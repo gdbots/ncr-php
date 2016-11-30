@@ -12,24 +12,6 @@ use Gdbots\Schemas\Ncr\NodeRef;
 interface Ncr
 {
     /**
-     * Creates the storage for a given SchemaQName.
-     *
-     * @param SchemaQName $qname
-     * @param array       $hints Data that helps the implementation decide where to create the storage.
-     */
-    public function createStorage(SchemaQName $qname, array $hints = []);
-
-    /**
-     * Returns debugging information about the storage for a given SchemaQName.
-     *
-     * @param SchemaQName $qname
-     * @param array       $hints Data that helps the implementation decide where to create the storage.
-     *
-     * @return string
-     */
-    public function describeStorage(SchemaQName $qname, array $hints = []);
-
-    /**
      * @param NodeRef $nodeRef
      * @param bool    $consistent An eventually consistent read is used by default unless this is true.
      * @param array   $hints      Data that helps the repository decide where to read/write data from.
@@ -39,7 +21,11 @@ interface Ncr
      * @throws NodeNotFound
      * @throws GdbotsNcrException
      */
-    public function getByNodeRef(NodeRef $nodeRef, $consistent = false, array $hints = []);
+    public function getNode(NodeRef $nodeRef, $consistent = false, array $hints = []);
+    //public function getNodeBatch(array $nodeRefs, $consistent = false, array $hints = []);
+    public function getNodeByIndex(SchemaQName $qname, $index, $value, array $hints = []);
+    //public function getNodeBatchByIndex(SchemaQName $qname, $index, array $values, array $hints = []);
+    //$this->ncr->getNodeByIndex($qname, 'email', 'test@test.com', [];
 
     /**
      * @param Node   $node

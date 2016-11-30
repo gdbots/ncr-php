@@ -1,6 +1,6 @@
 <?php
 
-namespace Gdbots\Ncr\Repository;
+namespace Gdbots\Ncr\Repository\DynamoDb;
 
 use Aws\DynamoDb\DynamoDbClient;
 use Aws\DynamoDb\Exception\DynamoDbException;
@@ -9,22 +9,22 @@ use Gdbots\Ncr\Exception\RepositoryOperationFailed;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 
 /**
- * Creates the DynamoDb table schema for a NodeRepository.
+ * Represents a DynamoDb table and its GSI.  This class is used by
+ * the TableManager to create/describe tables and fetch indexes
+ * when needed during the Ncr operations.
  *
  * You can customize the Global Secondary Indexes by extending this
- * class and overriding the "getAttributeDefinitions" and
- * "getGlobalSecondaryIndexes" methods.
- *
- * For details on the format of the parameters:
- * @link http://docs.aws.amazon.com/aws-sdk-php/v2/api/class-Aws.DynamoDb.DynamoDbClient.html#_createTable
+ * class and overriding the "getIndexes" method.
  *
  * NOTE: This will not update a table, it only handles creation.
- *
  */
-class DynamoDbNodeTableSchema
+class NodeTable
 {
     const SCHEMA_VERSION = 'v1';
     const HASH_KEY_NAME = '__node_ref';
+
+    /** @var GlobalSecondaryIndex[] */
+    private $gsi = [];
 
     /**
      * The tables are constructed with "new $class" in the
@@ -51,25 +51,48 @@ class DynamoDbNodeTableSchema
             // table doesn't exist, create it below
         }
 
-        $attributeDefinitions = $this->getAttributeDefinitions() ?: [];
-        $attributeDefinitions[] = ['AttributeName' => self::HASH_KEY_NAME, 'AttributeType' => 'S'];
+        $this->loadIndexes();
+
+        $attributes = [];
+        $indexes = [];
+
+        foreach ($this->gsi as $gsi) {
+            foreach ($gsi->getAttributeDefinitions() as $definition) {
+                $attributes[$definition['AttributeName']] = $definition;
+            }
+
+            $indexName = "{$gsi->getName()}_index";
+            $indexes[$indexName] = [
+                'IndexName' => $indexName,
+                'KeySchema' => [
+                    ['AttributeName' => $gsi->getHashKeyName(), 'KeyType' => 'HASH'],
+                ],
+                'Projection' => $gsi->getProjection() ?: ['ProjectionType' => 'KEYS_ONLY'],
+                'ProvisionedThroughput' => $this->getDefaultProvisionedThroughput()
+            ];
+
+            if ($gsi->getRangeKeyName()) {
+                $indexes[$indexName]['KeySchema'][] = ['AttributeName' => $gsi->getRangeKeyName(), 'KeyType' => 'RANGE'];
+            }
+        }
+
+        $attributes[self::HASH_KEY_NAME] = ['AttributeName' => self::HASH_KEY_NAME, 'AttributeType' => 'S'];
+        $attributes = array_values($attributes);
+        $indexes = array_values($indexes);
 
         try {
             /*$client->createTable(*/echo json_encode([
                 'TableName' => $tableName,
-                'AttributeDefinitions' => $attributeDefinitions,
+                'AttributeDefinitions' => $attributes,
                 'KeySchema' => [
                     ['AttributeName' => self::HASH_KEY_NAME, 'KeyType' => 'HASH'],
                 ],
-                'GlobalSecondaryIndexes' => $this->getGlobalSecondaryIndexes(),
+                'GlobalSecondaryIndexes' => $indexes,
                 'StreamSpecification' => [
                     'StreamEnabled' => true,
                     'StreamViewType' => 'NEW_AND_OLD_IMAGES',
                 ],
-                'ProvisionedThroughput' => [
-                    'ReadCapacityUnits'  => 2,
-                    'WriteCapacityUnits' => 2
-                ]
+                'ProvisionedThroughput' => $this->getDefaultProvisionedThroughput()
             ], JSON_PRETTY_PRINT);
 
             //$client->waitUntil('TableExists', ['TableName' => $tableName]);
@@ -118,18 +141,64 @@ class DynamoDbNodeTableSchema
     }
 
     /**
-     * @return array
+     * Returns true if this NodeTable has the given index.
+     * @see GlobalSecondaryIndex::getName
+     *
+     * @param string $name
+     *
+     * @return bool
      */
-    protected function getAttributeDefinitions()
+    final public function hasIndex($name)
     {
-        return [];
+        $this->loadIndexes();
+        return isset($this->gsi[$name]);
     }
 
     /**
+     * Returns an index by name if it exists on this table.
+     *
+     * @param string $name
+     *
+     * @return GlobalSecondaryIndex|null
+     */
+    final public function getIndex($name)
+    {
+        $this->loadIndexes();
+        return $this->gsi[$name] ?? null;
+    }
+
+    /**
+     * @return GlobalSecondaryIndex[]
+     */
+    protected function getIndexes()
+    {
+        return [
+            new SlugIndex()
+        ];
+    }
+
+    /**
+     * When creating tables and GSI this provisioning will be used.
+     *
      * @return array
      */
-    protected function getGlobalSecondaryIndexes()
+    protected function getDefaultProvisionedThroughput()
     {
-        return [];
+        return ['ReadCapacityUnits' => 2, 'WriteCapacityUnits' => 2];
+    }
+
+    /**
+     * Load the indexes for this table.
+     */
+    private function loadIndexes()
+    {
+        if (null !== $this->gsi) {
+            return;
+        }
+
+        $this->gsi = [];
+        foreach ($this->getIndexes() as $gsi) {
+            $this->gsi[$gsi->getName()] = $gsi;
+        }
     }
 }

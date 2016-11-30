@@ -1,12 +1,13 @@
 <?php
 
-namespace Gdbots\Ncr\Repository;
+namespace Gdbots\Ncr\Repository\DynamoDb;
 
 use Aws\DynamoDb\DynamoDbClient;
 use Aws\Exception\AwsException;
 use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Ncr\Exception\RepositoryOperationFailed;
 use Gdbots\Ncr\Ncr;
+use Gdbots\Ncr\NcrAdmin;
 use Gdbots\Pbj\Marshaler\DynamoDb\ItemMarshaler;
 use Gdbots\Pbj\SchemaQName;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
@@ -15,12 +16,12 @@ use Gdbots\Schemas\Pbjx\Enum\Code;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-class DynamoDbNcr implements Ncr
+class DynamoDbNcr implements Ncr, NcrAdmin
 {
     /** @var DynamoDbClient */
     protected $client;
 
-    /** @var DynamoDbNodeTableManager */
+    /** @var TableManager */
     protected $tableManager;
 
     /** @var LoggerInterface */
@@ -30,15 +31,12 @@ class DynamoDbNcr implements Ncr
     protected $marshaler;
 
     /**
-     * @param DynamoDbClient $client
-     * @param DynamoDbNodeTableManager $tableManager
+     * @param DynamoDbClient       $client
+     * @param TableManager         $tableManager
      * @param LoggerInterface|null $logger
      */
-    public function __construct(
-        DynamoDbClient $client,
-        DynamoDbNodeTableManager $tableManager,
-        LoggerInterface $logger = null
-    ) {
+    public function __construct(DynamoDbClient $client, TableManager $tableManager, LoggerInterface $logger = null)
+    {
         $this->client = $client;
         $this->tableManager = $tableManager;
         $this->logger = $logger ?: new NullLogger();
@@ -50,8 +48,8 @@ class DynamoDbNcr implements Ncr
      */
     public function createStorage(SchemaQName $qname, array $hints = [])
     {
-        $tableName = $this->tableManager->getTableName($qname, $hints);
-        $this->tableManager->getTableSchema($qname)->create($this->client, $tableName);
+        $tableName = $this->tableManager->getNodeTableName($qname, $hints);
+        $this->tableManager->getNodeTable($qname)->create($this->client, $tableName);
     }
 
     /**
@@ -59,23 +57,23 @@ class DynamoDbNcr implements Ncr
      */
     public function describeStorage(SchemaQName $qname, array $hints = [])
     {
-        $tableName = $this->tableManager->getTableName($qname, $hints);
-        $this->tableManager->getTableSchema($qname)->describe($this->client, $tableName);
+        $tableName = $this->tableManager->getNodeTableName($qname, $hints);
+        $this->tableManager->getNodeTable($qname)->describe($this->client, $tableName);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getByNodeRef(NodeRef $nodeRef, $consistent = false, array $hints = [])
+    public function getNode(NodeRef $nodeRef, $consistent = false, array $hints = [])
     {
-        $tableName = $this->tableManager->getTableName($nodeRef->getQName(), $hints);
+        $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
 
         try {
             $response = $this->client->getItem([
                 'ConsistentRead' => $consistent,
                 'TableName' => $tableName,
                 'Key' => [
-                    DynamoDbNodeTableSchema::HASH_KEY_NAME => ['S' => $nodeRef->toString()]
+                    NodeTable::HASH_KEY_NAME => ['S' => $nodeRef->toString()]
                 ]
             ]);
 
