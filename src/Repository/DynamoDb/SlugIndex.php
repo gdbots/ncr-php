@@ -51,35 +51,9 @@ final class SlugIndex implements GlobalSecondaryIndex
     }
 
     /**
-     * Returns an array with a "KeyConditionExpression" which can be used to query
-     * this GSI using the provided value.
-     *
-     * @link http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html
-     *
-     * @param string $value
-     *
-     * @return array
+     * {@inheritdoc}
      */
-    /*
-    public function getKeyConditionExpression($value)
-    {
-        return [
-            'ExpressionAttributeNames' => [
-                '#SLUG' => self::HASH_KEY_NAME
-            ],
-            'KeyConditionExpression' => '#SLUG = :v_slug',
-            'ExpressionAttributeValues' => [
-                ':v_slug' => ['S' => (string)$value]
-            ]
-        ];
-    }
-     */
-
-    /**
-     * @param array $item
-     * @param Node $node
-     */
-    public function applyToItem(array &$item, Node $node)
+    public function beforePutItem(array &$item, Node $node)
     {
         if (!$node instanceof Sluggable
             || !$node->has('slug')

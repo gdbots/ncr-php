@@ -6,6 +6,8 @@ use Aws\DynamoDb\DynamoDbClient;
 use Aws\DynamoDb\Exception\DynamoDbException;
 use Gdbots\Common\Util\ClassUtils;
 use Gdbots\Ncr\Exception\RepositoryOperationFailed;
+use Gdbots\Pbjx\Util\ShardUtils;
+use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 
 /**
@@ -22,9 +24,10 @@ class NodeTable
 {
     const SCHEMA_VERSION = 'v1';
     const HASH_KEY_NAME = '__node_ref';
+    const INDEXED_KEY_NAME = '__indexed';
 
     /** @var GlobalSecondaryIndex[] */
-    private $gsi = [];
+    private $gsi;
 
     /**
      * The tables are constructed with "new $class" in the
@@ -81,7 +84,7 @@ class NodeTable
         $indexes = array_values($indexes);
 
         try {
-            /*$client->createTable(*/echo json_encode([
+            $client->createTable([
                 'TableName' => $tableName,
                 'AttributeDefinitions' => $attributes,
                 'KeySchema' => [
@@ -93,9 +96,9 @@ class NodeTable
                     'StreamViewType' => 'NEW_AND_OLD_IMAGES',
                 ],
                 'ProvisionedThroughput' => $this->getDefaultProvisionedThroughput()
-            ], JSON_PRETTY_PRINT);
+            ]);
 
-            //$client->waitUntil('TableExists', ['TableName' => $tableName]);
+            $client->waitUntil('TableExists', ['TableName' => $tableName]);
 
         } catch (\Exception $e) {
             throw new RepositoryOperationFailed(
@@ -165,6 +168,55 @@ class NodeTable
     {
         $this->loadIndexes();
         return $this->gsi[$name] ?? null;
+    }
+
+    /**
+     * Calls all of the indexes on this table "beforePutItem" methods.
+     *
+     * @param array $item
+     * @param Node $node
+     */
+    final public function beforePutItem(array &$item, Node $node)
+    {
+        $this->loadIndexes();
+        $this->addShardAttributes($item, $node);
+
+        foreach ($this->gsi as $gsi) {
+            $gsi->beforePutItem($item, $node);
+        }
+
+        $this->doBeforePutItem($item, $node);
+    }
+
+    /**
+     * Add derived/virtual fields to the item before pushing to DynamoDb.
+     * Typically used to create a composite index, shards for distributed
+     * parallel scans (not generally for GSI).
+     *
+     * @param array $item
+     * @param Node $node
+     */
+    protected function doBeforePutItem(array &$item, Node $node)
+    {
+        // override to customize
+    }
+
+    /**
+     * A common use case is to run a parallel scan to reindex or reprocess
+     * nodes.  The shard fields allow you to run the parallel scans in
+     * parallel by using a filter expression for the "__s#" field.
+     *
+     * For example, parallel scan 16 separate processes with "__s16"
+     * having a value of 0-15.
+     *
+     * @param array $item
+     * @param Node $node
+     */
+    protected function addShardAttributes(array &$item, Node $node)
+    {
+        foreach ([16, 32, 64, 128, 256] as $shard) {
+            $item["__s{$shard}"] = ['N' => (string) ShardUtils::determineShard($item['_id']['S'], $shard)];
+        }
     }
 
     /**

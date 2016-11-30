@@ -52,7 +52,7 @@ interface GlobalSecondaryIndex
     public function getProjection();
 
     /**
-     * Applies the index to the item before it's pushed to DynamoDb.  It's possible that
+     * Hook to modify the item before it's pushed to DynamoDb.  It's possible that
      * this won't change the item at all if the index shouldn't be applied which makes
      * it possible to create a sparse GSI.
      *
@@ -61,5 +61,5 @@ interface GlobalSecondaryIndex
      * @param array $item
      * @param Node $node
      */
-    public function applyToItem(array &$item, Node $node);
+    public function beforePutItem(array &$item, Node $node);
 }

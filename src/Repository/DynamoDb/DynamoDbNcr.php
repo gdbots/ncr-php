@@ -10,6 +10,7 @@ use Gdbots\Ncr\Ncr;
 use Gdbots\Ncr\NcrAdmin;
 use Gdbots\Pbj\Marshaler\DynamoDb\ItemMarshaler;
 use Gdbots\Pbj\SchemaQName;
+use Gdbots\Schemas\Ncr\Mixin\Indexed\Indexed;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Pbjx\Enum\Code;
@@ -127,6 +128,30 @@ class DynamoDbNcr implements Ncr, NcrAdmin
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public function putNode(Node $node, $expectedEtag = null, array $hints = [])
+    {
+        $nodeRef = NodeRef::fromNode($node);
+        $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
+        $table = $this->tableManager->getNodeTable($nodeRef->getQName());
+
+        if (null !== $expectedEtag) {
+            //$this->optimisticCheck($streamId, $hints, $expectedEtag);
+        }
+
+        $item = $this->marshaler->marshal($node);
+        $item[NodeTable::HASH_KEY_NAME] = ['S' => $nodeRef->toString()];
+        if ($node instanceof Indexed) {
+            $item[NodeTable::INDEXED_KEY_NAME] = ['BOOL' => true];
+        }
+
+        $table->beforePutItem($item, $node);
+        //echo json_encode($item, JSON_PRETTY_PRINT);
+        $this->client->putItem(['TableName' => $tableName, 'Item' => $item]);
+    }
+
+    /**
      * @param array $item
      * @return Node
      */
@@ -134,4 +159,30 @@ class DynamoDbNcr implements Ncr, NcrAdmin
     {
         return $this->marshaler->unmarshal($item);
     }
+
+
+    /**
+     * Returns an array with a "KeyConditionExpression" which can be used to query
+     * this GSI using the provided value.
+     *
+     * @link http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html
+     *
+     * @param string $value
+     *
+     * @return array
+     */
+    /*
+    public function getKeyConditionExpression($value)
+    {
+        return [
+            'ExpressionAttributeNames' => [
+                '#SLUG' => self::HASH_KEY_NAME
+            ],
+            'KeyConditionExpression' => '#SLUG = :v_slug',
+            'ExpressionAttributeValues' => [
+                ':v_slug' => ['S' => (string)$value]
+            ]
+        ];
+    }
+     */
 }
