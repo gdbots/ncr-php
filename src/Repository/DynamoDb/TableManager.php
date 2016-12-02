@@ -34,7 +34,7 @@ class TableManager
      * @param string $tableNamePrefix   The prefix to use for all table names.  Typically "app-environment", e.g. "acme-prod"
      * @param array  $nodeTables        Node tables that define the class and optionally the table name to use.
      */
-    public function __construct($tableNamePrefix, array $nodeTables)
+    public function __construct($tableNamePrefix, array $nodeTables = [])
     {
         $this->tableNamePrefix = sprintf('%s-%s-', $tableNamePrefix, NodeTable::SCHEMA_VERSION);
         $this->nodeTables = $nodeTables;

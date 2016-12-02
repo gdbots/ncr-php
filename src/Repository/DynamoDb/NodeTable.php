@@ -9,7 +9,6 @@ use Gdbots\Ncr\Exception\RepositoryOperationFailed;
 use Gdbots\Pbjx\Util\ShardUtils;
 use Gdbots\Schemas\Ncr\Mixin\Indexed\Indexed;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
-use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 
 /**

@@ -8,11 +8,10 @@ class OptimisticCheckFailed extends \RuntimeException implements GdbotsNcrExcept
 {
     /**
      * @param string $message
-     * @param int $code
      * @param \Exception|null $previous
      */
-    public function __construct($message = '', $code = Code::FAILED_PRECONDITION, \Exception $previous = null)
+    public function __construct($message = '', \Exception $previous = null)
     {
-        parent::__construct($message, $code, $previous);
+        parent::__construct($message, Code::FAILED_PRECONDITION, $previous);
     }
 }

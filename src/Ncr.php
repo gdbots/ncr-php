@@ -5,7 +5,6 @@ namespace Gdbots\Ncr;
 use Gdbots\Ncr\Exception\GdbotsNcrException;
 use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Ncr\Exception\OptimisticCheckFailed;
-use Gdbots\Pbj\SchemaQName;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\NodeRef;
 

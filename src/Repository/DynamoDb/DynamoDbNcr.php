@@ -7,14 +7,16 @@ use Aws\Exception\AwsException;
 use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Ncr\Exception\RepositoryOperationFailed;
 use Gdbots\Ncr\Ncr;
+use Gdbots\Ncr\NcrAdmin;
 use Gdbots\Pbj\Marshaler\DynamoDb\ItemMarshaler;
+use Gdbots\Pbj\SchemaQName;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-class DynamoDbNcr implements Ncr
+class DynamoDbNcr implements Ncr, NcrAdmin
 {
     /** @var DynamoDbClient */
     protected $client;
@@ -44,6 +46,24 @@ class DynamoDbNcr implements Ncr
     /**
      * {@inheritdoc}
      */
+    public function createStorage(SchemaQName $qname, array $hints = [])
+    {
+        $tableName = $this->tableManager->getNodeTableName($qname, $hints);
+        $this->tableManager->getNodeTable($qname)->create($this->client, $tableName);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function describeStorage(SchemaQName $qname, array $hints = [])
+    {
+        $tableName = $this->tableManager->getNodeTableName($qname, $hints);
+        $this->tableManager->getNodeTable($qname)->describe($this->client, $tableName);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function getNode(NodeRef $nodeRef, $consistent = false, array $hints = [])
     {
         $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
@@ -61,7 +81,9 @@ class DynamoDbNcr implements Ncr
             if ('ProvisionedThroughputExceededException' === $e->getAwsErrorCode()) {
                 throw new RepositoryOperationFailed(
                     sprintf(
-                        'Read provisioning exceeded on DynamoDb table [%s].', $tableName
+                        'Read provisioning exceeded while fetching [%s] from DynamoDb table [%s].',
+                        $nodeRef,
+                        $tableName
                     ),
                     Code::RESOURCE_EXHAUSTED,
                     $e
@@ -69,21 +91,21 @@ class DynamoDbNcr implements Ncr
             }
 
             throw new RepositoryOperationFailed(
-                sprintf('Failed to query events from DynamoDb table [%s] for stream [%s].', $tableName),
+                sprintf('Failed to get [%s] from DynamoDb table [%s].', $nodeRef, $tableName),
                 Code::UNAVAILABLE,
                 $e
             );
 
         } catch (\Exception $e) {
             throw new RepositoryOperationFailed(
-                sprintf('Failed to query events from DynamoDb table [%s] for stream [%s].', $tableName),
+                sprintf('Failed to get [%s] from DynamoDb table [%s].', $nodeRef, $tableName),
                 Code::INTERNAL,
                 $e
             );
         }
 
         if (!$response['Count']) {
-            throw new NodeNotFound();
+            throw NodeNotFound::forNodeRef($nodeRef);
         }
 
         try {
@@ -100,7 +122,7 @@ class DynamoDbNcr implements Ncr
                 ]
             );
 
-            throw new NodeNotFound();
+            throw NodeNotFound::forNodeRef($nodeRef, $e);
         }
 
         return $node;
@@ -134,7 +156,6 @@ class DynamoDbNcr implements Ncr
     {
         return $this->marshaler->unmarshal($item);
     }
-
 
     /**
      * Returns an array with a "KeyConditionExpression" which can be used to query
