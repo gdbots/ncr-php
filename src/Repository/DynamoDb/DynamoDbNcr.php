@@ -7,17 +7,14 @@ use Aws\Exception\AwsException;
 use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Ncr\Exception\RepositoryOperationFailed;
 use Gdbots\Ncr\Ncr;
-use Gdbots\Ncr\NcrAdmin;
 use Gdbots\Pbj\Marshaler\DynamoDb\ItemMarshaler;
-use Gdbots\Pbj\SchemaQName;
-use Gdbots\Schemas\Ncr\Mixin\Indexed\Indexed;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-class DynamoDbNcr implements Ncr, NcrAdmin
+class DynamoDbNcr implements Ncr
 {
     /** @var DynamoDbClient */
     protected $client;
@@ -42,24 +39,6 @@ class DynamoDbNcr implements Ncr, NcrAdmin
         $this->tableManager = $tableManager;
         $this->logger = $logger ?: new NullLogger();
         $this->marshaler = new ItemMarshaler();
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function createStorage(SchemaQName $qname, array $hints = [])
-    {
-        $tableName = $this->tableManager->getNodeTableName($qname, $hints);
-        $this->tableManager->getNodeTable($qname)->create($this->client, $tableName);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function describeStorage(SchemaQName $qname, array $hints = [])
-    {
-        $tableName = $this->tableManager->getNodeTableName($qname, $hints);
-        $this->tableManager->getNodeTable($qname)->describe($this->client, $tableName);
     }
 
     /**
@@ -141,11 +120,7 @@ class DynamoDbNcr implements Ncr, NcrAdmin
         }
 
         $item = $this->marshaler->marshal($node);
-        $item[NodeTable::HASH_KEY_NAME] = ['S' => $nodeRef->toString()];
-        if ($node instanceof Indexed) {
-            $item[NodeTable::INDEXED_KEY_NAME] = ['BOOL' => true];
-        }
-
+        $item[NodeTable::HASH_KEY_NAME] = ['S' => NodeRef::fromNode($node)->toString()];
         $table->beforePutItem($item, $node);
         //echo json_encode($item, JSON_PRETTY_PRINT);
         $this->client->putItem(['TableName' => $tableName, 'Item' => $item]);

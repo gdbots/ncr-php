@@ -7,7 +7,9 @@ use Aws\DynamoDb\Exception\DynamoDbException;
 use Gdbots\Common\Util\ClassUtils;
 use Gdbots\Ncr\Exception\RepositoryOperationFailed;
 use Gdbots\Pbjx\Util\ShardUtils;
+use Gdbots\Schemas\Ncr\Mixin\Indexed\Indexed;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
+use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 
 /**
@@ -180,6 +182,9 @@ class NodeTable
     {
         $this->loadIndexes();
         $this->addShardAttributes($item, $node);
+        if ($node instanceof Indexed) {
+            $item[NodeTable::INDEXED_KEY_NAME] = ['BOOL' => true];
+        }
 
         foreach ($this->gsi as $gsi) {
             $gsi->beforePutItem($item, $node);
