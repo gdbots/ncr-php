@@ -31,8 +31,8 @@ class TableManager
     /**
      * todo: add lambda trigger on all new tables
      *
-     * @param string $tableNamePrefix   The prefix to use for all table names.  Typically "app-environment", e.g. "acme-prod"
-     * @param array  $nodeTables        Node tables that define the class and optionally the table name to use.
+     * @param string $tableNamePrefix The prefix to use for all table names.  Typically "app-environment", e.g. "acme-prod"
+     * @param array  $nodeTables      Node tables that define the class and optionally the table name to use.
      */
     public function __construct($tableNamePrefix, array $nodeTables = [])
     {
@@ -44,6 +44,10 @@ class TableManager
                 'class' => 'Gdbots\Ncr\Repository\DynamoDb\NodeTable',
                 'table_name' => 'multi'
             ];
+        }
+
+        if (!isset($this->nodeTables['default']['class'])) {
+            $this->nodeTables['default']['class'] = 'Gdbots\Ncr\Repository\DynamoDb\NodeTable';
         }
     }
 
@@ -76,8 +80,8 @@ class TableManager
     /**
      * Returns the table name that should be used to read/write from for the given SchemaQName.
      *
-     * @param SchemaQName $qname    QName used to derive the unfiltered table name.
-     * @param array       $hints    Data that helps the NCR decide where to read/write data from.
+     * @param SchemaQName $qname QName used to derive the unfiltered table name.
+     * @param array       $hints Data that helps the NCR decide where to read/write data from.
      *
      * @return string
      */
@@ -105,9 +109,9 @@ class TableManager
      * Filter the table name before it's returned to the consumer.  Typically used to add
      * prefixes or suffixes for multi-tenant applications using the hints array.
      *
-     * @param string      $tableName    The resolved table name, from converting qname to the config value.
-     * @param SchemaQName $qname        QName used to derive the unfiltered table name.
-     * @param array       $hints        Data that helps the NCR decide where to read/write data from.
+     * @param string      $tableName The resolved table name, from converting qname to the config value.
+     * @param SchemaQName $qname     QName used to derive the unfiltered table name.
+     * @param array       $hints     Data that helps the NCR decide where to read/write data from.
      *
      * @return string
      */

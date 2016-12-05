@@ -32,7 +32,7 @@ class NodeTable
 
     /**
      * The tables are constructed with "new $class" in the
-     * repository so the constructor must be consistent.
+     * TableManager so the constructor must be consistent.
      */
     final public function __construct()
     {
@@ -42,7 +42,7 @@ class NodeTable
      * Creates a DynamoDb table with the node schema.
      *
      * @param DynamoDbClient $client
-     * @param string $tableName
+     * @param string         $tableName
      *
      * @throws RepositoryOperationFailed
      */
@@ -51,7 +51,7 @@ class NodeTable
         try {
             $client->describeTable(['TableName' => $tableName]);
             return;
-        } catch (DynamoDbException $e)  {
+        } catch (DynamoDbException $e) {
             // table doesn't exist, create it below
         }
 
@@ -61,11 +61,11 @@ class NodeTable
         $indexes = [];
 
         foreach ($this->gsi as $gsi) {
-            foreach ($gsi->getAttributeDefinitions() as $definition) {
+            foreach ($gsi->getKeyAttributes() as $definition) {
                 $attributes[$definition['AttributeName']] = $definition;
             }
 
-            $indexName = "{$gsi->getName()}_index";
+            $indexName = $gsi->getName();
             $indexes[$indexName] = [
                 'IndexName' => $indexName,
                 'KeySchema' => [
@@ -105,7 +105,7 @@ class NodeTable
             throw new RepositoryOperationFailed(
                 sprintf(
                     '%s::Unable to create table [%s] in region [%s].',
-                    ClassUtils::getShortName($tableName),
+                    ClassUtils::getShortName($this),
                     $tableName,
                     $client->getRegion()
                 ),
@@ -119,7 +119,7 @@ class NodeTable
      * Describes a DynamoDb table.
      *
      * @param DynamoDbClient $client
-     * @param string $tableName
+     * @param string         $tableName
      *
      * @return string
      *
@@ -134,7 +134,7 @@ class NodeTable
             throw new RepositoryOperationFailed(
                 sprintf(
                     '%s::Unable to describe table [%s] in region [%s].',
-                    ClassUtils::getShortName($tableName),
+                    ClassUtils::getShortName($this),
                     $tableName,
                     $client->getRegion()
                 ),
@@ -146,36 +146,36 @@ class NodeTable
 
     /**
      * Returns true if this NodeTable has the given index.
-     * @see GlobalSecondaryIndex::getName
+     * @see GlobalSecondaryIndex::getAlias()
      *
-     * @param string $name
+     * @param string $alias
      *
      * @return bool
      */
-    final public function hasIndex($name)
+    final public function hasIndex($alias)
     {
         $this->loadIndexes();
-        return isset($this->gsi[$name]);
+        return isset($this->gsi[$alias]);
     }
 
     /**
-     * Returns an index by name if it exists on this table.
+     * Returns an index by its alias if it exists on this table.
      *
-     * @param string $name
+     * @param string $alias
      *
      * @return GlobalSecondaryIndex|null
      */
-    final public function getIndex($name)
+    final public function getIndex($alias)
     {
         $this->loadIndexes();
-        return $this->gsi[$name] ?? null;
+        return $this->gsi[$alias] ?? null;
     }
 
     /**
      * Calls all of the indexes on this table "beforePutItem" methods.
      *
      * @param array $item
-     * @param Node $node
+     * @param Node  $node
      */
     final public function beforePutItem(array &$item, Node $node)
     {
@@ -198,7 +198,7 @@ class NodeTable
      * parallel scans (not generally for GSI).
      *
      * @param array $item
-     * @param Node $node
+     * @param Node  $node
      */
     protected function doBeforePutItem(array &$item, Node $node)
     {
@@ -214,12 +214,12 @@ class NodeTable
      * having a value of 0-15.
      *
      * @param array $item
-     * @param Node $node
+     * @param Node  $node
      */
     protected function addShardAttributes(array &$item, Node $node)
     {
         foreach ([16, 32, 64, 128, 256] as $shard) {
-            $item["__s{$shard}"] = ['N' => (string) ShardUtils::determineShard($item['_id']['S'], $shard)];
+            $item["__s{$shard}"] = ['N' => (string)ShardUtils::determineShard($item['_id']['S'], $shard)];
         }
     }
 
@@ -254,7 +254,7 @@ class NodeTable
 
         $this->gsi = [];
         foreach ($this->getIndexes() as $gsi) {
-            $this->gsi[$gsi->getName()] = $gsi;
+            $this->gsi[$gsi->getAlias()] = $gsi;
         }
     }
 }

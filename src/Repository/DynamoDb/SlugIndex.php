@@ -6,12 +6,12 @@ use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\Mixin\Sluggable\Sluggable;
 
-final class SlugIndex implements GlobalSecondaryIndex
+final class SlugIndex extends AbstractIndex
 {
     /**
      * {@inheritdoc}
      */
-    public function getName()
+    public function getAlias()
     {
         return 'slug';
     }
@@ -29,16 +29,29 @@ final class SlugIndex implements GlobalSecondaryIndex
      */
     public function getRangeKeyName()
     {
-        return null;
+        return 'created_at';
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getAttributeDefinitions()
+    public function getKeyAttributes()
     {
         return [
-            ['AttributeName' => $this->getHashKeyName(), 'AttributeType' => 'S']
+            ['AttributeName' => $this->getHashKeyName(), 'AttributeType' => 'S'],
+            ['AttributeName' => $this->getRangeKeyName(), 'AttributeType' => 'N'],
+        ];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getFilterableAttributes()
+    {
+        return [
+            'created_at' => ['AttributeName' => $this->getRangeKeyName(), 'AttributeType' => 'N'],
+            'status' => ['AttributeName' => 'status', 'AttributeType' => 'S'],
+            'etag' => ['AttributeName' => 'etag', 'AttributeType' => 'S'],
         ];
     }
 
@@ -47,7 +60,10 @@ final class SlugIndex implements GlobalSecondaryIndex
      */
     public function getProjection()
     {
-        return [];
+        return [
+            'ProjectionType' => 'INCLUDE',
+            'NonKeyAttributes' => ['status', 'etag']
+        ];
     }
 
     /**
@@ -64,4 +80,23 @@ final class SlugIndex implements GlobalSecondaryIndex
 
         $item[$this->getHashKeyName()] = ['S' => (string)$node->get('slug')];
     }
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
