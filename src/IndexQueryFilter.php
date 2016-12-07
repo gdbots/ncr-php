@@ -58,9 +58,9 @@ final class IndexQueryFilter implements ToArray, \JsonSerializable
     public function toArray()
     {
         return [
-            'field' => $this->field,
+            'field'    => $this->field,
             'operator' => $this->operator->getValue(),
-            'value' => $this->value,
+            'value'    => $this->value,
         ];
     }
 

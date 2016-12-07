@@ -83,6 +83,7 @@ final class IndexQueryBuilder
     public function setQName(SchemaQName $qname)
     {
         $this->qname = $qname;
+
         return $this;
     }
 
@@ -94,6 +95,7 @@ final class IndexQueryBuilder
     public function setAlias($alias)
     {
         $this->alias = $alias;
+
         return $this;
     }
 
@@ -105,6 +107,7 @@ final class IndexQueryBuilder
     public function setValue($value)
     {
         $this->value = $value;
+
         return $this;
     }
 
@@ -116,6 +119,7 @@ final class IndexQueryBuilder
     public function setCount($count = 25)
     {
         $this->count = $count;
+
         return $this;
     }
 
@@ -127,6 +131,7 @@ final class IndexQueryBuilder
     public function setCursor($cursor = null)
     {
         $this->cursor = $cursor;
+
         return $this;
     }
 
@@ -138,6 +143,7 @@ final class IndexQueryBuilder
     public function sortAsc($sortAsc = true)
     {
         $this->sortAsc = $sortAsc;
+
         return $this;
     }
 
@@ -150,6 +156,7 @@ final class IndexQueryBuilder
     public function filterEq($field, $value)
     {
         $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::EQUAL_TO(), $value);
+
         return $this;
     }
 
@@ -162,6 +169,7 @@ final class IndexQueryBuilder
     public function filterNe($field, $value)
     {
         $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::NOT_EQUAL_TO(), $value);
+
         return $this;
     }
 
@@ -174,6 +182,7 @@ final class IndexQueryBuilder
     public function filterGt($field, $value)
     {
         $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::GREATER_THAN(), $value);
+
         return $this;
     }
 
@@ -186,6 +195,7 @@ final class IndexQueryBuilder
     public function filterGte($field, $value)
     {
         $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::GREATER_THAN_OR_EQUAL_TO(), $value);
+
         return $this;
     }
 
@@ -198,6 +208,7 @@ final class IndexQueryBuilder
     public function filterLt($field, $value)
     {
         $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::LESS_THAN(), $value);
+
         return $this;
     }
 
@@ -210,6 +221,7 @@ final class IndexQueryBuilder
     public function filterLte($field, $value)
     {
         $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::LESS_THAN_OR_EQUAL_TO(), $value);
+
         return $this;
     }
 
@@ -219,6 +231,7 @@ final class IndexQueryBuilder
     public function clearFilters()
     {
         $this->filters = [];
+
         return $this;
     }
 

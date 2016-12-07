@@ -62,9 +62,9 @@ final class IndexQueryResult implements ToArray, \JsonSerializable, \IteratorAgg
     public function toArray()
     {
         return [
-            'query' => $this->query,
-            'node_refs' => $this->nodeRefs,
-            'has_more' => $this->hasMore,
+            'query'       => $this->query,
+            'node_refs'   => $this->nodeRefs,
+            'has_more'    => $this->hasMore,
             'next_cursor' => $this->nextCursor,
         ];
     }

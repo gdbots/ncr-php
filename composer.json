@@ -4,7 +4,7 @@
   "type": "library",
   "license": "Apache-2.0",
   "require": {
-    "php": ">=7.0",
+    "php": ">=7.1",
     "gdbots/pbjx": "dev-es as 1.0.0",
     "gdbots/schemas": "dev-es as 1.0.0",
     "psr/log": "~1"
