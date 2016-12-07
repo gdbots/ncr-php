@@ -93,5 +93,4 @@ trait LocalNodeCacheTrait
             $this->nodeCache = array_slice($this->nodeCache, $this->maxNodeCacheItems * 0.2);
         }
     }
-
 }

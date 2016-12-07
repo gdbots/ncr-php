@@ -289,9 +289,6 @@ class DynamoDbNcr implements Ncr, NcrAdmin
             $params['ProjectionExpression'] = '#node_ref';
         }
 
-        //echo json_encode($params, JSON_PRETTY_PRINT);
-        //echo json_encode($unprocessedFilters, JSON_PRETTY_PRINT);
-
         try {
             $response = $this->client->query($params);
 
@@ -314,8 +311,6 @@ class DynamoDbNcr implements Ncr, NcrAdmin
                 $e
             );
         }
-
-        echo json_encode($response->toArray(), JSON_PRETTY_PRINT).PHP_EOL.PHP_EOL;
 
         if (!isset($response['Items']) || empty($response['Items'])) {
             return new IndexQueryResult($query);

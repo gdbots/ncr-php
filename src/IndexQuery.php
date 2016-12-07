@@ -77,7 +77,8 @@ final class IndexQuery implements ToArray, \JsonSerializable
         $cursor = null,
         $sortAsc = true,
         array $filters = []
-    ) {
+    )
+    {
         $this->qname = $qname;
         $this->alias = $alias;
         $this->value = $value;
@@ -206,13 +207,13 @@ final class IndexQuery implements ToArray, \JsonSerializable
     public function toArray()
     {
         return [
-            'qname' => $this->qname->toString(),
-            'alias' => $this->alias,
-            'value' => $this->value,
-            'count' => $this->count,
-            'cursor' => $this->cursor,
+            'qname'    => $this->qname->toString(),
+            'alias'    => $this->alias,
+            'value'    => $this->value,
+            'count'    => $this->count,
+            'cursor'   => $this->cursor,
             'sort_asc' => $this->sortAsc,
-            'filters' => $this->filters,
+            'filters'  => $this->filters,
         ];
     }
 
