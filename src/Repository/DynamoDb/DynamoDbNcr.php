@@ -96,14 +96,26 @@ class DynamoDbNcr implements Ncr, NcrAdmin
             }
 
             throw new RepositoryOperationFailed(
-                sprintf('%s while checking for [%s] in DynamoDb table [%s].', $e->getAwsErrorCode(), $nodeRef, $tableName),
+                sprintf(
+                    '%s while checking for [%s] in DynamoDb table [%s].',
+                    $e->getAwsErrorCode() ?: ClassUtils::getShortName($e),
+                    $nodeRef,
+                    $tableName
+                ),
                 'ProvisionedThroughputExceededException' === $e->getAwsErrorCode() ? Code::RESOURCE_EXHAUSTED : Code::UNAVAILABLE,
                 $e
             );
 
         } catch (\Exception $e) {
             throw new RepositoryOperationFailed(
-                sprintf('Failed to check for [%s] in DynamoDb table [%s].', $nodeRef, $tableName), Code::INTERNAL, $e
+                sprintf(
+                    '%s while checking for [%s] in DynamoDb table [%s].',
+                    ClassUtils::getShortName($e),
+                    $nodeRef,
+                    $tableName
+                ),
+                Code::INTERNAL,
+                $e
             );
         }
 
@@ -134,14 +146,26 @@ class DynamoDbNcr implements Ncr, NcrAdmin
             }
 
             throw new RepositoryOperationFailed(
-                sprintf('%s while fetching [%s] from DynamoDb table [%s].', $e->getAwsErrorCode(), $nodeRef, $tableName),
+                sprintf(
+                    '%s while getting [%s] from DynamoDb table [%s].',
+                    $e->getAwsErrorCode() ?: ClassUtils::getShortName($e),
+                    $nodeRef,
+                    $tableName
+                ),
                 'ProvisionedThroughputExceededException' === $e->getAwsErrorCode() ? Code::RESOURCE_EXHAUSTED : Code::UNAVAILABLE,
                 $e
             );
 
         } catch (\Exception $e) {
             throw new RepositoryOperationFailed(
-                sprintf('Failed to get [%s] from DynamoDb table [%s].', $nodeRef, $tableName), Code::INTERNAL, $e
+                sprintf(
+                    '%s while getting [%s] from DynamoDb table [%s].',
+                    ClassUtils::getShortName($e),
+                    $nodeRef,
+                    $tableName
+                ),
+                Code::INTERNAL,
+                $e
             );
         }
 
@@ -209,14 +233,26 @@ class DynamoDbNcr implements Ncr, NcrAdmin
             }
 
             throw new RepositoryOperationFailed(
-                sprintf('%s while putting [%s] into DynamoDb table [%s].', $e->getAwsErrorCode(), $nodeRef, $tableName),
+                sprintf(
+                    '%s while putting [%s] into DynamoDb table [%s].',
+                    $e->getAwsErrorCode() ?: ClassUtils::getShortName($e),
+                    $nodeRef,
+                    $tableName
+                ),
                 'ProvisionedThroughputExceededException' === $e->getAwsErrorCode() ? Code::RESOURCE_EXHAUSTED : Code::UNAVAILABLE,
                 $e
             );
 
         } catch (\Exception $e) {
             throw new RepositoryOperationFailed(
-                sprintf('Failed to put [%s] into DynamoDb table [%s].', $nodeRef, $tableName), Code::INTERNAL, $e
+                sprintf(
+                    '%s while putting [%s] into DynamoDb table [%s].',
+                    ClassUtils::getShortName($e),
+                    $nodeRef,
+                    $tableName
+                ),
+                Code::INTERNAL,
+                $e
             );
         }
 
@@ -243,14 +279,26 @@ class DynamoDbNcr implements Ncr, NcrAdmin
             }
 
             throw new RepositoryOperationFailed(
-                sprintf('%s while deleting [%s] into DynamoDb table [%s].', $e->getAwsErrorCode(), $nodeRef, $tableName),
+                sprintf(
+                    '%s while deleting [%s] from DynamoDb table [%s].',
+                    $e->getAwsErrorCode() ?: ClassUtils::getShortName($e),
+                    $nodeRef,
+                    $tableName
+                ),
                 'ProvisionedThroughputExceededException' === $e->getAwsErrorCode() ? Code::RESOURCE_EXHAUSTED : Code::UNAVAILABLE,
                 $e
             );
 
         } catch (\Exception $e) {
             throw new RepositoryOperationFailed(
-                sprintf('Failed to delete [%s] from DynamoDb table [%s].', $nodeRef, $tableName), Code::INTERNAL, $e
+                sprintf(
+                    '%s while deleting [%s] from DynamoDb table [%s].',
+                    ClassUtils::getShortName($e),
+                    $nodeRef,
+                    $tableName
+                ),
+                Code::INTERNAL,
+                $e
             );
         }
     }
@@ -291,23 +339,27 @@ class DynamoDbNcr implements Ncr, NcrAdmin
 
         try {
             $response = $this->client->query($params);
+        } catch (\Exception $e) {
+            if ($e instanceof AwsException) {
+                $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
+                if ('ProvisionedThroughputExceededException' === $e->getAwsErrorCode()) {
+                    $code = Code::RESOURCE_EXHAUSTED;
+                } else {
+                    $code = Code::UNAVAILABLE;
+                }
+            } else {
+                $errorName = ClassUtils::getShortName($e);
+                $code = Code::INTERNAL;
+            }
 
-        } catch (AwsException $e) {
             throw new RepositoryOperationFailed(
                 sprintf(
-                    '%s while running IndexQuery [%s] on DynamoDb table [%s].',
-                    $e->getAwsErrorCode(),
+                    '%s on IndexQuery [%s] on DynamoDb table [%s].',
+                    $errorName,
                     $query->getAlias(),
                     $tableName
                 ),
-                'ProvisionedThroughputExceededException' === $e->getAwsErrorCode() ? Code::RESOURCE_EXHAUSTED : Code::UNAVAILABLE,
-                $e
-            );
-
-        } catch (\Exception $e) {
-            throw new RepositoryOperationFailed(
-                sprintf('Failed to handle IndexQuery [%s] on DynamoDb table [%s].', $query->getAlias(), $tableName),
-                Code::INTERNAL,
+                $code,
                 $e
             );
         }
