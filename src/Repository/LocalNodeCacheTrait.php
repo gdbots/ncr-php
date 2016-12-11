@@ -45,7 +45,7 @@ trait LocalNodeCacheTrait
      *
      * @return bool
      */
-    private function isInNodeCache(NodeRef $nodeRef)
+    private function isInNodeCache(NodeRef $nodeRef): bool
     {
         return isset($this->nodeCache[$nodeRef->toString()]);
     }
@@ -57,7 +57,7 @@ trait LocalNodeCacheTrait
      *
      * @return Node
      */
-    private function getFromNodeCache(NodeRef $nodeRef)
+    private function getFromNodeCache(NodeRef $nodeRef): Node
     {
         return clone $this->nodeCache[$nodeRef->toString()];
     }
@@ -67,19 +67,19 @@ trait LocalNodeCacheTrait
      * @param Node    $node
      * @param bool    $pruneCache
      */
-    private function addToNodeCache(NodeRef $nodeRef, Node $node, $pruneCache = true)
+    private function addToNodeCache(NodeRef $nodeRef, Node $node, bool $pruneCache = true): void
     {
         if ($pruneCache) {
             $this->pruneNodeCache();
         }
 
-        $this->nodeCache[$nodeRef->toString()] = $node->freeze();
+        $this->nodeCache[$nodeRef->toString()] = $node;
     }
 
     /**
      * @param NodeRef $nodeRef
      */
-    private function removeFromNodeCache(NodeRef $nodeRef)
+    private function removeFromNodeCache(NodeRef $nodeRef): void
     {
         unset($this->nodeCache[$nodeRef->toString()]);
     }
@@ -87,7 +87,7 @@ trait LocalNodeCacheTrait
     /**
      * Prunes node cache by removing 20% of the cache if it is full.
      */
-    private function pruneNodeCache()
+    private function pruneNodeCache(): void
     {
         if (count($this->nodeCache) === $this->maxNodeCacheItems) {
             $this->nodeCache = array_slice($this->nodeCache, $this->maxNodeCacheItems * 0.2);

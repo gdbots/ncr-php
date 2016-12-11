@@ -46,7 +46,7 @@ class NodeTable
      *
      * @throws RepositoryOperationFailed
      */
-    final public function create(DynamoDbClient $client, $tableName)
+    final public function create(DynamoDbClient $client, string $tableName)
     {
         try {
             $client->describeTable(['TableName' => $tableName]);
@@ -67,12 +67,12 @@ class NodeTable
 
             $indexName = $gsi->getName();
             $indexes[$indexName] = [
-                'IndexName' => $indexName,
-                'KeySchema' => [
+                'IndexName'             => $indexName,
+                'KeySchema'             => [
                     ['AttributeName' => $gsi->getHashKeyName(), 'KeyType' => 'HASH'],
                 ],
-                'Projection' => $gsi->getProjection() ?: ['ProjectionType' => 'KEYS_ONLY'],
-                'ProvisionedThroughput' => $this->getDefaultProvisionedThroughput()
+                'Projection'            => $gsi->getProjection() ?: ['ProjectionType' => 'KEYS_ONLY'],
+                'ProvisionedThroughput' => $this->getDefaultProvisionedThroughput(),
             ];
 
             if ($gsi->getRangeKeyName()) {
@@ -86,21 +86,20 @@ class NodeTable
 
         try {
             $client->createTable([
-                'TableName' => $tableName,
-                'AttributeDefinitions' => $attributes,
-                'KeySchema' => [
+                'TableName'              => $tableName,
+                'AttributeDefinitions'   => $attributes,
+                'KeySchema'              => [
                     ['AttributeName' => self::HASH_KEY_NAME, 'KeyType' => 'HASH'],
                 ],
                 'GlobalSecondaryIndexes' => $indexes,
-                'StreamSpecification' => [
-                    'StreamEnabled' => true,
+                'StreamSpecification'    => [
+                    'StreamEnabled'  => true,
                     'StreamViewType' => 'NEW_AND_OLD_IMAGES',
                 ],
-                'ProvisionedThroughput' => $this->getDefaultProvisionedThroughput()
+                'ProvisionedThroughput'  => $this->getDefaultProvisionedThroughput(),
             ]);
 
             $client->waitUntil('TableExists', ['TableName' => $tableName]);
-
         } catch (\Exception $e) {
             throw new RepositoryOperationFailed(
                 sprintf(
@@ -125,7 +124,7 @@ class NodeTable
      *
      * @throws RepositoryOperationFailed
      */
-    final public function describe(DynamoDbClient $client, $tableName)
+    final public function describe(DynamoDbClient $client, string $tableName): string
     {
         try {
             $result = $client->describeTable(['TableName' => $tableName]);
@@ -152,7 +151,7 @@ class NodeTable
      *
      * @return bool
      */
-    final public function hasIndex($alias)
+    final public function hasIndex(string $alias): bool
     {
         $this->loadIndexes();
         return isset($this->gsi[$alias]);
@@ -165,7 +164,7 @@ class NodeTable
      *
      * @return GlobalSecondaryIndex|null
      */
-    final public function getIndex($alias)
+    final public function getIndex(string $alias): ?GlobalSecondaryIndex
     {
         $this->loadIndexes();
         return $this->gsi[$alias] ?? null;
@@ -177,7 +176,7 @@ class NodeTable
      * @param array $item
      * @param Node  $node
      */
-    final public function beforePutItem(array &$item, Node $node)
+    final public function beforePutItem(array &$item, Node $node): void
     {
         $this->loadIndexes();
         $this->addShardAttributes($item, $node);
@@ -200,7 +199,7 @@ class NodeTable
      * @param array $item
      * @param Node  $node
      */
-    protected function doBeforePutItem(array &$item, Node $node)
+    protected function doBeforePutItem(array &$item, Node $node): void
     {
         // override to customize
     }
@@ -216,7 +215,7 @@ class NodeTable
      * @param array $item
      * @param Node  $node
      */
-    protected function addShardAttributes(array &$item, Node $node)
+    protected function addShardAttributes(array &$item, Node $node): void
     {
         foreach ([16, 32, 64, 128, 256] as $shard) {
             $item["__s{$shard}"] = ['N' => (string)ShardUtils::determineShard($item['_id']['S'], $shard)];
@@ -226,10 +225,10 @@ class NodeTable
     /**
      * @return GlobalSecondaryIndex[]
      */
-    protected function getIndexes()
+    protected function getIndexes(): array
     {
         return [
-            new SlugIndex()
+            new SlugIndex(),
         ];
     }
 
@@ -238,7 +237,7 @@ class NodeTable
      *
      * @return array
      */
-    protected function getDefaultProvisionedThroughput()
+    protected function getDefaultProvisionedThroughput(): array
     {
         return ['ReadCapacityUnits' => 2, 'WriteCapacityUnits' => 2];
     }
@@ -246,7 +245,7 @@ class NodeTable
     /**
      * Load the indexes for this table.
      */
-    private function loadIndexes()
+    private function loadIndexes(): void
     {
         if (null !== $this->gsi) {
             return;

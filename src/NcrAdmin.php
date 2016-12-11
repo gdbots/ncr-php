@@ -22,5 +22,5 @@ interface NcrAdmin
      *
      * @return string
      */
-    public function describeStorage(SchemaQName $qname, array $hints = []);
+    public function describeStorage(SchemaQName $qname, array $hints = []): string;
 }

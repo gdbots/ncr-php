@@ -27,10 +27,10 @@ class DynamoDbNcr implements Ncr, NcrAdmin
     use LocalNodeCacheTrait;
 
     /** @var DynamoDbClient */
-    protected $client;
+    private $client;
 
     /** @var LoggerInterface */
-    protected $logger;
+    private $logger;
 
     /** @var TableManager */
     private $tableManager;
@@ -43,7 +43,7 @@ class DynamoDbNcr implements Ncr, NcrAdmin
      * @param TableManager         $tableManager
      * @param LoggerInterface|null $logger
      */
-    public function __construct(DynamoDbClient $client, TableManager $tableManager, LoggerInterface $logger = null)
+    public function __construct(DynamoDbClient $client, TableManager $tableManager, ?LoggerInterface $logger = null)
     {
         $this->client = $client;
         $this->tableManager = $tableManager;
@@ -63,7 +63,7 @@ class DynamoDbNcr implements Ncr, NcrAdmin
     /**
      * {@inheritdoc}
      */
-    final public function describeStorage(SchemaQName $qname, array $hints = [])
+    final public function describeStorage(SchemaQName $qname, array $hints = []): string
     {
         $tableName = $this->tableManager->getNodeTableName($qname, $hints);
         return $this->tableManager->getNodeTable($qname)->describe($this->client, $tableName);
@@ -72,7 +72,7 @@ class DynamoDbNcr implements Ncr, NcrAdmin
     /**
      * {@inheritdoc}
      */
-    final public function hasNode(NodeRef $nodeRef, $consistent = false, array $hints = [])
+    final public function hasNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): bool
     {
         if (!$consistent && $this->isInNodeCache($nodeRef)) {
             return true;
@@ -81,40 +81,37 @@ class DynamoDbNcr implements Ncr, NcrAdmin
         $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
 
         try {
-            $keyName = '#'.NodeTable::HASH_KEY_NAME;
+            $keyName = '#' . NodeTable::HASH_KEY_NAME;
             $response = $this->client->getItem([
-                'ConsistentRead' => true,
-                'TableName' => $tableName,
-                'ProjectionExpression' => $keyName,
+                'ConsistentRead'           => true,
+                'TableName'                => $tableName,
+                'ProjectionExpression'     => $keyName,
                 'ExpressionAttributeNames' => [$keyName => NodeTable::HASH_KEY_NAME],
-                'Key' => [NodeTable::HASH_KEY_NAME => ['S' => $nodeRef->toString()]]
+                'Key'                      => [NodeTable::HASH_KEY_NAME => ['S' => $nodeRef->toString()]],
             ]);
-
-        } catch (AwsException $e) {
-            if ('ResourceNotFoundException' === $e->getAwsErrorCode()) {
-                return false;
+        } catch (\Exception $e) {
+            if ($e instanceof AwsException) {
+                $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
+                if ('ResourceNotFoundException' === $errorName) {
+                    return false;
+                } elseif ('ProvisionedThroughputExceededException' === $errorName) {
+                    $code = Code::RESOURCE_EXHAUSTED;
+                } else {
+                    $code = Code::UNAVAILABLE;
+                }
+            } else {
+                $errorName = ClassUtils::getShortName($e);
+                $code = Code::INTERNAL;
             }
 
             throw new RepositoryOperationFailed(
                 sprintf(
                     '%s while checking for [%s] in DynamoDb table [%s].',
-                    $e->getAwsErrorCode() ?: ClassUtils::getShortName($e),
+                    $errorName,
                     $nodeRef,
                     $tableName
                 ),
-                'ProvisionedThroughputExceededException' === $e->getAwsErrorCode() ? Code::RESOURCE_EXHAUSTED : Code::UNAVAILABLE,
-                $e
-            );
-
-        } catch (\Exception $e) {
-            throw new RepositoryOperationFailed(
-                sprintf(
-                    '%s while checking for [%s] in DynamoDb table [%s].',
-                    ClassUtils::getShortName($e),
-                    $nodeRef,
-                    $tableName
-                ),
-                Code::INTERNAL,
+                $code,
                 $e
             );
         }
@@ -125,7 +122,7 @@ class DynamoDbNcr implements Ncr, NcrAdmin
     /**
      * {@inheritdoc}
      */
-    final public function getNode(NodeRef $nodeRef, $consistent = false, array $hints = [])
+    final public function getNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): Node
     {
         if (!$consistent && $this->isInNodeCache($nodeRef)) {
             return $this->getFromNodeCache($nodeRef);
@@ -136,35 +133,32 @@ class DynamoDbNcr implements Ncr, NcrAdmin
         try {
             $response = $this->client->getItem([
                 'ConsistentRead' => $consistent,
-                'TableName' => $tableName,
-                'Key' => [NodeTable::HASH_KEY_NAME => ['S' => $nodeRef->toString()]]
+                'TableName'      => $tableName,
+                'Key'            => [NodeTable::HASH_KEY_NAME => ['S' => $nodeRef->toString()]],
             ]);
-
-        } catch (AwsException $e) {
-            if ('ResourceNotFoundException' === $e->getAwsErrorCode()) {
-                throw NodeNotFound::forNodeRef($nodeRef, $e);
+        } catch (\Exception $e) {
+            if ($e instanceof AwsException) {
+                $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
+                if ('ResourceNotFoundException' === $errorName) {
+                    throw NodeNotFound::forNodeRef($nodeRef, $e);
+                } elseif ('ProvisionedThroughputExceededException' === $errorName) {
+                    $code = Code::RESOURCE_EXHAUSTED;
+                } else {
+                    $code = Code::UNAVAILABLE;
+                }
+            } else {
+                $errorName = ClassUtils::getShortName($e);
+                $code = Code::INTERNAL;
             }
 
             throw new RepositoryOperationFailed(
                 sprintf(
                     '%s while getting [%s] from DynamoDb table [%s].',
-                    $e->getAwsErrorCode() ?: ClassUtils::getShortName($e),
+                    $errorName,
                     $nodeRef,
                     $tableName
                 ),
-                'ProvisionedThroughputExceededException' === $e->getAwsErrorCode() ? Code::RESOURCE_EXHAUSTED : Code::UNAVAILABLE,
-                $e
-            );
-
-        } catch (\Exception $e) {
-            throw new RepositoryOperationFailed(
-                sprintf(
-                    '%s while getting [%s] from DynamoDb table [%s].',
-                    ClassUtils::getShortName($e),
-                    $nodeRef,
-                    $tableName
-                ),
-                Code::INTERNAL,
+                $code,
                 $e
             );
         }
@@ -180,11 +174,11 @@ class DynamoDbNcr implements Ncr, NcrAdmin
             $this->logger->error(
                 'Item returned from DynamoDb table [{table_name}] for [{node_ref}] could not be unmarshaled.',
                 [
-                    'exception' => $e,
-                    'item' => $response['Item'],
-                    'hints' => $hints,
+                    'exception'  => $e,
+                    'item'       => $response['Item'],
+                    'hints'      => $hints,
                     'table_name' => $tableName,
-                    'node_ref' => (string)$nodeRef
+                    'node_ref'   => (string)$nodeRef,
                 ]
             );
 
@@ -198,7 +192,7 @@ class DynamoDbNcr implements Ncr, NcrAdmin
     /**
      * {@inheritdoc}
      */
-    final public function putNode(Node $node, $expectedEtag = null, array $hints = [])
+    final public function putNode(Node $node, ?string $expectedEtag = null, array $hints = []): void
     {
         $node->freeze();
         $nodeRef = NodeRef::fromNode($node);
@@ -218,40 +212,37 @@ class DynamoDbNcr implements Ncr, NcrAdmin
             $table->beforePutItem($item, $node);
             $params['Item'] = $item;
             $this->client->putItem($params);
-
-        } catch (AwsException $e) {
-            if ('ConditionalCheckFailedException' === $e->getAwsErrorCode()) {
-                throw new OptimisticCheckFailed(
-                    sprintf(
-                        'NodeRef [%s] in DynamoDb table [%s] did not have expected etag [%s].',
-                        $nodeRef,
-                        $tableName,
-                        $expectedEtag
-                    ),
-                    $e
-                );
+        } catch (\Exception $e) {
+            if ($e instanceof AwsException) {
+                $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
+                if ('ConditionalCheckFailedException' === $errorName) {
+                    throw new OptimisticCheckFailed(
+                        sprintf(
+                            'NodeRef [%s] in DynamoDb table [%s] did not have expected etag [%s].',
+                            $nodeRef,
+                            $tableName,
+                            $expectedEtag
+                        ),
+                        $e
+                    );
+                } elseif ('ProvisionedThroughputExceededException' === $errorName) {
+                    $code = Code::RESOURCE_EXHAUSTED;
+                } else {
+                    $code = Code::UNAVAILABLE;
+                }
+            } else {
+                $errorName = ClassUtils::getShortName($e);
+                $code = Code::INTERNAL;
             }
 
             throw new RepositoryOperationFailed(
                 sprintf(
                     '%s while putting [%s] into DynamoDb table [%s].',
-                    $e->getAwsErrorCode() ?: ClassUtils::getShortName($e),
+                    $errorName,
                     $nodeRef,
                     $tableName
                 ),
-                'ProvisionedThroughputExceededException' === $e->getAwsErrorCode() ? Code::RESOURCE_EXHAUSTED : Code::UNAVAILABLE,
-                $e
-            );
-
-        } catch (\Exception $e) {
-            throw new RepositoryOperationFailed(
-                sprintf(
-                    '%s while putting [%s] into DynamoDb table [%s].',
-                    ClassUtils::getShortName($e),
-                    $nodeRef,
-                    $tableName
-                ),
-                Code::INTERNAL,
+                $code,
                 $e
             );
         }
@@ -262,7 +253,7 @@ class DynamoDbNcr implements Ncr, NcrAdmin
     /**
      * {@inheritdoc}
      */
-    final public function deleteNode(NodeRef $nodeRef, array $hints = [])
+    final public function deleteNode(NodeRef $nodeRef, array $hints = []): void
     {
         $this->removeFromNodeCache($nodeRef);
         $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
@@ -270,34 +261,32 @@ class DynamoDbNcr implements Ncr, NcrAdmin
         try {
             $this->client->deleteItem([
                 'TableName' => $tableName,
-                'Key' => [NodeTable::HASH_KEY_NAME => ['S' => $nodeRef->toString()]]
+                'Key'       => [NodeTable::HASH_KEY_NAME => ['S' => $nodeRef->toString()]],
             ]);
-
-        } catch (AwsException $e) {
-            if ('ResourceNotFoundException' === $e->getAwsErrorCode()) {
-                return;
+        } catch (\Exception $e) {
+            if ($e instanceof AwsException) {
+                $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
+                if ('ResourceNotFoundException' === $errorName) {
+                    // if it's already deleted, it's fine
+                    return;
+                } elseif ('ProvisionedThroughputExceededException' === $errorName) {
+                    $code = Code::RESOURCE_EXHAUSTED;
+                } else {
+                    $code = Code::UNAVAILABLE;
+                }
+            } else {
+                $errorName = ClassUtils::getShortName($e);
+                $code = Code::INTERNAL;
             }
 
             throw new RepositoryOperationFailed(
                 sprintf(
                     '%s while deleting [%s] from DynamoDb table [%s].',
-                    $e->getAwsErrorCode() ?: ClassUtils::getShortName($e),
+                    $errorName,
                     $nodeRef,
                     $tableName
                 ),
-                'ProvisionedThroughputExceededException' === $e->getAwsErrorCode() ? Code::RESOURCE_EXHAUSTED : Code::UNAVAILABLE,
-                $e
-            );
-
-        } catch (\Exception $e) {
-            throw new RepositoryOperationFailed(
-                sprintf(
-                    '%s while deleting [%s] from DynamoDb table [%s].',
-                    ClassUtils::getShortName($e),
-                    $nodeRef,
-                    $tableName
-                ),
-                Code::INTERNAL,
+                $code,
                 $e
             );
         }
@@ -306,7 +295,7 @@ class DynamoDbNcr implements Ncr, NcrAdmin
     /**
      * {@inheritdoc}
      */
-    final public function findNodeRefs(IndexQuery $query, array $hints = [])
+    final public function findNodeRefs(IndexQuery $query, array $hints = []): IndexQueryResult
     {
         $tableName = $this->tableManager->getNodeTableName($query->getQName(), $hints);
         $table = $this->tableManager->getNodeTable($query->getQName());
@@ -342,7 +331,7 @@ class DynamoDbNcr implements Ncr, NcrAdmin
         } catch (\Exception $e) {
             if ($e instanceof AwsException) {
                 $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
-                if ('ProvisionedThroughputExceededException' === $e->getAwsErrorCode()) {
+                if ('ProvisionedThroughputExceededException' === $errorName) {
                     $code = Code::RESOURCE_EXHAUSTED;
                 } else {
                     $code = Code::UNAVAILABLE;
@@ -377,12 +366,12 @@ class DynamoDbNcr implements Ncr, NcrAdmin
                 $this->logger->error(
                     'NodeRef returned from IndexQuery [{index_alias}] on DynamoDb table [{table_name}] is invalid.',
                     [
-                        'exception' => $e,
-                        'item' => $item,
-                        'hints' => $hints,
+                        'exception'   => $e,
+                        'item'        => $item,
+                        'hints'       => $hints,
                         'index_alias' => $query->getAlias(),
                         'index_query' => $query,
-                        'table_name' => $tableName,
+                        'table_name'  => $tableName,
                     ]
                 );
             }

@@ -12,35 +12,36 @@ class NodeNotFound extends \RuntimeException implements GdbotsNcrException, HasE
     protected $nodeRef;
 
     /**
-     * @param string $message
+     * @param string          $message
      * @param \Exception|null $previous
      */
-    public function __construct($message = '', \Exception $previous = null)
+    public function __construct(string $message = '', ?\Exception $previous = null)
     {
         parent::__construct($message, Code::NOT_FOUND, $previous);
     }
 
     /**
-     * @param NodeRef $nodeRef
+     * @param NodeRef         $nodeRef
      * @param \Exception|null $previous
      *
      * @return NodeNotFound
      */
-    public static function forNodeRef(NodeRef $nodeRef, \Exception $previous = null)
+    public static function forNodeRef(NodeRef $nodeRef, ?\Exception $previous = null): self
     {
         $e = new self("The node ({$nodeRef->toString()}) could not be found.", $previous);
         $e->nodeRef = $nodeRef;
+
         return $e;
     }
 
     /**
-     * @param string $index
-     * @param string $value
+     * @param string          $index
+     * @param string          $value
      * @param \Exception|null $previous
      *
      * @return NodeNotFound
      */
-    public static function forIndex($index, $value, \Exception $previous = null)
+    public static function forIndex(string $index, string $value, ?\Exception $previous = null): self
     {
         return new self("The node could not be found by ({$index}:{$value}).", $previous);
     }
@@ -64,7 +65,7 @@ class NodeNotFound extends \RuntimeException implements GdbotsNcrException, HasE
     /**
      * @return bool
      */
-    public function hasNodeRef()
+    public function hasNodeRef(): bool
     {
         return null !== $this->nodeRef;
     }
@@ -72,7 +73,7 @@ class NodeNotFound extends \RuntimeException implements GdbotsNcrException, HasE
     /**
      * @return NodeRef
      */
-    public function getNodeRef()
+    public function getNodeRef(): NodeRef
     {
         return $this->nodeRef;
     }

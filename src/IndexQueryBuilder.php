@@ -56,7 +56,7 @@ final class IndexQueryBuilder
      * @param string      $alias
      * @param string      $value
      */
-    public function __construct(SchemaQName $qname, $alias, $value)
+    public function __construct(SchemaQName $qname, string $alias, string $value)
     {
         $this->qname = $qname;
         $this->alias = $alias;
@@ -70,7 +70,7 @@ final class IndexQueryBuilder
      *
      * @return self
      */
-    public static function create(SchemaQName $qname, $alias, $value)
+    public static function create(SchemaQName $qname, string $alias, string $value): self
     {
         return new self($qname, $alias, $value);
     }
@@ -80,10 +80,9 @@ final class IndexQueryBuilder
      *
      * @return self
      */
-    public function setQName(SchemaQName $qname)
+    public function setQName(SchemaQName $qname): self
     {
         $this->qname = $qname;
-
         return $this;
     }
 
@@ -92,10 +91,9 @@ final class IndexQueryBuilder
      *
      * @return self
      */
-    public function setAlias($alias)
+    public function setAlias(string $alias): self
     {
         $this->alias = $alias;
-
         return $this;
     }
 
@@ -104,10 +102,9 @@ final class IndexQueryBuilder
      *
      * @return self
      */
-    public function setValue($value)
+    public function setValue(string $value): self
     {
         $this->value = $value;
-
         return $this;
     }
 
@@ -116,10 +113,9 @@ final class IndexQueryBuilder
      *
      * @return self
      */
-    public function setCount($count = 25)
+    public function setCount(int $count = 25)
     {
         $this->count = $count;
-
         return $this;
     }
 
@@ -128,10 +124,9 @@ final class IndexQueryBuilder
      *
      * @return self
      */
-    public function setCursor($cursor = null)
+    public function setCursor(?string $cursor = null): self
     {
         $this->cursor = $cursor;
-
         return $this;
     }
 
@@ -140,10 +135,9 @@ final class IndexQueryBuilder
      *
      * @return self
      */
-    public function sortAsc($sortAsc = true)
+    public function sortAsc(bool $sortAsc = true): self
     {
         $this->sortAsc = $sortAsc;
-
         return $this;
     }
 
@@ -153,10 +147,9 @@ final class IndexQueryBuilder
      *
      * @return self
      */
-    public function filterEq($field, $value)
+    public function filterEq(string $field, $value): self
     {
         $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::EQUAL_TO(), $value);
-
         return $this;
     }
 
@@ -166,10 +159,9 @@ final class IndexQueryBuilder
      *
      * @return self
      */
-    public function filterNe($field, $value)
+    public function filterNe(string $field, $value): self
     {
         $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::NOT_EQUAL_TO(), $value);
-
         return $this;
     }
 
@@ -179,10 +171,9 @@ final class IndexQueryBuilder
      *
      * @return self
      */
-    public function filterGt($field, $value)
+    public function filterGt(string $field, $value): self
     {
         $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::GREATER_THAN(), $value);
-
         return $this;
     }
 
@@ -192,10 +183,9 @@ final class IndexQueryBuilder
      *
      * @return self
      */
-    public function filterGte($field, $value)
+    public function filterGte(string $field, $value): self
     {
         $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::GREATER_THAN_OR_EQUAL_TO(), $value);
-
         return $this;
     }
 
@@ -205,10 +195,9 @@ final class IndexQueryBuilder
      *
      * @return self
      */
-    public function filterLt($field, $value)
+    public function filterLt(string $field, $value): self
     {
         $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::LESS_THAN(), $value);
-
         return $this;
     }
 
@@ -218,27 +207,25 @@ final class IndexQueryBuilder
      *
      * @return self
      */
-    public function filterLte($field, $value)
+    public function filterLte(string $field, $value): self
     {
         $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::LESS_THAN_OR_EQUAL_TO(), $value);
-
         return $this;
     }
 
     /**
      * @return self
      */
-    public function clearFilters()
+    public function clearFilters(): self
     {
         $this->filters = [];
-
         return $this;
     }
 
     /**
      * @return IndexQuery
      */
-    public function build()
+    public function build(): IndexQuery
     {
         return new IndexQuery(
             $this->qname,

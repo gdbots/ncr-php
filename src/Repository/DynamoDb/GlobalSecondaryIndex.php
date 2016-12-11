@@ -18,7 +18,7 @@ interface GlobalSecondaryIndex
      *
      * @return string
      */
-    public function getAlias();
+    public function getAlias(): string;
 
     /**
      * Returns the name of the index that should be used to create the actual index
@@ -26,14 +26,14 @@ interface GlobalSecondaryIndex
      *
      * @return string
      */
-    public function getName();
+    public function getName(): string;
 
     /**
      * Returns the AttributeName for the KeySchema KeyType "HASH".
      *
      * @return string
      */
-    public function getHashKeyName();
+    public function getHashKeyName(): string;
 
     /**
      * Returns the AttributeName for the KeySchema KeyType "RANGE".
@@ -41,7 +41,7 @@ interface GlobalSecondaryIndex
      *
      * @return string|null
      */
-    public function getRangeKeyName();
+    public function getRangeKeyName(): ?string;
 
     /**
      * Returns attributes used in the KeySchema for a GSI as they must also be defined
@@ -51,7 +51,7 @@ interface GlobalSecondaryIndex
      *
      * @return array
      */
-    public function getKeyAttributes();
+    public function getKeyAttributes(): array;
 
     /**
      * Returns attributes that can be used in @see IndexQueryFilter.  The name of the
@@ -64,7 +64,7 @@ interface GlobalSecondaryIndex
      *
      * @return array
      */
-    public function getFilterableAttributes();
+    public function getFilterableAttributes(): array;
 
     /**
      * Return the configuration for the GSI projection.
@@ -74,7 +74,7 @@ interface GlobalSecondaryIndex
      *
      * @return array
      */
-    public function getProjection();
+    public function getProjection(): array;
 
     /**
      * Hook to modify the item before it's pushed to DynamoDb.  It's possible that
@@ -86,7 +86,7 @@ interface GlobalSecondaryIndex
      * @param array $item
      * @param Node  $node
      */
-    public function beforePutItem(array &$item, Node $node);
+    public function beforePutItem(array &$item, Node $node): void;
 
     /**
      * Converts the IndexQuery into the parameters needed to perform a DynamoDb query.
@@ -96,5 +96,5 @@ interface GlobalSecondaryIndex
      *
      * @return array
      */
-    public function createQuery(IndexQuery $query);
+    public function createQuery(IndexQuery $query): array;
 }

@@ -11,7 +11,7 @@ final class SlugIndex extends AbstractIndex
     /**
      * {@inheritdoc}
      */
-    public function getAlias()
+    public function getAlias(): string
     {
         return 'slug';
     }
@@ -19,7 +19,7 @@ final class SlugIndex extends AbstractIndex
     /**
      * {@inheritdoc}
      */
-    public function getHashKeyName()
+    public function getHashKeyName(): string
     {
         return '__slug';
     }
@@ -27,7 +27,7 @@ final class SlugIndex extends AbstractIndex
     /**
      * {@inheritdoc}
      */
-    public function getRangeKeyName()
+    public function getRangeKeyName(): ?string
     {
         return 'created_at';
     }
@@ -35,7 +35,7 @@ final class SlugIndex extends AbstractIndex
     /**
      * {@inheritdoc}
      */
-    public function getKeyAttributes()
+    public function getKeyAttributes(): array
     {
         return [
             ['AttributeName' => $this->getHashKeyName(), 'AttributeType' => 'S'],
@@ -46,7 +46,7 @@ final class SlugIndex extends AbstractIndex
     /**
      * {@inheritdoc}
      */
-    public function getFilterableAttributes()
+    public function getFilterableAttributes(): array
     {
         return [
             'created_at' => ['AttributeName' => $this->getRangeKeyName(), 'AttributeType' => 'N'],
@@ -58,7 +58,7 @@ final class SlugIndex extends AbstractIndex
     /**
      * {@inheritdoc}
      */
-    public function getProjection()
+    public function getProjection(): array
     {
         return [
             'ProjectionType' => 'INCLUDE',
@@ -69,7 +69,7 @@ final class SlugIndex extends AbstractIndex
     /**
      * {@inheritdoc}
      */
-    public function beforePutItem(array &$item, Node $node)
+    public function beforePutItem(array &$item, Node $node): void
     {
         if (!$node instanceof Sluggable
             || !$node->has('slug')
@@ -80,23 +80,4 @@ final class SlugIndex extends AbstractIndex
 
         $item[$this->getHashKeyName()] = ['S' => (string)$node->get('slug')];
     }
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

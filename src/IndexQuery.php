@@ -71,14 +71,13 @@ final class IndexQuery implements ToArray, \JsonSerializable
      */
     public function __construct(
         SchemaQName $qname,
-        $alias,
-        $value,
-        $count = 25,
-        $cursor = null,
-        $sortAsc = true,
+        string $alias,
+        string $value,
+        int $count = 25,
+        ?string $cursor = null,
+        bool $sortAsc = true,
         array $filters = []
-    )
-    {
+    ) {
         $this->qname = $qname;
         $this->alias = $alias;
         $this->value = $value;
@@ -95,7 +94,7 @@ final class IndexQuery implements ToArray, \JsonSerializable
     /**
      * @return SchemaQName
      */
-    public function getQName()
+    public function getQName(): SchemaQName
     {
         return $this->qname;
     }
@@ -103,7 +102,7 @@ final class IndexQuery implements ToArray, \JsonSerializable
     /**
      * @return string
      */
-    public function getAlias()
+    public function getAlias(): string
     {
         return $this->alias;
     }
@@ -111,7 +110,7 @@ final class IndexQuery implements ToArray, \JsonSerializable
     /**
      * @return string
      */
-    public function getValue()
+    public function getValue(): string
     {
         return $this->value;
     }
@@ -119,7 +118,7 @@ final class IndexQuery implements ToArray, \JsonSerializable
     /**
      * @return int
      */
-    public function getCount()
+    public function getCount(): int
     {
         return $this->count;
     }
@@ -127,7 +126,7 @@ final class IndexQuery implements ToArray, \JsonSerializable
     /**
      * @return bool
      */
-    public function hasCursor()
+    public function hasCursor(): bool
     {
         return null !== $this->cursor;
     }
@@ -135,7 +134,7 @@ final class IndexQuery implements ToArray, \JsonSerializable
     /**
      * @return string
      */
-    public function getCursor()
+    public function getCursor(): ?string
     {
         return $this->cursor;
     }
@@ -143,7 +142,7 @@ final class IndexQuery implements ToArray, \JsonSerializable
     /**
      * @return bool
      */
-    public function sortAsc()
+    public function sortAsc(): bool
     {
         return $this->sortAsc;
     }
@@ -151,7 +150,7 @@ final class IndexQuery implements ToArray, \JsonSerializable
     /**
      * @return bool
      */
-    public function hasFilters()
+    public function hasFilters(): bool
     {
         return empty($this->filters);
     }
@@ -159,7 +158,7 @@ final class IndexQuery implements ToArray, \JsonSerializable
     /**
      * @return IndexQueryFilter[]
      */
-    public function getFilters()
+    public function getFilters(): array
     {
         return $this->filters;
     }
@@ -167,7 +166,7 @@ final class IndexQuery implements ToArray, \JsonSerializable
     /**
      * @return string[]
      */
-    public function getFieldsUsed()
+    public function getFieldsUsed(): array
     {
         return array_keys($this->fields);
     }
@@ -179,7 +178,7 @@ final class IndexQuery implements ToArray, \JsonSerializable
      *
      * @return bool
      */
-    public function hasFilterForField($field)
+    public function hasFilterForField(string $field): bool
     {
         return isset($this->fields[$field]);
     }
@@ -189,7 +188,7 @@ final class IndexQuery implements ToArray, \JsonSerializable
      *
      * @return array
      */
-    public function getFiltersForField($field)
+    public function getFiltersForField(string $field): array
     {
         $filters = [];
         foreach ($this->filters as $filter) {

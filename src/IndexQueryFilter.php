@@ -21,7 +21,7 @@ final class IndexQueryFilter implements ToArray, \JsonSerializable
      * @param IndexQueryFilterOperator $operator
      * @param mixed                    $value
      */
-    public function __construct($field, IndexQueryFilterOperator $operator, $value)
+    public function __construct(string $field, IndexQueryFilterOperator $operator, $value)
     {
         $this->field = $field;
         $this->operator = $operator;

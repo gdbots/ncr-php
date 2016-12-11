@@ -29,12 +29,10 @@ class TableManager
     private $resolvedTableNames = [];
 
     /**
-     * todo: add lambda trigger on all new tables
-     *
-     * @param string $tableNamePrefix The prefix to use for all table names.  Typically "app-environment", e.g. "acme-prod"
+     * @param string $tableNamePrefix The prefix to use for all table names.  Typically "app-environment-ncr", e.g. "acme-prod-ncr"
      * @param array  $nodeTables      Node tables that define the class and optionally the table name to use.
      */
-    public function __construct($tableNamePrefix, array $nodeTables = [])
+    public function __construct(string $tableNamePrefix, array $nodeTables = [])
     {
         $this->tableNamePrefix = sprintf('%s-%s-', $tableNamePrefix, NodeTable::SCHEMA_VERSION);
         $this->nodeTables = $nodeTables;
@@ -56,7 +54,7 @@ class TableManager
      *
      * @return NodeTable
      */
-    final public function getNodeTable(SchemaQName $qname)
+    final public function getNodeTable(SchemaQName $qname): NodeTable
     {
         $key = $qname->toString();
 
@@ -85,7 +83,7 @@ class TableManager
      *
      * @return string
      */
-    final public function getNodeTableName(SchemaQName $qname, array $hints = [])
+    final public function getNodeTableName(SchemaQName $qname, array $hints = []): string
     {
         $key = $qname->toString();
 
@@ -115,7 +113,7 @@ class TableManager
      *
      * @return string
      */
-    protected function filterNodeTableName($tableName, SchemaQName $qname, array $hints = [])
+    protected function filterNodeTableName(string $tableName, SchemaQName $qname, array $hints = []): string
     {
         return $tableName;
     }

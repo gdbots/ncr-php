@@ -20,7 +20,7 @@ interface Ncr
      *
      * @throws GdbotsNcrException
      */
-    public function hasNode(NodeRef $nodeRef, $consistent = false, array $hints = []);
+    public function hasNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): bool;
 
     /**
      * @param NodeRef $nodeRef    The NodeRef to get from the NCR.
@@ -32,7 +32,7 @@ interface Ncr
      * @throws NodeNotFound
      * @throws GdbotsNcrException
      */
-    public function getNode(NodeRef $nodeRef, $consistent = false, array $hints = []);
+    public function getNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): Node;
     //public function getNodeBatch(array $nodeRefs, $consistent = false, array $hints = []);
 
     /**
@@ -43,7 +43,7 @@ interface Ncr
      * @throws OptimisticCheckFailed
      * @throws GdbotsNcrException
      */
-    public function putNode(Node $node, $expectedEtag = null, array $hints = []);
+    public function putNode(Node $node, ?string $expectedEtag = null, array $hints = []): void;
 
     /**
      * @param NodeRef $nodeRef The NodeRef to delete from the NCR.
@@ -51,7 +51,7 @@ interface Ncr
      *
      * @throws GdbotsNcrException
      */
-    public function deleteNode(NodeRef $nodeRef, array $hints = []);
+    public function deleteNode(NodeRef $nodeRef, array $hints = []): void;
 
     /**
      * @param IndexQuery $query The IndexQuery to use to find NodeRefs.
@@ -62,5 +62,5 @@ interface Ncr
      * @throws RepositoryIndexNotFound
      * @throws GdbotsNcrException
      */
-    public function findNodeRefs(IndexQuery $query, array $hints = []);
+    public function findNodeRefs(IndexQuery $query, array $hints = []): IndexQueryResult;
 }

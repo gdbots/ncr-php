@@ -24,7 +24,7 @@ final class IndexQueryResult implements ToArray, \JsonSerializable, \IteratorAgg
      * @param NodeRef[]   $nodeRefs
      * @param string|null $nextCursor
      */
-    public function __construct(IndexQuery $query, array $nodeRefs = [], $nextCursor = null)
+    public function __construct(IndexQuery $query, array $nodeRefs = [], ?string $nextCursor = null)
     {
         $this->query = $query;
         $this->nodeRefs = $nodeRefs;
@@ -35,7 +35,7 @@ final class IndexQueryResult implements ToArray, \JsonSerializable, \IteratorAgg
     /**
      * @return NodeRef[]
      */
-    public function getNodeRefs()
+    public function getNodeRefs(): array
     {
         return $this->nodeRefs;
     }
@@ -43,7 +43,7 @@ final class IndexQueryResult implements ToArray, \JsonSerializable, \IteratorAgg
     /**
      * @return bool
      */
-    public function hasMore()
+    public function hasMore(): bool
     {
         return $this->hasMore;
     }
@@ -51,7 +51,7 @@ final class IndexQueryResult implements ToArray, \JsonSerializable, \IteratorAgg
     /**
      * @return string|null
      */
-    public function getNextCursor()
+    public function getNextCursor(): ?string
     {
         return $this->nextCursor;
     }

@@ -12,7 +12,7 @@ abstract class AbstractIndex implements GlobalSecondaryIndex
     /**
      * {@inheritdoc}
      */
-    public function getName()
+    public function getName(): string
     {
         return "{$this->getAlias()}_index";
     }
@@ -20,7 +20,7 @@ abstract class AbstractIndex implements GlobalSecondaryIndex
     /**
      * {@inheritdoc}
      */
-    public function getRangeKeyName()
+    public function getRangeKeyName(): ?string
     {
         return null;
     }
@@ -28,7 +28,7 @@ abstract class AbstractIndex implements GlobalSecondaryIndex
     /**
      * {@inheritdoc}
      */
-    public function getFilterableAttributes()
+    public function getFilterableAttributes(): array
     {
         return [];
     }
@@ -36,7 +36,7 @@ abstract class AbstractIndex implements GlobalSecondaryIndex
     /**
      * {@inheritdoc}
      */
-    public function getProjection()
+    public function getProjection(): array
     {
         return [];
     }
@@ -44,32 +44,32 @@ abstract class AbstractIndex implements GlobalSecondaryIndex
     /**
      * {@inheritdoc}
      */
-    public function beforePutItem(array &$item, Node $node)
+    public function beforePutItem(array &$item, Node $node): void
     {
     }
 
     /**
      * {@inheritdoc}
      */
-    final public function createQuery(IndexQuery $query)
+    final public function createQuery(IndexQuery $query): array
     {
         $filterables = $this->getFilterableAttributes();
         $params = [
-            'IndexName' => $this->getName(),
-            'ScanIndexForward' => $query->sortAsc(),
-            'Limit' => $query->getCount(),
-            'ExpressionAttributeNames' => [
-                '#hash' => $this->getHashKeyName(),
+            'IndexName'                 => $this->getName(),
+            'ScanIndexForward'          => $query->sortAsc(),
+            'Limit'                     => $query->getCount(),
+            'ExpressionAttributeNames'  => [
+                '#hash'     => $this->getHashKeyName(),
                 '#node_ref' => NodeTable::HASH_KEY_NAME,
             ],
             'ExpressionAttributeValues' => [
-                ':v_hash' => ['S' => $query->getValue()],
-                ':v_qname' => ['S' => $query->getQName()->toString()]
+                ':v_hash'  => ['S' => $query->getValue()],
+                ':v_qname' => ['S' => $query->getQName()->toString()],
             ],
             // special key to deal with filters that must be
             // processed AFTER the query runs due to limitation of range key
             // only allowing for one expression.
-            'unprocessed_filters' => []
+            'unprocessed_filters'       => [],
         ];
 
         $keyConditionExpressions = ['#hash = :v_hash'];
@@ -100,7 +100,7 @@ abstract class AbstractIndex implements GlobalSecondaryIndex
 
             $params['ExpressionAttributeNames'][$ean] = $filterable['AttributeName'];
             $params['ExpressionAttributeValues'][$eav] = [
-                $filterable['AttributeType'] => $this->marshalValue($filterable['AttributeType'], $filter->getValue())
+                $filterable['AttributeType'] => $this->marshalValue($filterable['AttributeType'], $filter->getValue()),
             ];
 
             $operator = $this->getDynamoDbOperator($filter->getOperator());
@@ -140,18 +140,18 @@ abstract class AbstractIndex implements GlobalSecondaryIndex
 
     /**
      * @param string $attributeType
-     * @param mixed $value
+     * @param mixed  $value
      *
      * @return mixed
      */
-    private function marshalValue($attributeType, $value)
+    private function marshalValue(string $attributeType, $value)
     {
         switch ($attributeType) {
             case 'BOOL':
                 return filter_var($value, FILTER_VALIDATE_BOOLEAN);
 
             default:
-                return (string) $value;
+                return (string)$value;
         }
     }
 
@@ -160,7 +160,7 @@ abstract class AbstractIndex implements GlobalSecondaryIndex
      *
      * @return string
      */
-    private function getDynamoDbOperator(IndexQueryFilterOperator $operator)
+    private function getDynamoDbOperator(IndexQueryFilterOperator $operator): string
     {
         switch ($operator->getValue()) {
             case IndexQueryFilterOperator::EQUAL_TO:
