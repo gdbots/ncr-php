@@ -66,7 +66,7 @@ class InMemoryNcr implements Ncr
     {
         $node->freeze();
         $nodeRef = NodeRef::fromNode($node);
-        $this->addToNodeCache($nodeRef, $node);
+        $this->addToNodeCache($nodeRef, $node, false);
     }
 
     /**
