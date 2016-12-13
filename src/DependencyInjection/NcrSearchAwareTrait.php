@@ -1,7 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Gdbots\Ncr;
+namespace Gdbots\Ncr\DependencyInjection;
+
+use Gdbots\Ncr\NcrSearch;
 
 /**
  * Basic implementation of NcrSearchAware interface.

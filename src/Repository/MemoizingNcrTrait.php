@@ -6,7 +6,7 @@ namespace Gdbots\Ncr\Repository;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\NodeRef;
 
-trait LocalNodeCacheTrait
+trait MemoizingNcrTrait
 {
     /**
      * Array of nodes keyed by their NodeRef that have been fetched
@@ -42,6 +42,14 @@ trait LocalNodeCacheTrait
     private $maxNodeCacheItems = 500;
 
     /**
+     * When new items are added to cache the cache will be
+     * pruned if this is enabled.
+     *
+     * @var bool
+     */
+    private $enableCachePruning = true;
+
+    /**
      * @param NodeRef $nodeRef
      *
      * @return bool
@@ -70,7 +78,7 @@ trait LocalNodeCacheTrait
      */
     private function addToNodeCache(NodeRef $nodeRef, Node $node, bool $pruneCache = true): void
     {
-        if ($pruneCache) {
+        if ($this->enableCachePruning && $pruneCache) {
             $this->pruneNodeCache();
         }
 
@@ -90,7 +98,7 @@ trait LocalNodeCacheTrait
      */
     private function pruneNodeCache(): void
     {
-        if (count($this->nodeCache) === $this->maxNodeCacheItems) {
+        if (count($this->nodeCache) >= $this->maxNodeCacheItems) {
             $this->nodeCache = array_slice($this->nodeCache, $this->maxNodeCacheItems * 0.2);
         }
     }

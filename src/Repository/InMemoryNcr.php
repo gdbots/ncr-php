@@ -16,7 +16,7 @@ use Gdbots\Schemas\Ncr\NodeRef;
  */
 class InMemoryNcr implements Ncr
 {
-    use LocalNodeCacheTrait;
+    use MemoizingNcrTrait;
 
     /** @var PhpArraySerializer */
     private static $serializer;
@@ -26,6 +26,8 @@ class InMemoryNcr implements Ncr
      */
     public function __construct(array $nodes = [])
     {
+        $this->enableCachePruning = false;
+
         foreach ($nodes as $node) {
             try {
                 if (!$node instanceof Node) {
@@ -33,7 +35,7 @@ class InMemoryNcr implements Ncr
                 }
 
                 $nodeRef = NodeRef::fromNode($node);
-                $this->addToNodeCache($nodeRef, $node);
+                $this->addToNodeCache($nodeRef, $node, false);
             } catch (\Exception $e) {
             }
         }

@@ -1,7 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace Gdbots\Ncr;
+namespace Gdbots\Ncr\DependencyInjection;
+
+use Gdbots\Ncr\Ncr;
 
 /**
  * Marker Interface used for dependency injection

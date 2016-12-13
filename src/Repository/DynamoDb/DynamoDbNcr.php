@@ -14,7 +14,7 @@ use Gdbots\Ncr\IndexQuery;
 use Gdbots\Ncr\IndexQueryResult;
 use Gdbots\Ncr\Ncr;
 use Gdbots\Ncr\NcrAdmin;
-use Gdbots\Ncr\Repository\LocalNodeCacheTrait;
+use Gdbots\Ncr\Repository\MemoizingNcrTrait;
 use Gdbots\Pbj\Marshaler\DynamoDb\ItemMarshaler;
 use Gdbots\Pbj\SchemaQName;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
@@ -25,7 +25,7 @@ use Psr\Log\NullLogger;
 
 class DynamoDbNcr implements Ncr, NcrAdmin
 {
-    use LocalNodeCacheTrait;
+    use MemoizingNcrTrait;
 
     /** @var DynamoDbClient */
     private $client;
@@ -79,45 +79,15 @@ class DynamoDbNcr implements Ncr, NcrAdmin
             return true;
         }
 
-        $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
-
         try {
-            $keyName = '#' . NodeTable::HASH_KEY_NAME;
-            $response = $this->client->getItem([
-                'ConsistentRead'           => true,
-                'TableName'                => $tableName,
-                'ProjectionExpression'     => $keyName,
-                'ExpressionAttributeNames' => [$keyName => NodeTable::HASH_KEY_NAME],
-                'Key'                      => [NodeTable::HASH_KEY_NAME => ['S' => $nodeRef->toString()]],
-            ]);
+            $this->getNode($nodeRef, $consistent, $hints);
+        } catch (NodeNotFound $e) {
+            return false;
         } catch (\Exception $e) {
-            if ($e instanceof AwsException) {
-                $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
-                if ('ResourceNotFoundException' === $errorName) {
-                    return false;
-                } elseif ('ProvisionedThroughputExceededException' === $errorName) {
-                    $code = Code::RESOURCE_EXHAUSTED;
-                } else {
-                    $code = Code::UNAVAILABLE;
-                }
-            } else {
-                $errorName = ClassUtils::getShortName($e);
-                $code = Code::INTERNAL;
-            }
-
-            throw new RepositoryOperationFailed(
-                sprintf(
-                    '%s while checking for [%s] in DynamoDb table [%s].',
-                    $errorName,
-                    $nodeRef,
-                    $tableName
-                ),
-                $code,
-                $e
-            );
+            throw $e;
         }
 
-        return isset($response['Item']);
+        return true;
     }
 
     /**
@@ -256,6 +226,7 @@ class DynamoDbNcr implements Ncr, NcrAdmin
      */
     final public function deleteNode(NodeRef $nodeRef, array $hints = []): void
     {
+        //$this->ncrCache->deleteNode($nodeRef);
         $this->removeFromNodeCache($nodeRef);
         $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
 
