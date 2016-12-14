@@ -52,13 +52,13 @@ final class NcrCache
     private $maxItems = 500;
 
     /**
-     * When loadNodesDeferred method is used a request is created
+     * When lazyLoadNodes method is used a request is created
      * and populated with the node refs.  Only when a cache miss
      * occurs on getNode will this request be processed.
      *
      * @var GetNodeBatchRequest
      */
-    private $deferredRequest;
+    private $lazyLoadNodesRequest;
 
     /**
      * @param Pbjx $pbjx
@@ -88,8 +88,12 @@ final class NcrCache
     public function getNode(NodeRef $nodeRef): Node
     {
         if (!$this->hasNode($nodeRef)) {
-            $this->processDeferredRequest();
-            if (!$this->hasNode($nodeRef)) {
+            if ($this->lazyLoadNodesRequest && $this->lazyLoadNodesRequest->isInSet('node_refs', $nodeRef)) {
+                $this->processlazyLoadNodesRequest();
+                if (!$this->hasNode($nodeRef)) {
+                    throw NodeNotFound::forNodeRef($nodeRef);
+                }
+            } else {
                 throw NodeNotFound::forNodeRef($nodeRef);
             }
         }
@@ -110,7 +114,7 @@ final class NcrCache
         $this->pruneNodeCache();
         $nodeRef = NodeRef::fromNode($node);
         $this->nodes[$nodeRef->toString()] = $node;
-        $this->removeNodesDeferred([$nodeRef]);
+        $this->removeLazyLoadNodes([$nodeRef]);
     }
 
     /**
@@ -119,7 +123,7 @@ final class NcrCache
     public function deleteNode(NodeRef $nodeRef): void
     {
         unset($this->nodes[$nodeRef->toString()]);
-        $this->removeNodesDeferred([$nodeRef]);
+        $this->removeLazyLoadNodes([$nodeRef]);
     }
 
     /**
@@ -128,7 +132,7 @@ final class NcrCache
     public function clear(): void
     {
         $this->nodes = [];
-        $this->deferredRequest = null;
+        $this->lazyLoadNodesRequest = null;
     }
 
     /**
@@ -140,17 +144,17 @@ final class NcrCache
      * @param Message   $causator
      * @param array     $hints
      */
-    public function loadNodesDeferred(array $nodeRefs, Message $causator, array $hints = []): void
+    public function lazyLoadNodes(array $nodeRefs, Message $causator, array $hints = []): void
     {
-        if (null === $this->deferredRequest) {
-            $this->deferredRequest = GetNodeBatchRequestV1::create();
+        if (null === $this->lazyLoadNodesRequest) {
+            $this->lazyLoadNodesRequest = GetNodeBatchRequestV1::create();
         }
 
-        $this->deferredRequest->addToSet('node_refs', $nodeRefs);
-        $this->pbjx->copyContext($causator, $this->deferredRequest);
+        $this->lazyLoadNodesRequest->addToSet('node_refs', $nodeRefs);
+        $this->pbjx->copyContext($causator, $this->lazyLoadNodesRequest);
 
         foreach ($hints as $k => $v) {
-            $this->deferredRequest->addToMap('hints', (string)$k, (string)$v);
+            $this->lazyLoadNodesRequest->addToMap('hints', (string)$k, (string)$v);
         }
     }
 
@@ -159,13 +163,13 @@ final class NcrCache
      *
      * @param NodeRef[] $nodeRefs
      */
-    private function removeNodesDeferred(array $nodeRefs): void
+    private function removeLazyLoadNodes(array $nodeRefs): void
     {
-        if (null === $this->deferredRequest) {
+        if (null === $this->lazyLoadNodesRequest) {
             return;
         }
 
-        $this->deferredRequest->removeFromSet('node_refs', $nodeRefs);
+        $this->lazyLoadNodesRequest->removeFromSet('node_refs', $nodeRefs);
     }
 
     /**
@@ -174,22 +178,22 @@ final class NcrCache
      *
      * todo: split up requests with > 100 node_refs?
      */
-    private function processDeferredRequest()
+    private function processLazyLoadNodesRequest()
     {
-        if (null === $this->deferredRequest) {
+        if (null === $this->lazyLoadNodesRequest) {
             return;
         }
 
-        if (!$this->deferredRequest->has('node_refs')) {
+        if (!$this->lazyLoadNodesRequest->has('node_refs')) {
             return;
         }
 
         try {
-            $this->pbjx->request($this->deferredRequest);
+            $this->pbjx->request($this->lazyLoadNodesRequest);
         } catch (\Exception $e) {
         }
 
-        $this->deferredRequest = null;
+        $this->lazyLoadNodesRequest = null;
     }
 
     /**
