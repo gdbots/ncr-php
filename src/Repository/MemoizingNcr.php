@@ -1,32 +1,45 @@
 <?php
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace Gdbots\Ncr\Repository;
 
 use Gdbots\Ncr\IndexQuery;
 use Gdbots\Ncr\IndexQueryResult;
 use Gdbots\Ncr\Ncr;
-use Gdbots\Ncr\NcrRequestCache;
+use Gdbots\Ncr\NcrCache;
 use Gdbots\Pbj\SchemaQName;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\NodeRef;
 
-class MemoizingNcr implements Ncr
+final class MemoizingNcr implements Ncr
 {
     /** @var Ncr */
     private $next;
 
-    /** @var NcrRequestCache */
+    /** @var NcrCache */
     private $cache;
 
     /**
-     * @param Ncr             $next
-     * @param NcrRequestCache $cache
+     * If true, the NcrCache will be updated when a cache miss occurs.
+     * When the Pbjx request bus is in memory, then you'd want this
+     * to be false so there aren't two processes updating the NcrCache.
+     * One is this memoizer and the other are event listeners which are
+     * updating cache after successful get node requests.
+     *
+     * @var bool
      */
-    public function __construct(Ncr $next, NcrRequestCache $cache)
+    private $readThrough = false;
+
+    /**
+     * @param Ncr      $next
+     * @param NcrCache $cache
+     * @param bool     $readThrough
+     */
+    public function __construct(Ncr $next, NcrCache $cache, bool $readThrough = false)
     {
         $this->next = $next;
         $this->cache = $cache;
+        $this->readThrough = $readThrough;
     }
 
     /**
@@ -67,7 +80,11 @@ class MemoizingNcr implements Ncr
         }
 
         $node = $this->next->getNode($nodeRef, $consistent, $hints);
-        $this->cache->putNode($node);
+
+        if ($this->readThrough) {
+            $this->cache->putNode($node);
+        }
+
         return $node;
     }
 

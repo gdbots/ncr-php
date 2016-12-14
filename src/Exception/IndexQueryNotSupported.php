@@ -5,7 +5,7 @@ namespace Gdbots\Ncr\Exception;
 
 use Gdbots\Schemas\Pbjx\Enum\Code;
 
-class IndexQueryNotSupported extends \LogicException implements GdbotsNcrException
+final class IndexQueryNotSupported extends \LogicException implements GdbotsNcrException
 {
     /**
      * @param string          $message

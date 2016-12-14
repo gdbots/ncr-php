@@ -5,7 +5,7 @@ namespace Gdbots\Ncr\Exception;
 
 use Gdbots\Schemas\Pbjx\Enum\Code;
 
-class RepositoryIndexNotFound extends RepositoryOperationFailed
+final class RepositoryIndexNotFound extends RepositoryOperationFailed
 {
     /**
      * @param string          $message

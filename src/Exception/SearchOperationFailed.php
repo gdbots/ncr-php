@@ -5,7 +5,7 @@ namespace Gdbots\Ncr\Exception;
 
 use Gdbots\Schemas\Pbjx\Enum\Code;
 
-class SearchOperationFailed extends \RuntimeException implements GdbotsNcrException
+final class SearchOperationFailed extends \RuntimeException implements GdbotsNcrException
 {
     /**
      * @param string          $message

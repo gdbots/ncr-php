@@ -20,8 +20,12 @@ class InMemoryNcrTest extends \PHPUnit_Framework_TestCase
     public function testHasNode()
     {
         $node = FakeNode::create();
+        $nodeRef = NodeRef::fromNode($node);
+
         $this->ncr->putNode($node);
-        $this->assertTrue($this->ncr->hasNode(NodeRef::fromNode($node)));
+        $this->assertTrue($this->ncr->hasNode($nodeRef));
+        $this->ncr->deleteNode($nodeRef);
+        $this->assertFalse($this->ncr->hasNode($nodeRef));
     }
 
     public function testGetAndPutNode()
@@ -42,5 +46,47 @@ class InMemoryNcrTest extends \PHPUnit_Framework_TestCase
 
         $this->ncr->deleteNode($nodeRef);
         $this->assertFalse($this->ncr->hasNode($nodeRef));
+    }
+
+    public function testPutNodeWithValidExpectedEtag()
+    {
+        $expectedEtag = 'test';
+        $expectedNode = FakeNode::create()->set('etag', $expectedEtag);
+        $this->ncr->putNode($expectedNode);
+        $nodeRef = NodeRef::fromNode($expectedNode);
+
+        $nextNode = $this->ncr->getNode($nodeRef);
+        $this->ncr->putNode($nextNode, $expectedEtag);
+        $this->assertSame($expectedNode->get('etag'), $nextNode->get('etag'));
+    }
+
+    /**
+     * @expectedException \Gdbots\Ncr\Exception\OptimisticCheckFailed
+     */
+    public function testPutNodeWithInvalidExpectedEtag1()
+    {
+        $expectedEtag = 'test';
+        $expectedNode = FakeNode::create()->set('etag', $expectedEtag);
+        $this->ncr->putNode($expectedNode);
+        $nodeRef = NodeRef::fromNode($expectedNode);
+
+        $invalidEtag = 'test2';
+        $nextNode = $this->ncr->getNode($nodeRef);
+        $this->ncr->putNode($nextNode, $invalidEtag);
+    }
+
+    /**
+     * @expectedException \Gdbots\Ncr\Exception\OptimisticCheckFailed
+     */
+    public function testPutNodeWithInvalidExpectedEtag2()
+    {
+        $expectedEtag = 'test';
+        $expectedNode = FakeNode::create()->set('etag', $expectedEtag);
+        $this->ncr->putNode($expectedNode);
+        $nodeRef = NodeRef::fromNode($expectedNode);
+
+        // expectedEtag should fail here because the node doesn't exist at all
+        $this->ncr->deleteNode($nodeRef);
+        $this->ncr->putNode($expectedNode, $expectedEtag);
     }
 }

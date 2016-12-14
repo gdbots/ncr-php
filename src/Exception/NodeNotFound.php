@@ -7,7 +7,7 @@ use Gdbots\Pbj\Exception\HasEndUserMessage;
 use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 
-class NodeNotFound extends \RuntimeException implements GdbotsNcrException, HasEndUserMessage
+final class NodeNotFound extends \RuntimeException implements GdbotsNcrException, HasEndUserMessage
 {
     /** @var NodeRef */
     protected $nodeRef;

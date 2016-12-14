@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Gdbots\Ncr\Repository;
 
 use Gdbots\Ncr\Exception\NodeNotFound;
+use Gdbots\Ncr\Exception\OptimisticCheckFailed;
 use Gdbots\Ncr\IndexQuery;
 use Gdbots\Ncr\IndexQueryResult;
 use Gdbots\Ncr\Ncr;
@@ -15,20 +16,23 @@ use Gdbots\Schemas\Ncr\NodeRef;
 /**
  * NCR which runs entirely in memory, typically used for unit tests.
  */
-class InMemoryNcr implements Ncr
+final class InMemoryNcr implements Ncr
 {
-    use MemoizingNcrTrait;
-
     /** @var PhpArraySerializer */
     private static $serializer;
+
+    /**
+     * Array of nodes keyed by their NodeRef.
+     *
+     * @var Node[]
+     */
+    private $nodes;
 
     /**
      * @param Node[]|array $nodes
      */
     public function __construct(array $nodes = [])
     {
-        $this->enableCachePruning = false;
-
         foreach ($nodes as $node) {
             try {
                 if (!$node instanceof Node) {
@@ -36,7 +40,7 @@ class InMemoryNcr implements Ncr
                 }
 
                 $nodeRef = NodeRef::fromNode($node);
-                $this->addToNodeCache($nodeRef, $node, false);
+                $this->nodes[$nodeRef->toString()] = $node;
             } catch (\Exception $e) {
             }
         }
@@ -54,8 +58,8 @@ class InMemoryNcr implements Ncr
      */
     public function describeStorage(SchemaQName $qname, array $hints = []): string
     {
-        $count = count($this->nodeCache);
-        $nodeRefs = implode(PHP_EOL, array_keys($this->nodeCache));
+        $count = count($this->nodes);
+        $nodeRefs = implode(PHP_EOL, array_keys($this->nodes));
         return <<<TEXT
 InMemoryNcr
 
@@ -71,7 +75,7 @@ TEXT;
      */
     public function hasNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): bool
     {
-        return $this->isInNodeCache($nodeRef);
+        return isset($this->nodes[$nodeRef->toString()]);
     }
 
     /**
@@ -79,11 +83,16 @@ TEXT;
      */
     public function getNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): Node
     {
-        if (!$this->isInNodeCache($nodeRef)) {
+        if (!$this->hasNode($nodeRef)) {
             throw NodeNotFound::forNodeRef($nodeRef);
         }
 
-        return $this->getFromNodeCache($nodeRef);
+        $node = $this->nodes[$nodeRef->toString()];
+        if ($node->isFrozen()) {
+            $node = $this->nodes[$nodeRef->toString()] = clone $node;
+        }
+
+        return $node;
     }
 
     /**
@@ -91,9 +100,23 @@ TEXT;
      */
     public function putNode(Node $node, ?string $expectedEtag = null, array $hints = []): void
     {
-        $node->freeze();
         $nodeRef = NodeRef::fromNode($node);
-        $this->addToNodeCache($nodeRef, $node, false);
+
+        if (null !== $expectedEtag) {
+            if (!$this->hasNode($nodeRef)) {
+                throw new OptimisticCheckFailed(
+                    sprintf('NodeRef [%s] did not have expected etag [%s] (not found).', $nodeRef, $expectedEtag)
+                );
+            }
+
+            if ($this->nodes[$nodeRef->toString()]->get('etag') !== $expectedEtag) {
+                throw new OptimisticCheckFailed(
+                    sprintf('NodeRef [%s] did not have expected etag [%s].', $nodeRef, $expectedEtag)
+                );
+            }
+        }
+
+        $this->nodes[$nodeRef->toString()] = $node->freeze();
     }
 
     /**
@@ -101,7 +124,7 @@ TEXT;
      */
     public function deleteNode(NodeRef $nodeRef, array $hints = []): void
     {
-        $this->removeFromNodeCache($nodeRef);
+        unset($this->nodes[$nodeRef->toString()]);
     }
 
     /**

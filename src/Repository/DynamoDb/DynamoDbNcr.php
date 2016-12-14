@@ -21,7 +21,7 @@ use Gdbots\Schemas\Pbjx\Enum\Code;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-class DynamoDbNcr implements Ncr
+final class DynamoDbNcr implements Ncr
 {
     /** @var DynamoDbClient */
     private $client;
@@ -51,7 +51,7 @@ class DynamoDbNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    final public function createStorage(SchemaQName $qname, array $hints = [])
+    public function createStorage(SchemaQName $qname, array $hints = [])
     {
         $tableName = $this->tableManager->getNodeTableName($qname, $hints);
         $this->tableManager->getNodeTable($qname)->create($this->client, $tableName);
@@ -60,7 +60,7 @@ class DynamoDbNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    final public function describeStorage(SchemaQName $qname, array $hints = []): string
+    public function describeStorage(SchemaQName $qname, array $hints = []): string
     {
         $tableName = $this->tableManager->getNodeTableName($qname, $hints);
         return $this->tableManager->getNodeTable($qname)->describe($this->client, $tableName);
@@ -69,27 +69,53 @@ class DynamoDbNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    final public function hasNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): bool
+    public function hasNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): bool
     {
-        if (!$consistent && $this->isInNodeCache($nodeRef)) {
-            return true;
-        }
+        $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
 
         try {
-            $this->getNode($nodeRef, $consistent, $hints);
-        } catch (NodeNotFound $e) {
-            return false;
+            $keyName = '#' . NodeTable::HASH_KEY_NAME;
+            $response = $this->client->getItem([
+                'ConsistentRead'           => $consistent,
+                'TableName'                => $tableName,
+                'ProjectionExpression'     => $keyName,
+                'ExpressionAttributeNames' => [$keyName => NodeTable::HASH_KEY_NAME],
+                'Key'                      => [NodeTable::HASH_KEY_NAME => ['S' => $nodeRef->toString()]],
+            ]);
         } catch (\Exception $e) {
-            throw $e;
+            if ($e instanceof AwsException) {
+                $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
+                if ('ResourceNotFoundException' === $errorName) {
+                    return false;
+                } elseif ('ProvisionedThroughputExceededException' === $errorName) {
+                    $code = Code::RESOURCE_EXHAUSTED;
+                } else {
+                    $code = Code::UNAVAILABLE;
+                }
+            } else {
+                $errorName = ClassUtils::getShortName($e);
+                $code = Code::INTERNAL;
+            }
+
+            throw new RepositoryOperationFailed(
+                sprintf(
+                    '%s while checking for [%s] in DynamoDb table [%s].',
+                    $errorName,
+                    $nodeRef,
+                    $tableName
+                ),
+                $code,
+                $e
+            );
         }
 
-        return true;
+        return isset($response['Item']);
     }
 
     /**
      * {@inheritdoc}
      */
-    final public function getNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): Node
+    public function getNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): Node
     {
         $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
 
@@ -154,7 +180,7 @@ class DynamoDbNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    final public function putNode(Node $node, ?string $expectedEtag = null, array $hints = []): void
+    public function putNode(Node $node, ?string $expectedEtag = null, array $hints = []): void
     {
         $node->freeze();
         $nodeRef = NodeRef::fromNode($node);
@@ -212,7 +238,7 @@ class DynamoDbNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    final public function deleteNode(NodeRef $nodeRef, array $hints = []): void
+    public function deleteNode(NodeRef $nodeRef, array $hints = []): void
     {
         $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
 
@@ -253,7 +279,7 @@ class DynamoDbNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    final public function findNodeRefs(IndexQuery $query, array $hints = []): IndexQueryResult
+    public function findNodeRefs(IndexQuery $query, array $hints = []): IndexQueryResult
     {
         $tableName = $this->tableManager->getNodeTableName($query->getQName(), $hints);
         $table = $this->tableManager->getNodeTable($query->getQName());

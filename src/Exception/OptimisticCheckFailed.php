@@ -5,7 +5,7 @@ namespace Gdbots\Ncr\Exception;
 
 use Gdbots\Schemas\Pbjx\Enum\Code;
 
-class OptimisticCheckFailed extends \RuntimeException implements GdbotsNcrException
+final class OptimisticCheckFailed extends \RuntimeException implements GdbotsNcrException
 {
     /**
      * @param string          $message
