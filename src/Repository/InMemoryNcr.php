@@ -7,6 +7,7 @@ use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Ncr\IndexQuery;
 use Gdbots\Ncr\IndexQueryResult;
 use Gdbots\Ncr\Ncr;
+use Gdbots\Pbj\SchemaQName;
 use Gdbots\Pbj\Serializer\PhpArraySerializer;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\NodeRef;
@@ -39,6 +40,30 @@ class InMemoryNcr implements Ncr
             } catch (\Exception $e) {
             }
         }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function createStorage(SchemaQName $qname, array $hints = [])
+    {
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function describeStorage(SchemaQName $qname, array $hints = []): string
+    {
+        $count = count($this->nodeCache);
+        $nodeRefs = implode(PHP_EOL, array_keys($this->nodeCache));
+        return <<<TEXT
+InMemoryNcr
+
+Count: {$count}
+NodeRefs:
+{$nodeRefs}
+
+TEXT;
     }
 
     /**

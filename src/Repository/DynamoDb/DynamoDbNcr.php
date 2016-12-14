@@ -13,8 +13,6 @@ use Gdbots\Ncr\Exception\RepositoryOperationFailed;
 use Gdbots\Ncr\IndexQuery;
 use Gdbots\Ncr\IndexQueryResult;
 use Gdbots\Ncr\Ncr;
-use Gdbots\Ncr\NcrAdmin;
-use Gdbots\Ncr\Repository\MemoizingNcrTrait;
 use Gdbots\Pbj\Marshaler\DynamoDb\ItemMarshaler;
 use Gdbots\Pbj\SchemaQName;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
@@ -23,10 +21,8 @@ use Gdbots\Schemas\Pbjx\Enum\Code;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
-class DynamoDbNcr implements Ncr, NcrAdmin
+class DynamoDbNcr implements Ncr
 {
-    use MemoizingNcrTrait;
-
     /** @var DynamoDbClient */
     private $client;
 
@@ -95,10 +91,6 @@ class DynamoDbNcr implements Ncr, NcrAdmin
      */
     final public function getNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): Node
     {
-        if (!$consistent && $this->isInNodeCache($nodeRef)) {
-            return $this->getFromNodeCache($nodeRef);
-        }
-
         $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
 
         try {
@@ -156,7 +148,6 @@ class DynamoDbNcr implements Ncr, NcrAdmin
             throw NodeNotFound::forNodeRef($nodeRef, $e);
         }
 
-        $this->addToNodeCache($nodeRef, $node);
         return $node;
     }
 
@@ -167,7 +158,6 @@ class DynamoDbNcr implements Ncr, NcrAdmin
     {
         $node->freeze();
         $nodeRef = NodeRef::fromNode($node);
-        $this->removeFromNodeCache($nodeRef);
         $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
         $table = $this->tableManager->getNodeTable($nodeRef->getQName());
 
@@ -179,7 +169,7 @@ class DynamoDbNcr implements Ncr, NcrAdmin
 
         try {
             $item = $this->marshaler->marshal($node);
-            $item[NodeTable::HASH_KEY_NAME] = ['S' => NodeRef::fromNode($node)->toString()];
+            $item[NodeTable::HASH_KEY_NAME] = ['S' => $nodeRef->toString()];
             $table->beforePutItem($item, $node);
             $params['Item'] = $item;
             $this->client->putItem($params);
@@ -217,8 +207,6 @@ class DynamoDbNcr implements Ncr, NcrAdmin
                 $e
             );
         }
-
-        $this->addToNodeCache($nodeRef, $node);
     }
 
     /**
@@ -226,8 +214,6 @@ class DynamoDbNcr implements Ncr, NcrAdmin
      */
     final public function deleteNode(NodeRef $nodeRef, array $hints = []): void
     {
-        //$this->ncrCache->deleteNode($nodeRef);
-        $this->removeFromNodeCache($nodeRef);
         $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
 
         try {

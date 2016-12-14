@@ -68,7 +68,8 @@ trait MemoizingNcrTrait
      */
     private function getFromNodeCache(NodeRef $nodeRef): Node
     {
-        return clone $this->nodeCache[$nodeRef->toString()];
+        $node = $this->nodeCache[$nodeRef->toString()];
+        return $node->isFrozen() ? clone $node : $node;
     }
 
     /**

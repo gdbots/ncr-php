@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Gdbots\Ncr;
 
@@ -7,11 +7,30 @@ use Gdbots\Ncr\Exception\GdbotsNcrException;
 use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Ncr\Exception\OptimisticCheckFailed;
 use Gdbots\Ncr\Exception\RepositoryIndexNotFound;
+use Gdbots\Pbj\SchemaQName;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\NodeRef;
 
 interface Ncr
 {
+    /**
+     * Creates the storage for a given SchemaQName.
+     *
+     * @param SchemaQName $qname
+     * @param array       $hints Data that helps the implementation decide where to create the storage.
+     */
+    public function createStorage(SchemaQName $qname, array $hints = []);
+
+    /**
+     * Returns debugging information about the storage for a given SchemaQName.
+     *
+     * @param SchemaQName $qname
+     * @param array       $hints Data that helps the implementation decide what storage to describe.
+     *
+     * @return string
+     */
+    public function describeStorage(SchemaQName $qname, array $hints = []): string;
+
     /**
      * @param NodeRef $nodeRef    The NodeRef to check for in the NCR.
      * @param bool    $consistent An eventually consistent read is used by default unless this is true.
