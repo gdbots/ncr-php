@@ -91,6 +91,15 @@ final class MemoizingNcr implements Ncr
     /**
      * {@inheritdoc}
      */
+    public function getNodes(array $nodeRefs, bool $consistent = false, array $hints = []): array
+    {
+        // todo: optimize for batch processing and cache handling
+        return $this->next->getNodes($nodeRefs, $consistent, $hints);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function putNode(Node $node, ?string $expectedEtag = null, array $hints = []): void
     {
         $this->next->putNode($node, $expectedEtag, $hints);

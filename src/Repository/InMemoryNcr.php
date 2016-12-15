@@ -98,6 +98,24 @@ TEXT;
     /**
      * {@inheritdoc}
      */
+    public function getNodes(array $nodeRefs, bool $consistent = false, array $hints = []): array
+    {
+        $keys = array_map('strval', $nodeRefs);
+        $nodes = array_intersect_key($this->nodes, array_flip($keys));
+
+        /** @var Node[] $nodes */
+        foreach ($nodes as $nodeRef => $node) {
+            if ($node->isFrozen()) {
+                $nodes[$nodeRef] = $this->nodes[$nodeRef] = clone $node;
+            }
+        }
+
+        return $nodes;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function putNode(Node $node, ?string $expectedEtag = null, array $hints = []): void
     {
         $nodeRef = NodeRef::fromNode($node);

@@ -118,6 +118,23 @@ final class NcrCache
     }
 
     /**
+     * @param Node[] $nodes The Nodes to put into the NcrCache.
+     */
+    public function putNodes(array $nodes): void
+    {
+        $this->pruneNodeCache();
+        $nodeRefs = [];
+
+        foreach ($nodes as $node) {
+            $nodeRef = NodeRef::fromNode($node);
+            $nodeRefs[] = $nodeRef;
+            $this->nodes[$nodeRef->toString()] = $node;
+        }
+
+        $this->removeLazyLoadNodes($nodeRefs);
+    }
+
+    /**
      * @param NodeRef $nodeRef The NodeRef to delete from the NcrCache.
      */
     public function deleteNode(NodeRef $nodeRef): void

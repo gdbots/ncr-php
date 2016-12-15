@@ -1,5 +1,5 @@
 <?php
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
@@ -53,7 +53,17 @@ interface Ncr
      * @throws GdbotsNcrException
      */
     public function getNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): Node;
-    //public function getNodeBatch(array $nodeRefs, $consistent = false, array $hints = []);
+
+    /**
+     * @param NodeRef[] $nodeRefs   An array of NodeRefs to get from the NCR.
+     * @param bool      $consistent An eventually consistent read is used by default unless this is true.
+     * @param array     $hints      Data that helps the NCR decide where to read/write data from.
+     *
+     * @return Node[]
+     *
+     * @throws GdbotsNcrException
+     */
+    public function getNodes(array $nodeRefs, bool $consistent = false, array $hints = []): array;
 
     /**
      * @param Node   $node         The Node to put into the NCR.
