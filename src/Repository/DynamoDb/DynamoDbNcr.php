@@ -180,6 +180,37 @@ final class DynamoDbNcr implements Ncr
     /**
      * {@inheritdoc}
      */
+    public function getNodes(array $nodeRefs, bool $consistent = false, array $hints = []): array
+    {
+        if (count($nodeRefs) === 1) {
+            try {
+                return [(string)$nodeRefs[0] => $this->getNode($nodeRefs[0], $consistent, $hints)];
+            } catch (NodeNotFound $e) {
+                return [];
+            } catch (\Exception $e) {
+                throw $e;
+            }
+        }
+
+        $batch = new BatchGetItemRequest($this->client);
+        $batch->withBatchSize(2)->usingConsistentRead($consistent);
+
+        foreach ($nodeRefs as $nodeRef) {
+            $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
+            $batch->addItemKey($tableName, [NodeTable::HASH_KEY_NAME => ['S' => $nodeRef->toString()]]);
+        }
+
+
+
+        $batch->flush();
+
+        return [];
+
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function putNode(Node $node, ?string $expectedEtag = null, array $hints = []): void
     {
         $node->freeze();
