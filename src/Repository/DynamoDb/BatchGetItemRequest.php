@@ -33,7 +33,7 @@ final class BatchGetItemRequest
      *
      * @var int
      */
-    private $poolSize = 5;
+    private $poolSize = 25;
 
     /**
      * When true, a ConsistentRead is used.
@@ -41,6 +41,13 @@ final class BatchGetItemRequest
      * @var bool
      */
     private $consistentRead = false;
+
+    /**
+     * A callable to execute when an error occurs.
+     *
+     * @var callable
+     */
+    private $errorFunc;
 
     /** @var array */
     private $queue;
@@ -59,7 +66,7 @@ final class BatchGetItemRequest
      *
      * @return self
      */
-    public function withBatchSize(int $batchSize = 100): self
+    public function batchSize(int $batchSize = 100): self
     {
         $this->batchSize = NumberUtils::bound($batchSize, 2, 100);
         return $this;
@@ -70,9 +77,9 @@ final class BatchGetItemRequest
      *
      * @return self
      */
-    public function withPoolSize(int $poolSize = 5): self
+    public function poolSize(int $poolSize = 25): self
     {
-        $this->poolSize = NumberUtils::bound($poolSize, 1, 10);
+        $this->poolSize = NumberUtils::bound($poolSize, 1, 50);
         return $this;
     }
 
@@ -81,9 +88,20 @@ final class BatchGetItemRequest
      *
      * @return self
      */
-    public function usingConsistentRead(bool $consistentRead = false): self
+    public function consistentRead(bool $consistentRead = false): self
     {
         $this->consistentRead = $consistentRead;
+        return $this;
+    }
+
+    /**
+     * @param callable $func
+     *
+     * @return self
+     */
+    public function onError(callable $func): self
+    {
+        $this->errorFunc = $func;
         return $this;
     }
 
@@ -102,35 +120,39 @@ final class BatchGetItemRequest
     }
 
     /**
-     * Flushes the batch by combining all the queued requests into
+     * Processes the batch by combining all the queued requests into
      * BatchGetItem commands and executing them. UnprocessedKeys
      * are automatically re-queued.
      *
-     * @return self
+     * @return array
      */
-    public function flush()
+    public function getItems(): array
     {
-        $items = [];
+        $allItems = [];
+
         while ($this->queue) {
             $commands = $this->prepareCommands();
             $pool = new CommandPool($this->client, $commands, [
                 'concurrency' => $this->poolSize,
-                'fulfilled'   => function (ResultInterface $result) {
+                'fulfilled'   => function (ResultInterface $result) use (&$allItems) {
                     if ($result->hasKey('UnprocessedKeys')) {
                         $this->retryUnprocessed($result['UnprocessedKeys']);
                     }
 
-                    foreach ($result->get('Responses') as $response) {
-
+                    foreach ((array)$result->get('Responses') as $tableName => $items) {
+                        $allItems = array_merge($allItems, $items);
                     }
                 },
                 'rejected'    => function ($reason) {
                     if ($reason instanceof AwsException) {
-                        $code = $reason->getAwsErrorCode();
-                        if ($code === 'ProvisionedThroughputExceededException') {
+                        if ('ProvisionedThroughputExceededException' === $reason->getAwsErrorCode()) {
                             $this->retryUnprocessed($reason->getCommand()['RequestItems']);
-                        } elseif (is_callable($this->config['error'])) {
-                            $this->config['error']($reason);
+                            return;
+                        }
+
+                        if (is_callable($this->errorFunc)) {
+                            $func = $this->errorFunc;
+                            $func($reason);
                         }
                     }
                 },
@@ -139,7 +161,7 @@ final class BatchGetItemRequest
             $pool->promise()->wait();
         }
 
-        return $this;
+        return $allItems;
     }
 
     /**
@@ -147,7 +169,7 @@ final class BatchGetItemRequest
      *
      * @return CommandInterface[]
      */
-    private function prepareCommands()
+    private function prepareCommands(): array
     {
         $batches = array_chunk($this->queue, $this->batchSize);
         $this->queue = [];
@@ -161,8 +183,6 @@ final class BatchGetItemRequest
                 }
                 $requests[$item['table']]['Keys'][] = $item['key'];
             }
-
-            echo json_encode(['RequestItems' => $requests], JSON_PRETTY_PRINT);
             $commands[] = $this->client->getCommand('BatchGetItem', ['RequestItems' => $requests]);
         }
 
@@ -174,7 +194,7 @@ final class BatchGetItemRequest
      *
      * @param array $unprocessed
      */
-    private function retryUnprocessed(array $unprocessed)
+    private function retryUnprocessed(array $unprocessed): void
     {
         foreach ($unprocessed as $table => $requests) {
             foreach ($requests['Keys'] as $key) {

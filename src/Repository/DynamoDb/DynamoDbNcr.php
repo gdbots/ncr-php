@@ -3,9 +3,12 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr\Repository\DynamoDb;
 
+use Aws\CommandPool;
 use Aws\DynamoDb\DynamoDbClient;
 use Aws\Exception\AwsException;
+use Aws\ResultInterface;
 use Gdbots\Common\Util\ClassUtils;
+use Gdbots\Common\Util\NumberUtils;
 use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Ncr\Exception\OptimisticCheckFailed;
 use Gdbots\Ncr\Exception\RepositoryIndexNotFound;
@@ -18,6 +21,7 @@ use Gdbots\Pbj\SchemaQName;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Pbjx\Enum\Code;
+use GuzzleHttp\Promise\PromiseInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -192,20 +196,36 @@ final class DynamoDbNcr implements Ncr
             }
         }
 
-        $batch = new BatchGetItemRequest($this->client);
-        $batch->withBatchSize(2)->usingConsistentRead($consistent);
+        $batch = (new BatchGetItemRequest($this->client))
+            ->batchSize(2)
+            ->consistentRead($consistent)
+            ->onError(function (AwsException $e) use ($hints) {
+                $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
+                $this->logger->error(
+                    sprintf('%s while processing BatchGetItemRequest.', $errorName),
+                    ['exception' => $e, 'hints' => $hints]
+                );
+            });
 
         foreach ($nodeRefs as $nodeRef) {
             $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
             $batch->addItemKey($tableName, [NodeTable::HASH_KEY_NAME => ['S' => $nodeRef->toString()]]);
         }
 
+        $nodes = [];
+        foreach ($batch->getItems() as $item) {
+            try {
+                $nodeRef = NodeRef::fromString($item[NodeTable::HASH_KEY_NAME]['S']);
+                $nodes[$nodeRef->toString()] = $this->marshaler->unmarshal($item);
+            } catch (\Exception $e) {
+                $this->logger->error(
+                    'Item returned from DynamoDb table could not be unmarshaled.',
+                    ['exception' => $e, 'item' => $item, 'hints' => $hints]
+                );
+            }
+        }
 
-
-        $batch->flush();
-
-        return [];
-
+        return $nodes;
     }
 
     /**
@@ -399,5 +419,162 @@ final class DynamoDbNcr implements Ncr
         }
 
         return new IndexQueryResult($query, $nodeRefs, $nextCursor);
+    }
+
+
+
+
+    /**
+     * {@inheritdoc}
+     */
+    final public function streamNodes(SchemaQName $qname, callable $callback, array $hints = []): void
+    {
+        $tableName = $this->tableManager->getNodeTableName($qname, $hints);
+        $skipErrors = filter_var($hints['skip_errors'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $reindexing = filter_var($hints['reindexing'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $limit = NumberUtils::bound($hints['limit'] ?? 100, 1, 500);
+        $totalSegments = NumberUtils::bound($hints['total_segments'] ?? 16, 1, 64);
+        $poolDelay = NumberUtils::bound($hints['pool_delay'] ?? 500, 100, 10000);
+
+        $params = [
+            'ExpressionAttributeNames' => [
+                '#schema' => '_schema'
+            ],
+            'ExpressionAttributeValues' => [
+                ':v_qname' => ['S' => $qname->toString()]
+            ]
+        ];
+
+        $filterExpressions = ['contains(#schema, :v_qname)'];
+
+        if ($reindexing) {
+            $params['ExpressionAttributeNames']['#indexed'] = NodeTable::INDEXED_KEY_NAME;
+            $filterExpressions[] = 'attribute_exists(#indexed)';
+        }
+
+        foreach (['s16', 's32', 's64', 's128', 's256'] as $shard) {
+            if (isset($hints[$shard])) {
+                $params['ExpressionAttributeNames']["#{$shard}"] = "__{$shard}";
+                $params['ExpressionAttributeValues'][":v_{$shard}"] = ['N' => (string) ((int) $hints[$shard])];
+                $filterExpressions[] = "(#{$shard} = :v_{$shard})";
+            }
+        }
+
+        $params['TableName'] = $tableName;
+        $params['Limit'] = $limit;
+        $params['TotalSegments'] = $totalSegments;
+        $params['FilterExpression'] = implode(' AND ', $filterExpressions);
+
+        $pending = [];
+        $iter2seg = ['prev' => [], 'next' => []];
+        for ($segment = 0; $segment < $totalSegments; $segment++) {
+            $params['Segment'] = $segment;
+            $iter2seg['prev'][] = $segment;
+            $pending[] = $this->client->getCommand('Scan', $params);
+        }
+
+        $fulfilled = function (ResultInterface $result, string $iterKey)
+        use ($qname, $callback, $tableName, $hints, $params, &$pending, &$iter2seg) {
+            $segment = $iter2seg['prev'][$iterKey];
+
+            foreach ($result['Items'] as $item) {
+                try {
+                    $nodeRef = NodeRef::fromString($item[NodeTable::HASH_KEY_NAME]['S']);
+                    $node = $this->marshaler->unmarshal($item);
+                } catch (\Exception $e) {
+                    $this->logger->error(
+                        'Item returned from DynamoDb table [{table_name}] segment [{segment}] ' .
+                        'for QName [{qname}] could not be unmarshaled.',
+                        [
+                            'exception'  => $e,
+                            'item'       => $item,
+                            'hints'      => $hints,
+                            'table_name' => $tableName,
+                            'segment'    => $segment,
+                            'qname'      => (string) $qname,
+                        ]
+                    );
+
+                    continue;
+                }
+
+                $callback($node, $nodeRef);
+            }
+
+            if ($result['LastEvaluatedKey']) {
+                $params['Segment'] = $segment;
+                $params['ExclusiveStartKey'] = $result['LastEvaluatedKey'];
+                $pending[] = $this->client->getCommand('Scan', $params);
+                $iter2seg['next'][] = $segment;
+            } else {
+                $this->logger->info(
+                    'Scan of DynamoDb table [{table_name}] segment [{segment}] for QName [{qname}] is complete.',
+                    [
+                        'hints'      => $hints,
+                        'table_name' => $tableName,
+                        'segment'    => $segment,
+                        'qname'      => (string) $qname,
+                    ]
+                );
+            }
+        };
+
+        $rejected = function (AwsException $exception, string $iterKey, PromiseInterface $aggregatePromise)
+        use ($qname, $tableName, $hints, $skipErrors, &$iter2seg) {
+            $segment = $iter2seg['prev'][$iterKey];
+
+            $errorName = $exception->getAwsErrorCode() ?: ClassUtils::getShortName($exception);
+            if ('ProvisionedThroughputExceededException' === $errorName) {
+                $code = Code::RESOURCE_EXHAUSTED;
+            } else {
+                $code = Code::UNAVAILABLE;
+            }
+
+            if ($skipErrors) {
+                $this->logger->error(
+                    sprintf(
+                        '%s while scanning DynamoDb table [{table_name}] segment [{segment}] for QName [{qname}].',
+                        $errorName
+                    ),
+                    [
+                        'exception'  => $exception,
+                        'hints'      => $hints,
+                        'table_name' => $tableName,
+                        'segment'    => $segment,
+                        'qname'      => (string) $qname,
+                    ]
+                );
+
+                return;
+            }
+
+            $aggregatePromise->reject(
+                new RepositoryOperationFailed(
+                    sprintf(
+                        '%s while scanning DynamoDb table [%s] segment [%s] for QName [%s].',
+                        $errorName,
+                        $tableName,
+                        $segment,
+                        (string) $qname
+                    ),
+                    $code,
+                    $exception
+                )
+            );
+        };
+
+        while (count($pending) > 0) {
+            $commands = $pending;
+            $pending = [];
+            $pool = new CommandPool($this->client, $commands, ['fulfilled' => $fulfilled, 'rejected' => $rejected]);
+            $pool->promise()->wait();
+            $iter2seg['prev'] = $iter2seg['next'];
+            $iter2seg['next'] = [];
+
+            if (count($pending) > 0) {
+                $this->logger->info(sprintf('Pausing for %d milliseconds.', $poolDelay));
+                usleep($poolDelay * 1000);
+            }
+        }
     }
 }
