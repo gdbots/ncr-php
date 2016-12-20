@@ -96,12 +96,11 @@ final class DynamoDbNcr implements Ncr
         $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
 
         try {
-            $keyName = '#' . NodeTable::HASH_KEY_NAME;
             $response = $this->client->getItem([
                 'ConsistentRead'           => $consistent,
                 'TableName'                => $tableName,
-                'ProjectionExpression'     => $keyName,
-                'ExpressionAttributeNames' => [$keyName => NodeTable::HASH_KEY_NAME],
+                'ProjectionExpression'     => '#node_ref',
+                'ExpressionAttributeNames' => ['#node_ref' => NodeTable::HASH_KEY_NAME],
                 'Key'                      => [NodeTable::HASH_KEY_NAME => ['S' => $nodeRef->toString()]],
             ]);
         } catch (\Exception $e) {
@@ -204,9 +203,14 @@ final class DynamoDbNcr implements Ncr
      */
     public function getNodes(array $nodeRefs, bool $consistent = false, array $hints = []): array
     {
-        if (count($nodeRefs) === 1) {
+        echo 'called'.PHP_EOL;
+
+        if (empty($nodeRefs)) {
+            return [];
+        } elseif (count($nodeRefs) === 1) {
             try {
-                return [(string) $nodeRefs[0] => $this->getNode($nodeRefs[0], $consistent, $hints)];
+                $nodeRef = array_shift($nodeRefs);
+                return [(string)$nodeRef => $this->getNode($nodeRef, $consistent, $hints)];
             } catch (NodeNotFound $e) {
                 return [];
             } catch (\Exception $e) {
@@ -259,8 +263,8 @@ final class DynamoDbNcr implements Ncr
 
         $params = ['TableName' => $tableName];
         if (null !== $expectedEtag) {
-            $params['ConditionExpression'] = 'etag = :v_etag';
             $params['ExpressionAttributeValues'] = [':v_etag' => ['S' => (string) $expectedEtag]];
+            $params['ConditionExpression'] = 'etag = :v_etag';
         }
 
         try {
@@ -443,7 +447,7 @@ final class DynamoDbNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    final public function streamNodes(SchemaQName $qname, callable $callback, array $hints = []): void
+    public function streamNodes(SchemaQName $qname, callable $callback, array $hints = []): void
     {
         $hints['node_refs_only'] = false;
         $this->doStreamNodes($qname, $callback, $hints);
@@ -452,7 +456,7 @@ final class DynamoDbNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    final public function streamNodeRefs(SchemaQName $qname, callable $callback, array $hints = []): void
+    public function streamNodeRefs(SchemaQName $qname, callable $callback, array $hints = []): void
     {
         $hints['node_refs_only'] = true;
         $this->doStreamNodes($qname, $callback, $hints);
@@ -474,14 +478,14 @@ final class DynamoDbNcr implements Ncr
 
         $params = [
             'ExpressionAttributeNames'  => [
-                '#schema' => '_schema',
+                '#node_ref' => NodeTable::HASH_KEY_NAME,
             ],
             'ExpressionAttributeValues' => [
-                ':v_qname' => ['S' => $qname->toString()],
+                ':v_qname' => ['S' => $qname->toString().':'],
             ],
         ];
 
-        $filterExpressions = ['contains(#schema, :v_qname)'];
+        $filterExpressions = ['begins_with(#node_ref, :v_qname)'];
 
         if ($reindexing) {
             $params['ExpressionAttributeNames']['#indexed'] = NodeTable::INDEXED_KEY_NAME;
@@ -491,18 +495,19 @@ final class DynamoDbNcr implements Ncr
         foreach (['s16', 's32', 's64', 's128', 's256'] as $shard) {
             if (isset($hints[$shard])) {
                 $params['ExpressionAttributeNames']["#{$shard}"] = "__{$shard}";
-                $params['ExpressionAttributeValues'][":v_{$shard}"] = ['N' => (string) ((int) $hints[$shard])];
-                $filterExpressions[] = "(#{$shard} = :v_{$shard})";
+                $params['ExpressionAttributeValues'][":v_{$shard}"] = ['N' => (string) ((int)$hints[$shard])];
+                $filterExpressions[] = "#{$shard} = :v_{$shard}";
             }
         }
 
-        // fixme: add node_status filter
-
+        if (isset($hints['status'])) {
+            $params['ExpressionAttributeNames']['#status'] = 'status';
+            $params['ExpressionAttributeValues'][':v_status'] = ['S' => (string)$hints['status']];
+            $filterExpressions[] = '#status = :v_status';
+        }
 
         if ($hints['node_refs_only']) {
-            $keyName = '#' . NodeTable::HASH_KEY_NAME;
-            $params['ProjectionExpression'] = $keyName;
-            $params['ExpressionAttributeNames'][$keyName] = NodeTable::HASH_KEY_NAME;
+            $params['ProjectionExpression'] = '#node_ref';
         }
 
         $params['TableName'] = $tableName;
@@ -549,7 +554,7 @@ final class DynamoDbNcr implements Ncr
                 if ($hints['node_refs_only']) {
                     $callback($nodeRef);
                 } else {
-                    $callback($node, $nodeRef);
+                    $callback($nodeRef, $node);
                 }
             }
 

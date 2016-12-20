@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
-use Gdbots\Pbjx\Event\PbjxEvent;
+use Gdbots\Pbjx\Event\ResponseCreatedEvent;
 use Gdbots\Pbjx\EventSubscriber;
 
 /*
@@ -28,22 +28,22 @@ class NcrCacheLoader implements EventSubscriber
     }
 
     /**
-     * @param PbjxEvent $pbjxEvent
+     * @param ResponseCreatedEvent $pbjxEvent
      */
-    public function onGetNodeReponseCreated(PbjxEvent $pbjxEvent): void
+    public function onGetNodeReponseCreated(ResponseCreatedEvent $pbjxEvent): void
     {
-        $response = $pbjxEvent->getMessage();
+        $response = $pbjxEvent->getResponse();
         if ($response->has('node')) {
             $this->cache->putNode($response->get('node'));
         }
     }
 
     /**
-     * @param PbjxEvent $pbjxEvent
+     * @param ResponseCreatedEvent $pbjxEvent
      */
-    public function onGetNodeBatchReponseCreated(PbjxEvent $pbjxEvent): void
+    public function onGetNodeBatchReponseCreated(ResponseCreatedEvent $pbjxEvent): void
     {
-        $response = $pbjxEvent->getMessage();
+        $response = $pbjxEvent->getResponse();
         if ($response->has('nodes')) {
             $this->cache->putNodes($response->get('nodes'));
         }

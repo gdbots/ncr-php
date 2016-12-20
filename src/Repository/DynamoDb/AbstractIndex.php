@@ -74,7 +74,7 @@ abstract class AbstractIndex implements GlobalSecondaryIndex
         ];
 
         $keyConditionExpressions = ['#hash = :v_hash'];
-        $filterExpressions = ['contains(#node_ref, :v_qname)'];
+        $filterExpressions = ['begins_with(#node_ref, :v_qname)'];
         $rangeKeyName = $this->getRangeKeyName();
         $usedRange = false;
         $i = 0;

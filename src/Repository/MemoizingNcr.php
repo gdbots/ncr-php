@@ -93,8 +93,33 @@ final class MemoizingNcr implements Ncr
      */
     public function getNodes(array $nodeRefs, bool $consistent = false, array $hints = []): array
     {
-        // todo: optimize for batch processing and cache handling
-        return $this->next->getNodes($nodeRefs, $consistent, $hints);
+        if (empty($nodeRefs)) {
+            return [];
+        }
+
+        $cached = [];
+
+        if (!$consistent) {
+            /** @var NodeRef[] $nodeRefs */
+            foreach ($nodeRefs as $idx => $nodeRef) {
+                if ($this->cache->hasNode($nodeRef)) {
+                    $cached[$nodeRef->toString()] = $this->cache->getNode($nodeRef);
+                    unset($nodeRefs[$idx]);
+                }
+            }
+        }
+
+        $nodes = empty($nodeRefs) ? [] : $this->next->getNodes($nodeRefs, $consistent, $hints);
+
+        if ($this->readThrough && !empty($nodes)) {
+            $this->cache->putNodes($nodes);
+        }
+
+        if (!empty($cached)) {
+            $nodes += $cached;
+        }
+
+        return $nodes;
     }
 
     /**
@@ -126,7 +151,7 @@ final class MemoizingNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    final public function streamNodes(SchemaQName $qname, callable $callback, array $hints = []): void
+    public function streamNodes(SchemaQName $qname, callable $callback, array $hints = []): void
     {
         $this->next->streamNodes($qname, $callback, $hints);
     }
@@ -134,7 +159,7 @@ final class MemoizingNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    final public function streamNodeRefs(SchemaQName $qname, callable $callback, array $hints = []): void
+    public function streamNodeRefs(SchemaQName $qname, callable $callback, array $hints = []): void
     {
         $this->next->streamNodeRefs($qname, $callback, $hints);
     }

@@ -57,7 +57,7 @@ final class IndexQuery implements ToArray, \JsonSerializable
      * An array of fields referenced which are extracted from
      * the filters used on this query.
      *
-     * @var string
+     * @var string[]
      */
     private $fields = [];
 
