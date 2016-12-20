@@ -30,11 +30,14 @@ final class DynamoDbNcr implements Ncr
     /** @var DynamoDbClient */
     private $client;
 
-    /** @var LoggerInterface */
-    private $logger;
-
     /** @var TableManager */
     private $tableManager;
+
+    /** @var array */
+    private $config;
+
+    /** @var LoggerInterface */
+    private $logger;
 
     /** @var ItemMarshaler */
     private $marshaler;
@@ -42,12 +45,27 @@ final class DynamoDbNcr implements Ncr
     /**
      * @param DynamoDbClient       $client
      * @param TableManager         $tableManager
+     * @param array                $config
      * @param LoggerInterface|null $logger
      */
-    public function __construct(DynamoDbClient $client, TableManager $tableManager, ?LoggerInterface $logger = null)
-    {
+    public function __construct(
+        DynamoDbClient $client,
+        TableManager $tableManager,
+        array $config = [],
+        ?LoggerInterface $logger = null
+    ) {
+        // defaults
+        $config += [
+            'batch_size' => 100,
+            'pool_size'  => 25,
+        ];
+
+        $config['batch_size'] = NumberUtils::bound($config['batch_size'], 2, 100);
+        $config['pool_size'] = NumberUtils::bound($config['pool_size'], 1, 50);
+
         $this->client = $client;
         $this->tableManager = $tableManager;
+        $this->config = $config;
         $this->logger = $logger ?: new NullLogger();
         $this->marshaler = new ItemMarshaler();
     }
@@ -171,7 +189,7 @@ final class DynamoDbNcr implements Ncr
                     'item'       => $response['Item'],
                     'hints'      => $hints,
                     'table_name' => $tableName,
-                    'node_ref'   => (string)$nodeRef,
+                    'node_ref'   => (string) $nodeRef,
                 ]
             );
 
@@ -188,7 +206,7 @@ final class DynamoDbNcr implements Ncr
     {
         if (count($nodeRefs) === 1) {
             try {
-                return [(string)$nodeRefs[0] => $this->getNode($nodeRefs[0], $consistent, $hints)];
+                return [(string) $nodeRefs[0] => $this->getNode($nodeRefs[0], $consistent, $hints)];
             } catch (NodeNotFound $e) {
                 return [];
             } catch (\Exception $e) {
@@ -197,7 +215,8 @@ final class DynamoDbNcr implements Ncr
         }
 
         $batch = (new BatchGetItemRequest($this->client))
-            ->batchSize(2)
+            ->batchSize($this->config['batch_size'])
+            ->poolSize($this->config['pool_size'])
             ->consistentRead($consistent)
             ->onError(function (AwsException $e) use ($hints) {
                 $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
@@ -241,7 +260,7 @@ final class DynamoDbNcr implements Ncr
         $params = ['TableName' => $tableName];
         if (null !== $expectedEtag) {
             $params['ConditionExpression'] = 'etag = :v_etag';
-            $params['ExpressionAttributeValues'] = [':v_etag' => ['S' => (string)$expectedEtag]];
+            $params['ExpressionAttributeValues'] = [':v_etag' => ['S' => (string) $expectedEtag]];
         }
 
         try {
@@ -421,13 +440,30 @@ final class DynamoDbNcr implements Ncr
         return new IndexQueryResult($query, $nodeRefs, $nextCursor);
     }
 
-
-
-
     /**
      * {@inheritdoc}
      */
     final public function streamNodes(SchemaQName $qname, callable $callback, array $hints = []): void
+    {
+        $hints['node_refs_only'] = false;
+        $this->doStreamNodes($qname, $callback, $hints);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    final public function streamNodeRefs(SchemaQName $qname, callable $callback, array $hints = []): void
+    {
+        $hints['node_refs_only'] = true;
+        $this->doStreamNodes($qname, $callback, $hints);
+    }
+
+    /**
+     * @param SchemaQName $qname
+     * @param callable    $callback
+     * @param array       $hints
+     */
+    private function doStreamNodes(SchemaQName $qname, callable $callback, array $hints = []): void
     {
         $tableName = $this->tableManager->getNodeTableName($qname, $hints);
         $skipErrors = filter_var($hints['skip_errors'] ?? false, FILTER_VALIDATE_BOOLEAN);
@@ -437,12 +473,12 @@ final class DynamoDbNcr implements Ncr
         $poolDelay = NumberUtils::bound($hints['pool_delay'] ?? 500, 100, 10000);
 
         $params = [
-            'ExpressionAttributeNames' => [
-                '#schema' => '_schema'
+            'ExpressionAttributeNames'  => [
+                '#schema' => '_schema',
             ],
             'ExpressionAttributeValues' => [
-                ':v_qname' => ['S' => $qname->toString()]
-            ]
+                ':v_qname' => ['S' => $qname->toString()],
+            ],
         ];
 
         $filterExpressions = ['contains(#schema, :v_qname)'];
@@ -458,6 +494,15 @@ final class DynamoDbNcr implements Ncr
                 $params['ExpressionAttributeValues'][":v_{$shard}"] = ['N' => (string) ((int) $hints[$shard])];
                 $filterExpressions[] = "(#{$shard} = :v_{$shard})";
             }
+        }
+
+        // fixme: add node_status filter
+
+
+        if ($hints['node_refs_only']) {
+            $keyName = '#' . NodeTable::HASH_KEY_NAME;
+            $params['ProjectionExpression'] = $keyName;
+            $params['ExpressionAttributeNames'][$keyName] = NodeTable::HASH_KEY_NAME;
         }
 
         $params['TableName'] = $tableName;
@@ -478,9 +523,12 @@ final class DynamoDbNcr implements Ncr
             $segment = $iter2seg['prev'][$iterKey];
 
             foreach ($result['Items'] as $item) {
+                $node = null;
                 try {
                     $nodeRef = NodeRef::fromString($item[NodeTable::HASH_KEY_NAME]['S']);
-                    $node = $this->marshaler->unmarshal($item);
+                    if (!$hints['node_refs_only']) {
+                        $node = $this->marshaler->unmarshal($item);
+                    }
                 } catch (\Exception $e) {
                     $this->logger->error(
                         'Item returned from DynamoDb table [{table_name}] segment [{segment}] ' .
@@ -498,7 +546,11 @@ final class DynamoDbNcr implements Ncr
                     continue;
                 }
 
-                $callback($node, $nodeRef);
+                if ($hints['node_refs_only']) {
+                    $callback($nodeRef);
+                } else {
+                    $callback($node, $nodeRef);
+                }
             }
 
             if ($result['LastEvaluatedKey']) {

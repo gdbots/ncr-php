@@ -91,7 +91,7 @@ class NodeCommandBinder implements EventSubscriber
             $response = $pbjx->copyContext($command, $request)->request($request);
         } catch (RequestHandlingFailed $e) {
             if (Code::NOT_FOUND === $e->getResponse()->get('error_code')) {
-                return NodeNotFound::forNodeRef($nodeRef, $e);
+                throw NodeNotFound::forNodeRef($nodeRef, $e);
             }
 
             throw $e;

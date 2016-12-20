@@ -26,7 +26,7 @@ final class InMemoryNcr implements Ncr
      *
      * @var Node[]
      */
-    private $nodes;
+    private $nodes = [];
 
     /**
      * @param Node[]|array $nodes
@@ -152,6 +152,30 @@ TEXT;
     {
         // fixme: handle findNodeRefs in memory
         return new IndexQueryResult($query);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function streamNodes(SchemaQName $qname, callable $callback, array $hints = []): void
+    {
+        foreach ($this->nodes as $nodeRef => $node) {
+            if ($node->isFrozen()) {
+                $this->nodes[$nodeRef] = clone $node;
+            }
+
+            $callback($this->nodes[$nodeRef], NodeRef::fromString($nodeRef));
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function streamNodeRefs(SchemaQName $qname, callable $callback, array $hints = []): void
+    {
+        foreach ($this->nodes as $nodeRef => $node) {
+            $callback(NodeRef::fromString($nodeRef));
+        }
     }
 
     /**

@@ -192,8 +192,6 @@ final class NcrCache
     /**
      * Processes the deferrered request which should populate the
      * NcrCache once complete.  At least for any nodes that exist.
-     *
-     * todo: split up requests with > 100 node_refs?
      */
     private function processLazyLoadNodesRequest()
     {

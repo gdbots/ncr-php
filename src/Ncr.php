@@ -93,4 +93,22 @@ interface Ncr
      * @throws GdbotsNcrException
      */
     public function findNodeRefs(IndexQuery $query, array $hints = []): IndexQueryResult;
+
+    /**
+     * @param SchemaQName $qname
+     * @param callable    $callback The callable that will receive "func(Node, NodeRef)" for each node.
+     * @param array       $hints    Data that helps the NCR decide where to read/write data from.
+     *
+     * @throws GdbotsNcrException
+     */
+    public function streamNodes(SchemaQName $qname, callable $callback, array $hints = []): void;
+
+    /**
+     * @param SchemaQName $qname
+     * @param callable    $callback The callable that will receive "func(NodeRef)" for each node.
+     * @param array       $hints    Data that helps the NCR decide where to read/write data from.
+     *
+     * @throws GdbotsNcrException
+     */
+    public function streamNodeRefs(SchemaQName $qname, callable $callback, array $hints = []): void;
 }

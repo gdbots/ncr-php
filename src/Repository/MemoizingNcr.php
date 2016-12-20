@@ -122,4 +122,20 @@ final class MemoizingNcr implements Ncr
     {
         return $this->next->findNodeRefs($query, $hints);
     }
+
+    /**
+     * {@inheritdoc}
+     */
+    final public function streamNodes(SchemaQName $qname, callable $callback, array $hints = []): void
+    {
+        $this->next->streamNodes($qname, $callback, $hints);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    final public function streamNodeRefs(SchemaQName $qname, callable $callback, array $hints = []): void
+    {
+        $this->next->streamNodeRefs($qname, $callback, $hints);
+    }
 }
