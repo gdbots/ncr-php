@@ -31,7 +31,6 @@ final class NodeNotFound extends \RuntimeException implements GdbotsNcrException
     {
         $e = new self("The node ({$nodeRef->toString()}) could not be found.", $previous);
         $e->nodeRef = $nodeRef;
-
         return $e;
     }
 

@@ -41,7 +41,7 @@ final class NcrCache
      *
      * @var Node[]
      */
-    private $nodes;
+    private $nodes = [];
 
     /**
      * The maximum number of items to keep in cache.
@@ -84,6 +84,8 @@ final class NcrCache
      * @param NodeRef $nodeRef The NodeRef to get from the NcrCache.
      *
      * @return Node
+     *
+     * @throws NodeNotFound
      */
     public function getNode(NodeRef $nodeRef): Node
     {

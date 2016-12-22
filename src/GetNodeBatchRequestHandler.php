@@ -26,7 +26,7 @@ class GetNodeBatchRequestHandler implements RequestHandler, NcrAware
      */
     protected function handle(GetNodeBatchRequest $request, Pbjx $pbjx): GetNodeBatchResponse
     {
-        $nodeRefs = $request->get('node_refs', []);
+        $nodeRefs = $request->get('node_refs');
         $response = GetNodeBatchResponseV1::create();
 
         if (empty($nodeRefs)) {

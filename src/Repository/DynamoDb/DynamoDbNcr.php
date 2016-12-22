@@ -203,8 +203,6 @@ final class DynamoDbNcr implements Ncr
      */
     public function getNodes(array $nodeRefs, bool $consistent = false, array $hints = []): array
     {
-        echo 'called'.PHP_EOL;
-
         if (empty($nodeRefs)) {
             return [];
         } elseif (count($nodeRefs) === 1) {
