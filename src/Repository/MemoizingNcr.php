@@ -97,13 +97,13 @@ final class MemoizingNcr implements Ncr
             return [];
         }
 
-        $cached = [];
+        $cachedNodes = [];
 
         if (!$consistent) {
             /** @var NodeRef[] $nodeRefs */
             foreach ($nodeRefs as $idx => $nodeRef) {
                 if ($this->cache->hasNode($nodeRef)) {
-                    $cached[$nodeRef->toString()] = $this->cache->getNode($nodeRef);
+                    $cachedNodes[$nodeRef->toString()] = $this->cache->getNode($nodeRef);
                     unset($nodeRefs[$idx]);
                 }
             }
@@ -115,8 +115,8 @@ final class MemoizingNcr implements Ncr
             $this->cache->putNodes($nodes);
         }
 
-        if (!empty($cached)) {
-            $nodes += $cached;
+        if (!empty($cachedNodes)) {
+            $nodes += $cachedNodes;
         }
 
         return $nodes;

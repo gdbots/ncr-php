@@ -216,6 +216,7 @@ final class DynamoDbNcr implements Ncr
             }
         }
 
+        echo __CLASS__.' called'.PHP_EOL;
         $batch = (new BatchGetItemRequest($this->client))
             ->batchSize($this->config['batch_size'])
             ->poolSize($this->config['pool_size'])
