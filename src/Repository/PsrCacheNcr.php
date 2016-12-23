@@ -186,7 +186,6 @@ class PsrCacheNcr implements Ncr
                 }
             } else {
                 // psr6 really needs a method to just create a cache item without incurring a lookup
-                // Returns an array containing all the entries from array1 that are not present in any of the other arrays.
                 $missingCacheKeys = array_values(array_diff($cacheKeys, array_keys($cacheItems)));
                 $missingCacheItems = $this->cache->getItems($missingCacheKeys);
                 if ($missingCacheItems instanceof \Traversable) {
