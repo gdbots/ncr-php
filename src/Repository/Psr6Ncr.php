@@ -13,7 +13,7 @@ use Gdbots\Schemas\Ncr\NodeRef;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
 
-class PsrCacheNcr implements Ncr
+class Psr6Ncr implements Ncr
 {
     /** @var Ncr */
     private $next;
@@ -98,7 +98,8 @@ class PsrCacheNcr implements Ncr
                 $cacheItem = $this->cache->getItem($cacheKey);
             }
 
-            $this->cache->saveDeferred($cacheItem->set($node)->expiresAfter(null)->expiresAt(null));
+            $this->beforeSaveCacheItem($cacheItem, $node);
+            $this->cache->saveDeferred($cacheItem->set($node));
         }
 
         return $node;
@@ -175,9 +176,8 @@ class PsrCacheNcr implements Ncr
                         continue;
                     }
 
-                    $this->cache->saveDeferred(
-                        $cacheItems[$cacheKey]->set($nodes[$nodeRef])->expiresAfter(null)->expiresAt(null)
-                    );
+                    $this->beforeSaveCacheItem($cacheItems[$cacheKey], $nodes[$nodeRef]);
+                    $this->cache->saveDeferred($cacheItems[$cacheKey]->set($nodes[$nodeRef]));
                 }
             } else {
                 // psr6 really needs a method to just create a cache item without incurring a lookup
@@ -194,7 +194,8 @@ class PsrCacheNcr implements Ncr
                         continue;
                     }
 
-                    $this->cache->saveDeferred($cacheItems[$cacheKey]->set($node)->expiresAfter(null)->expiresAt(null));
+                    $this->beforeSaveCacheItem($cacheItems[$cacheKey], $node);
+                    $this->cache->saveDeferred($cacheItems[$cacheKey]->set($node));
                 }
             }
         }
@@ -214,7 +215,8 @@ class PsrCacheNcr implements Ncr
         $this->next->putNode($node, $expectedEtag, $hints);
         $nodeRef = NodeRef::fromNode($node);
         $cacheItem = $this->cache->getItem($this->getCacheKey($nodeRef, $hints));
-        $this->cache->save($cacheItem->set($node)->expiresAfter(null)->expiresAt(null));
+        $this->beforeSaveCacheItem($cacheItem, $node);
+        $this->cache->save($cacheItem->set($node));
     }
 
     /**
@@ -272,5 +274,19 @@ class PsrCacheNcr implements Ncr
             $nodeRef->getLabel(),
             md5($nodeRef->getId())
         ));
+    }
+
+    /**
+     * Prepares the cache item before it's saved into the cache pool.
+     * By default, all nodes are stored in cache forever, to change this behavior
+     * either set the default ttl on the cache provider, or tweak the expiry on
+     * a per item basis by overriding this method.
+     *
+     * @param CacheItemInterface $cacheItem
+     * @param Node               $node
+     */
+    protected function beforeSaveCacheItem(CacheItemInterface $cacheItem, Node $node): void
+    {
+        $cacheItem->expiresAfter(null)->expiresAt(null);
     }
 }
