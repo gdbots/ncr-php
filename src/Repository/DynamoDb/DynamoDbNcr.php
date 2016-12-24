@@ -188,7 +188,7 @@ final class DynamoDbNcr implements Ncr
                     'item'       => $response['Item'],
                     'hints'      => $hints,
                     'table_name' => $tableName,
-                    'node_ref'   => (string) $nodeRef,
+                    'node_ref'   => (string)$nodeRef,
                 ]
             );
 
@@ -216,7 +216,6 @@ final class DynamoDbNcr implements Ncr
             }
         }
 
-        echo __CLASS__.' called'.PHP_EOL;
         $batch = (new BatchGetItemRequest($this->client))
             ->batchSize($this->config['batch_size'])
             ->poolSize($this->config['pool_size'])
@@ -262,7 +261,7 @@ final class DynamoDbNcr implements Ncr
 
         $params = ['TableName' => $tableName];
         if (null !== $expectedEtag) {
-            $params['ExpressionAttributeValues'] = [':v_etag' => ['S' => (string) $expectedEtag]];
+            $params['ExpressionAttributeValues'] = [':v_etag' => ['S' => (string)$expectedEtag]];
             $params['ConditionExpression'] = 'etag = :v_etag';
         }
 
@@ -480,7 +479,7 @@ final class DynamoDbNcr implements Ncr
                 '#node_ref' => NodeTable::HASH_KEY_NAME,
             ],
             'ExpressionAttributeValues' => [
-                ':v_qname' => ['S' => $qname->toString().':'],
+                ':v_qname' => ['S' => $qname->toString() . ':'],
             ],
         ];
 
@@ -494,7 +493,7 @@ final class DynamoDbNcr implements Ncr
         foreach (['s16', 's32', 's64', 's128', 's256'] as $shard) {
             if (isset($hints[$shard])) {
                 $params['ExpressionAttributeNames']["#{$shard}"] = "__{$shard}";
-                $params['ExpressionAttributeValues'][":v_{$shard}"] = ['N' => (string) ((int)$hints[$shard])];
+                $params['ExpressionAttributeValues'][":v_{$shard}"] = ['N' => (string)((int)$hints[$shard])];
                 $filterExpressions[] = "#{$shard} = :v_{$shard}";
             }
         }
@@ -543,7 +542,7 @@ final class DynamoDbNcr implements Ncr
                             'hints'      => $hints,
                             'table_name' => $tableName,
                             'segment'    => $segment,
-                            'qname'      => (string) $qname,
+                            'qname'      => (string)$qname,
                         ]
                     );
 
@@ -569,7 +568,7 @@ final class DynamoDbNcr implements Ncr
                         'hints'      => $hints,
                         'table_name' => $tableName,
                         'segment'    => $segment,
-                        'qname'      => (string) $qname,
+                        'qname'      => (string)$qname,
                     ]
                 );
             }
@@ -597,7 +596,7 @@ final class DynamoDbNcr implements Ncr
                         'hints'      => $hints,
                         'table_name' => $tableName,
                         'segment'    => $segment,
-                        'qname'      => (string) $qname,
+                        'qname'      => (string)$qname,
                     ]
                 );
 
@@ -611,7 +610,7 @@ final class DynamoDbNcr implements Ncr
                         $errorName,
                         $tableName,
                         $segment,
-                        (string) $qname
+                        (string)$qname
                     ),
                     $code,
                     $exception

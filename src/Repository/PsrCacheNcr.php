@@ -13,7 +13,6 @@ use Gdbots\Schemas\Ncr\NodeRef;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
 
-// fixme: implement PsrCacheNcr
 class PsrCacheNcr implements Ncr
 {
     /** @var Ncr */
@@ -123,7 +122,6 @@ class PsrCacheNcr implements Ncr
             }
         }
 
-        echo __CLASS__ . ' called' . PHP_EOL;
         $cachedNodes = [];
         $cacheKeys = [];
         /** @var CacheItemInterface[] $cacheItems */
@@ -149,8 +147,6 @@ class PsrCacheNcr implements Ncr
                 }
 
                 $cacheItem = $cacheItems[$cacheKey];
-//var_dump($cacheItem->getKey());
-//var_dump($cacheItem->get());
                 if (!$cacheItem->isHit()) {
                     continue;
                 }
@@ -165,7 +161,6 @@ class PsrCacheNcr implements Ncr
         }
 
         $nodes = empty($nodeRefs) ? [] : $this->next->getNodes($nodeRefs, $consistent, $hints);
-        echo json_encode($nodeRefs, JSON_PRETTY_PRINT);
 
         if ($this->readThrough && !empty($nodes)) {
             if ($consistent) {
