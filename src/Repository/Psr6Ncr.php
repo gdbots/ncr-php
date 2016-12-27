@@ -258,7 +258,7 @@ class Psr6Ncr implements Ncr
      *
      * @link http://www.php-fig.org/psr/psr-6/#definitions
      *
-     * The "-php" suffix here is used because the cache item
+     * The ".php" suffix here is used because the cache item
      * will be stored as serialized php.
      *
      * @param NodeRef $nodeRef

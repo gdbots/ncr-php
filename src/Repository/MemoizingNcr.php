@@ -82,7 +82,7 @@ final class MemoizingNcr implements Ncr
         $node = $this->next->getNode($nodeRef, $consistent, $hints);
 
         if ($this->readThrough) {
-            $this->cache->putNode($node);
+            $this->cache->addNode($node);
         }
 
         return $node;
@@ -112,7 +112,7 @@ final class MemoizingNcr implements Ncr
         $nodes = empty($nodeRefs) ? [] : $this->next->getNodes($nodeRefs, $consistent, $hints);
 
         if ($this->readThrough && !empty($nodes)) {
-            $this->cache->putNodes($nodes);
+            $this->cache->addNodes($nodes);
         }
 
         if (!empty($cachedNodes)) {
@@ -128,7 +128,7 @@ final class MemoizingNcr implements Ncr
     public function putNode(Node $node, ?string $expectedEtag = null, array $hints = []): void
     {
         $this->next->putNode($node, $expectedEtag, $hints);
-        $this->cache->putNode($node);
+        $this->cache->addNode($node);
     }
 
     /**
@@ -137,7 +137,7 @@ final class MemoizingNcr implements Ncr
     public function deleteNode(NodeRef $nodeRef, array $hints = []): void
     {
         $this->next->deleteNode($nodeRef, $hints);
-        $this->cache->deleteNode($nodeRef);
+        $this->cache->removeNode($nodeRef);
     }
 
     /**
