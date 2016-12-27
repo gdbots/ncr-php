@@ -202,5 +202,4 @@ final class BatchGetItemRequest
             }
         }
     }
-
 }
