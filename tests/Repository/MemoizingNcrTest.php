@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Gdbots\Tests\Ncr\Repository;
 
+use Gdbots\Ncr\GetNodeBatchRequestHandler;
 use Gdbots\Ncr\NcrCache;
 use Gdbots\Ncr\NcrLazyLoader;
 use Gdbots\Ncr\Repository\InMemoryNcr;
@@ -11,6 +12,7 @@ use Gdbots\Pbjx\DefaultPbjx;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Pbjx\RegisteringServiceLocator;
 use Gdbots\Schemas\Ncr\NodeRef;
+use Gdbots\Schemas\Ncr\Request\GetNodeBatchRequestV1;
 use Gdbots\Tests\Ncr\Fixtures\FakeNode;
 
 class MemoizingNcrTest extends \PHPUnit_Framework_TestCase
@@ -131,5 +133,22 @@ class MemoizingNcrTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse($this->ncrCache->hasNode($nodeRef));
         $this->assertFalse($this->ncr->hasNode($nodeRef, true));
         $this->assertFalse($this->ncr->hasNode($nodeRef));
+    }
+
+    public function testLazyLoad()
+    {
+        $expectedNode = FakeNode::create();
+        $nodeRef = NodeRef::fromNode($expectedNode);
+        $this->inMemoryNcr->putNode($expectedNode);
+        $this->ncrLazyLoader->addNodeRefs([$nodeRef]);
+
+        $handler = new GetNodeBatchRequestHandler();
+        $handler->setNcr($this->ncr);
+        $this->locator->registerRequestHandler(GetNodeBatchRequestV1::schema()->getCurie(), $handler);
+
+        $this->assertFalse($this->ncrCache->hasNode($nodeRef));
+        $this->assertTrue($this->ncr->hasNode($nodeRef));
+        $actualNode = $this->ncrCache->getNode($nodeRef);
+        $this->assertTrue($expectedNode->equals($actualNode));
     }
 }
