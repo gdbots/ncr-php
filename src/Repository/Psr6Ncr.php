@@ -43,7 +43,7 @@ class Psr6Ncr implements Ncr
     /**
      * {@inheritdoc}
      */
-    final public function createStorage(SchemaQName $qname, array $hints = [])
+    final public function createStorage(SchemaQName $qname, array $hints = []): void
     {
         $this->next->createStorage($qname, $hints);
     }
@@ -266,7 +266,7 @@ class Psr6Ncr implements Ncr
      *
      * @return string
      */
-    protected function getCacheKey(NodeRef $nodeRef, array $hints = []): string
+    protected function getCacheKey(NodeRef $nodeRef, array $hints): string
     {
         return str_replace('-', '_', sprintf(
             '%s.%s.%s.php',

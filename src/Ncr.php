@@ -19,7 +19,7 @@ interface Ncr
      * @param SchemaQName $qname
      * @param array       $hints Data that helps the implementation decide where to create the storage.
      */
-    public function createStorage(SchemaQName $qname, array $hints = []);
+    public function createStorage(SchemaQName $qname, array $hints = []): void;
 
     /**
      * Returns debugging information about the storage for a given SchemaQName.

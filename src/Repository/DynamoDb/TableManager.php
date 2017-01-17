@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Gdbots\Ncr\Repository\DynamoDb;
 
@@ -40,8 +40,8 @@ class TableManager
 
         if (!isset($this->nodeTables['default'])) {
             $this->nodeTables['default'] = [
-                'class' => 'Gdbots\Ncr\Repository\DynamoDb\NodeTable',
-                'table_name' => 'multi'
+                'class'      => 'Gdbots\Ncr\Repository\DynamoDb\NodeTable',
+                'table_name' => 'multi',
             ];
         }
 
@@ -114,7 +114,7 @@ class TableManager
      *
      * @return string
      */
-    protected function filterNodeTableName(string $tableName, SchemaQName $qname, array $hints = []): string
+    protected function filterNodeTableName(string $tableName, SchemaQName $qname, array $hints): string
     {
         return $tableName;
     }

@@ -49,7 +49,7 @@ final class InMemoryNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    public function createStorage(SchemaQName $qname, array $hints = [])
+    public function createStorage(SchemaQName $qname, array $hints = []): void
     {
     }
 

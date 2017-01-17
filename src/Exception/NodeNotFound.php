@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Gdbots\Ncr\Exception;
 
@@ -13,8 +13,8 @@ final class NodeNotFound extends \RuntimeException implements GdbotsNcrException
     protected $nodeRef;
 
     /**
-     * @param string          $message
-     * @param \Exception|null $previous
+     * @param string     $message
+     * @param \Exception $previous
      */
     public function __construct(string $message = '', ?\Exception $previous = null)
     {
@@ -22,8 +22,8 @@ final class NodeNotFound extends \RuntimeException implements GdbotsNcrException
     }
 
     /**
-     * @param NodeRef         $nodeRef
-     * @param \Exception|null $previous
+     * @param NodeRef    $nodeRef
+     * @param \Exception $previous
      *
      * @return NodeNotFound
      */
@@ -35,9 +35,9 @@ final class NodeNotFound extends \RuntimeException implements GdbotsNcrException
     }
 
     /**
-     * @param string          $index
-     * @param string          $value
-     * @param \Exception|null $previous
+     * @param string     $index
+     * @param string     $value
+     * @param \Exception $previous
      *
      * @return NodeNotFound
      */

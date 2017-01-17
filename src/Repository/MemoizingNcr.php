@@ -45,7 +45,7 @@ final class MemoizingNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    public function createStorage(SchemaQName $qname, array $hints = [])
+    public function createStorage(SchemaQName $qname, array $hints = []): void
     {
         $this->next->createStorage($qname, $hints);
     }

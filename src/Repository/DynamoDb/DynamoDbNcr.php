@@ -73,7 +73,7 @@ final class DynamoDbNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    public function createStorage(SchemaQName $qname, array $hints = [])
+    public function createStorage(SchemaQName $qname, array $hints = []): void
     {
         $tableName = $this->tableManager->getNodeTableName($qname, $hints);
         $this->tableManager->getNodeTable($qname)->create($this->client, $tableName);
