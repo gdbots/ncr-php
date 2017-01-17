@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Gdbots\Ncr\Repository\DynamoDb;
 
@@ -51,8 +51,8 @@ final class SlugIndex extends AbstractIndex
     {
         return [
             'created_at' => ['AttributeName' => $this->getRangeKeyName(), 'AttributeType' => 'N'],
-            'status' => ['AttributeName' => 'status', 'AttributeType' => 'S'],
-            'etag' => ['AttributeName' => 'etag', 'AttributeType' => 'S'],
+            'status'     => ['AttributeName' => 'status', 'AttributeType' => 'S'],
+            'etag'       => ['AttributeName' => 'etag', 'AttributeType' => 'S'],
         ];
     }
 
@@ -62,8 +62,8 @@ final class SlugIndex extends AbstractIndex
     public function getProjection(): array
     {
         return [
-            'ProjectionType' => 'INCLUDE',
-            'NonKeyAttributes' => ['status', 'etag']
+            'ProjectionType'   => 'INCLUDE',
+            'NonKeyAttributes' => ['status', 'etag'],
         ];
     }
 

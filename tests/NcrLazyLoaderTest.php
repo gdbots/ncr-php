@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Gdbots\Tests\Ncr;
 
@@ -73,8 +73,10 @@ class NcrLazyLoaderTest extends \PHPUnit_Framework_TestCase
 
     public function testFlush()
     {
-        $handler = new class implements RequestHandler {
+        $handler = new class implements RequestHandler
+        {
             public $worked = false;
+
             public function handleRequest(Request $request, Pbjx $pbjx)
             {
                 $this->worked = $request->isInSet('node_refs', NodeRef::fromString('acme:article:123'));

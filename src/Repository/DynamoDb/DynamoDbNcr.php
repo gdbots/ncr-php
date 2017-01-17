@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Gdbots\Ncr\Repository\DynamoDb;
 
@@ -43,10 +43,10 @@ final class DynamoDbNcr implements Ncr
     private $marshaler;
 
     /**
-     * @param DynamoDbClient       $client
-     * @param TableManager         $tableManager
-     * @param array                $config
-     * @param LoggerInterface|null $logger
+     * @param DynamoDbClient  $client
+     * @param TableManager    $tableManager
+     * @param array           $config
+     * @param LoggerInterface $logger
      */
     public function __construct(
         DynamoDbClient $client,
@@ -73,27 +73,27 @@ final class DynamoDbNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    public function createStorage(SchemaQName $qname, array $hints = []): void
+    public function createStorage(SchemaQName $qname, array $context = []): void
     {
-        $tableName = $this->tableManager->getNodeTableName($qname, $hints);
+        $tableName = $this->tableManager->getNodeTableName($qname, $context);
         $this->tableManager->getNodeTable($qname)->create($this->client, $tableName);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function describeStorage(SchemaQName $qname, array $hints = []): string
+    public function describeStorage(SchemaQName $qname, array $context = []): string
     {
-        $tableName = $this->tableManager->getNodeTableName($qname, $hints);
+        $tableName = $this->tableManager->getNodeTableName($qname, $context);
         return $this->tableManager->getNodeTable($qname)->describe($this->client, $tableName);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function hasNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): bool
+    public function hasNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): bool
     {
-        $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
+        $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $context);
 
         try {
             $response = $this->client->getItem([
@@ -136,9 +136,9 @@ final class DynamoDbNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    public function getNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): Node
+    public function getNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): Node
     {
-        $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
+        $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $context);
 
         try {
             $response = $this->client->getItem([
@@ -186,7 +186,7 @@ final class DynamoDbNcr implements Ncr
                 [
                     'exception'  => $e,
                     'item'       => $response['Item'],
-                    'hints'      => $hints,
+                    'context'    => $context,
                     'table_name' => $tableName,
                     'node_ref'   => (string)$nodeRef,
                 ]
@@ -201,14 +201,14 @@ final class DynamoDbNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    public function getNodes(array $nodeRefs, bool $consistent = false, array $hints = []): array
+    public function getNodes(array $nodeRefs, bool $consistent = false, array $context = []): array
     {
         if (empty($nodeRefs)) {
             return [];
         } elseif (count($nodeRefs) === 1) {
             try {
                 $nodeRef = array_shift($nodeRefs);
-                return [(string)$nodeRef => $this->getNode($nodeRef, $consistent, $hints)];
+                return [(string)$nodeRef => $this->getNode($nodeRef, $consistent, $context)];
             } catch (NodeNotFound $e) {
                 return [];
             } catch (\Exception $e) {
@@ -220,16 +220,16 @@ final class DynamoDbNcr implements Ncr
             ->batchSize($this->config['batch_size'])
             ->poolSize($this->config['pool_size'])
             ->consistentRead($consistent)
-            ->onError(function (AwsException $e) use ($hints) {
+            ->onError(function (AwsException $e) use ($context) {
                 $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
                 $this->logger->error(
                     sprintf('%s while processing BatchGetItemRequest.', $errorName),
-                    ['exception' => $e, 'hints' => $hints]
+                    ['exception' => $e, 'context' => $context]
                 );
             });
 
         foreach ($nodeRefs as $nodeRef) {
-            $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
+            $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $context);
             $batch->addItemKey($tableName, [NodeTable::HASH_KEY_NAME => ['S' => $nodeRef->toString()]]);
         }
 
@@ -241,7 +241,7 @@ final class DynamoDbNcr implements Ncr
             } catch (\Exception $e) {
                 $this->logger->error(
                     'Item returned from DynamoDb table could not be unmarshaled.',
-                    ['exception' => $e, 'item' => $item, 'hints' => $hints]
+                    ['exception' => $e, 'item' => $item, 'context' => $context]
                 );
             }
         }
@@ -252,11 +252,11 @@ final class DynamoDbNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    public function putNode(Node $node, ?string $expectedEtag = null, array $hints = []): void
+    public function putNode(Node $node, ?string $expectedEtag = null, array $context = []): void
     {
         $node->freeze();
         $nodeRef = NodeRef::fromNode($node);
-        $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
+        $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $context);
         $table = $this->tableManager->getNodeTable($nodeRef->getQName());
 
         $params = ['TableName' => $tableName];
@@ -310,9 +310,9 @@ final class DynamoDbNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    public function deleteNode(NodeRef $nodeRef, array $hints = []): void
+    public function deleteNode(NodeRef $nodeRef, array $context = []): void
     {
-        $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $hints);
+        $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $context);
 
         try {
             $this->client->deleteItem([
@@ -351,9 +351,9 @@ final class DynamoDbNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    public function findNodeRefs(IndexQuery $query, array $hints = []): IndexQueryResult
+    public function findNodeRefs(IndexQuery $query, array $context = []): IndexQueryResult
     {
-        $tableName = $this->tableManager->getNodeTableName($query->getQName(), $hints);
+        $tableName = $this->tableManager->getNodeTableName($query->getQName(), $context);
         $table = $this->tableManager->getNodeTable($query->getQName());
 
         if (!$table->hasIndex($query->getAlias())) {
@@ -424,9 +424,9 @@ final class DynamoDbNcr implements Ncr
                     [
                         'exception'   => $e,
                         'item'        => $item,
-                        'hints'       => $hints,
+                        'context'     => $context,
                         'index_alias' => $query->getAlias(),
-                        'index_query' => $query,
+                        'index_query' => $query->toArray(),
                         'table_name'  => $tableName,
                     ]
                 );
@@ -445,34 +445,34 @@ final class DynamoDbNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    public function streamNodes(SchemaQName $qname, callable $callback, array $hints = []): void
+    public function streamNodes(SchemaQName $qname, callable $callback, array $context = []): void
     {
-        $hints['node_refs_only'] = false;
-        $this->doStreamNodes($qname, $callback, $hints);
+        $context['node_refs_only'] = false;
+        $this->doStreamNodes($qname, $callback, $context);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function streamNodeRefs(SchemaQName $qname, callable $callback, array $hints = []): void
+    public function streamNodeRefs(SchemaQName $qname, callable $callback, array $context = []): void
     {
-        $hints['node_refs_only'] = true;
-        $this->doStreamNodes($qname, $callback, $hints);
+        $context['node_refs_only'] = true;
+        $this->doStreamNodes($qname, $callback, $context);
     }
 
     /**
      * @param SchemaQName $qname
      * @param callable    $callback
-     * @param array       $hints
+     * @param array       $context
      */
-    private function doStreamNodes(SchemaQName $qname, callable $callback, array $hints = []): void
+    private function doStreamNodes(SchemaQName $qname, callable $callback, array $context): void
     {
-        $tableName = $this->tableManager->getNodeTableName($qname, $hints);
-        $skipErrors = filter_var($hints['skip_errors'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        $reindexing = filter_var($hints['reindexing'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        $limit = NumberUtils::bound($hints['limit'] ?? 100, 1, 500);
-        $totalSegments = NumberUtils::bound($hints['total_segments'] ?? 16, 1, 64);
-        $poolDelay = NumberUtils::bound($hints['pool_delay'] ?? 500, 100, 10000);
+        $tableName = $this->tableManager->getNodeTableName($qname, $context);
+        $skipErrors = filter_var($context['skip_errors'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $reindexing = filter_var($context['reindexing'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $limit = NumberUtils::bound($context['limit'] ?? 100, 1, 500);
+        $totalSegments = NumberUtils::bound($context['total_segments'] ?? 16, 1, 64);
+        $poolDelay = NumberUtils::bound($context['pool_delay'] ?? 500, 100, 10000);
 
         $params = [
             'ExpressionAttributeNames'  => [
@@ -491,20 +491,20 @@ final class DynamoDbNcr implements Ncr
         }
 
         foreach (['s16', 's32', 's64', 's128', 's256'] as $shard) {
-            if (isset($hints[$shard])) {
+            if (isset($context[$shard])) {
                 $params['ExpressionAttributeNames']["#{$shard}"] = "__{$shard}";
-                $params['ExpressionAttributeValues'][":v_{$shard}"] = ['N' => (string)((int)$hints[$shard])];
+                $params['ExpressionAttributeValues'][":v_{$shard}"] = ['N' => (string)((int)$context[$shard])];
                 $filterExpressions[] = "#{$shard} = :v_{$shard}";
             }
         }
 
-        if (isset($hints['status'])) {
+        if (isset($context['status'])) {
             $params['ExpressionAttributeNames']['#status'] = 'status';
-            $params['ExpressionAttributeValues'][':v_status'] = ['S' => (string)$hints['status']];
+            $params['ExpressionAttributeValues'][':v_status'] = ['S' => (string)$context['status']];
             $filterExpressions[] = '#status = :v_status';
         }
 
-        if ($hints['node_refs_only']) {
+        if ($context['node_refs_only']) {
             $params['ProjectionExpression'] = '#node_ref';
         }
 
@@ -521,15 +521,16 @@ final class DynamoDbNcr implements Ncr
             $pending[] = $this->client->getCommand('Scan', $params);
         }
 
-        $fulfilled = function (ResultInterface $result, string $iterKey)
-        use ($qname, $callback, $tableName, $hints, $params, &$pending, &$iter2seg) {
+        $fulfilled = function (ResultInterface $result, string $iterKey) use (
+            $qname, $callback, $tableName, $context, $params, &$pending, &$iter2seg
+        ) {
             $segment = $iter2seg['prev'][$iterKey];
 
             foreach ($result['Items'] as $item) {
                 $node = null;
                 try {
                     $nodeRef = NodeRef::fromString($item[NodeTable::HASH_KEY_NAME]['S']);
-                    if (!$hints['node_refs_only']) {
+                    if (!$context['node_refs_only']) {
                         $node = $this->marshaler->unmarshal($item);
                     }
                 } catch (\Exception $e) {
@@ -539,7 +540,7 @@ final class DynamoDbNcr implements Ncr
                         [
                             'exception'  => $e,
                             'item'       => $item,
-                            'hints'      => $hints,
+                            'context'    => $context,
                             'table_name' => $tableName,
                             'segment'    => $segment,
                             'qname'      => (string)$qname,
@@ -549,10 +550,10 @@ final class DynamoDbNcr implements Ncr
                     continue;
                 }
 
-                if ($hints['node_refs_only']) {
+                if ($context['node_refs_only']) {
                     $callback($nodeRef);
                 } else {
-                    $callback($nodeRef, $node);
+                    $callback($node, $nodeRef);
                 }
             }
 
@@ -565,7 +566,7 @@ final class DynamoDbNcr implements Ncr
                 $this->logger->info(
                     'Scan of DynamoDb table [{table_name}] segment [{segment}] for QName [{qname}] is complete.',
                     [
-                        'hints'      => $hints,
+                        'context'    => $context,
                         'table_name' => $tableName,
                         'segment'    => $segment,
                         'qname'      => (string)$qname,
@@ -574,8 +575,9 @@ final class DynamoDbNcr implements Ncr
             }
         };
 
-        $rejected = function (AwsException $exception, string $iterKey, PromiseInterface $aggregatePromise)
-        use ($qname, $tableName, $hints, $skipErrors, &$iter2seg) {
+        $rejected = function (AwsException $exception, string $iterKey, PromiseInterface $aggregatePromise) use (
+            $qname, $tableName, $context, $skipErrors, &$iter2seg
+        ) {
             $segment = $iter2seg['prev'][$iterKey];
 
             $errorName = $exception->getAwsErrorCode() ?: ClassUtils::getShortName($exception);
@@ -593,7 +595,7 @@ final class DynamoDbNcr implements Ncr
                     ),
                     [
                         'exception'  => $exception,
-                        'hints'      => $hints,
+                        'context'    => $context,
                         'table_name' => $tableName,
                         'segment'    => $segment,
                         'qname'      => (string)$qname,

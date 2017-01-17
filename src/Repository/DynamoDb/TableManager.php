@@ -79,17 +79,17 @@ class TableManager
     /**
      * Returns the table name that should be used to read/write from for the given SchemaQName.
      *
-     * @param SchemaQName $qname QName used to derive the unfiltered table name.
-     * @param array       $hints Data that helps the NCR decide where to read/write data from.
+     * @param SchemaQName $qname   QName used to derive the unfiltered table name.
+     * @param array       $context Data that helps the NCR decide where to read/write data from.
      *
      * @return string
      */
-    final public function getNodeTableName(SchemaQName $qname, array $hints = []): string
+    final public function getNodeTableName(SchemaQName $qname, array $context = []): string
     {
         $key = $qname->toString();
 
         if (isset($this->resolvedTableNames[$key])) {
-            return $this->filterNodeTableName($this->resolvedTableNames[$key], $qname, $hints);
+            return $this->filterNodeTableName($this->resolvedTableNames[$key], $qname, $context);
         }
 
         if (isset($this->nodeTables[$key], $this->nodeTables[$key]['table_name'])) {
@@ -101,20 +101,20 @@ class TableManager
         }
 
         $this->resolvedTableNames[$key] = $this->tableNamePrefix . $tableName;
-        return $this->filterNodeTableName($this->resolvedTableNames[$key], $qname, $hints);
+        return $this->filterNodeTableName($this->resolvedTableNames[$key], $qname, $context);
     }
 
     /**
      * Filter the table name before it's returned to the consumer.  Typically used to add
-     * prefixes or suffixes for multi-tenant applications using the hints array.
+     * prefixes or suffixes for multi-tenant applications using the context array.
      *
      * @param string      $tableName The resolved table name, from converting qname to the config value.
      * @param SchemaQName $qname     QName used to derive the unfiltered table name.
-     * @param array       $hints     Data that helps the NCR decide where to read/write data from.
+     * @param array       $context   Data that helps the NCR decide where to read/write data from.
      *
      * @return string
      */
-    protected function filterNodeTableName(string $tableName, SchemaQName $qname, array $hints): string
+    protected function filterNodeTableName(string $tableName, SchemaQName $qname, array $context): string
     {
         return $tableName;
     }

@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Gdbots\Ncr\Repository\DynamoDb;
 
@@ -139,7 +139,7 @@ final class BatchGetItemRequest
                         $this->retryUnprocessed($result['UnprocessedKeys']);
                     }
 
-                    foreach ((array) $result->get('Responses') as $tableName => $items) {
+                    foreach ((array)$result->get('Responses') as $tableName => $items) {
                         $allItems = array_merge($allItems, $items);
                     }
                 },

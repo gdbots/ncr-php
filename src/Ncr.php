@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Gdbots\Ncr;
 
@@ -17,98 +17,98 @@ interface Ncr
      * Creates the storage for a given SchemaQName.
      *
      * @param SchemaQName $qname
-     * @param array       $hints Data that helps the implementation decide where to create the storage.
+     * @param array       $context Data that helps the implementation decide where to create the storage.
      */
-    public function createStorage(SchemaQName $qname, array $hints = []): void;
+    public function createStorage(SchemaQName $qname, array $context = []): void;
 
     /**
      * Returns debugging information about the storage for a given SchemaQName.
      *
      * @param SchemaQName $qname
-     * @param array       $hints Data that helps the implementation decide what storage to describe.
+     * @param array       $context Data that helps the implementation decide what storage to describe.
      *
      * @return string
      */
-    public function describeStorage(SchemaQName $qname, array $hints = []): string;
+    public function describeStorage(SchemaQName $qname, array $context = []): string;
 
     /**
      * @param NodeRef $nodeRef    The NodeRef to check for in the NCR.
      * @param bool    $consistent An eventually consistent read is used by default unless this is true.
-     * @param array   $hints      Data that helps the NCR decide where to read/write data from.
+     * @param array   $context    Data that helps the NCR decide where to read/write data from.
      *
      * @return bool
      *
      * @throws GdbotsNcrException
      */
-    public function hasNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): bool;
+    public function hasNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): bool;
 
     /**
      * @param NodeRef $nodeRef    The NodeRef to get from the NCR.
      * @param bool    $consistent An eventually consistent read is used by default unless this is true.
-     * @param array   $hints      Data that helps the NCR decide where to read/write data from.
+     * @param array   $context    Data that helps the NCR decide where to read/write data from.
      *
      * @return Node
      *
      * @throws NodeNotFound
      * @throws GdbotsNcrException
      */
-    public function getNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): Node;
+    public function getNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): Node;
 
     /**
      * @param NodeRef[] $nodeRefs   An array of NodeRefs to get from the NCR.
      * @param bool      $consistent An eventually consistent read is used by default unless this is true.
-     * @param array     $hints      Data that helps the NCR decide where to read/write data from.
+     * @param array     $context    Data that helps the NCR decide where to read/write data from.
      *
      * @return Node[]
      *
      * @throws GdbotsNcrException
      */
-    public function getNodes(array $nodeRefs, bool $consistent = false, array $hints = []): array;
+    public function getNodes(array $nodeRefs, bool $consistent = false, array $context = []): array;
 
     /**
      * @param Node   $node         The Node to put into the NCR.
      * @param string $expectedEtag Used to perform optimistic concurrency check.
-     * @param array  $hints        Data that helps the NCR decide where to read/write data from.
+     * @param array  $context      Data that helps the NCR decide where to read/write data from.
      *
      * @throws OptimisticCheckFailed
      * @throws GdbotsNcrException
      */
-    public function putNode(Node $node, ?string $expectedEtag = null, array $hints = []): void;
+    public function putNode(Node $node, ?string $expectedEtag = null, array $context = []): void;
 
     /**
      * @param NodeRef $nodeRef The NodeRef to delete from the NCR.
-     * @param array   $hints   Data that helps the NCR decide where to read/write data from.
+     * @param array   $context Data that helps the NCR decide where to read/write data from.
      *
      * @throws GdbotsNcrException
      */
-    public function deleteNode(NodeRef $nodeRef, array $hints = []): void;
+    public function deleteNode(NodeRef $nodeRef, array $context = []): void;
 
     /**
-     * @param IndexQuery $query The IndexQuery to use to find NodeRefs.
-     * @param array      $hints Data that helps the NCR decide where to read/write data from.
+     * @param IndexQuery $query   The IndexQuery to use to find NodeRefs.
+     * @param array      $context Data that helps the NCR decide where to read/write data from.
      *
      * @return IndexQueryResult
      *
      * @throws RepositoryIndexNotFound
      * @throws GdbotsNcrException
      */
-    public function findNodeRefs(IndexQuery $query, array $hints = []): IndexQueryResult;
+    public function findNodeRefs(IndexQuery $query, array $context = []): IndexQueryResult;
 
     /**
      * @param SchemaQName $qname
-     * @param callable    $callback The callable that will receive "func(NodeRef, Node)" for each node.
-     * @param array       $hints    Data that helps the NCR decide where to read/write data from.
+     * @param callable    $callback The callable that will receive "func(Node, NodeRef)" for each node.
+     * @param array       $context  Data that helps the NCR decide where to read/write data from.
      *
      * @throws GdbotsNcrException
      */
-    public function streamNodes(SchemaQName $qname, callable $callback, array $hints = []): void;
+    public function streamNodes(SchemaQName $qname, callable $callback, array $context = []): void;
 
     /**
      * @param SchemaQName $qname
      * @param callable    $callback The callable that will receive "func(NodeRef)" for each node.
-     * @param array       $hints    Data that helps the NCR decide where to read/write data from.
+     * @param array       $context  Data that helps the NCR decide where to read/write data from.
      *
      * @throws GdbotsNcrException
      */
-    public function streamNodeRefs(SchemaQName $qname, callable $callback, array $hints = []): void;
+    public function streamNodeRefs(SchemaQName $qname, callable $callback, array $context = []): void;
 }

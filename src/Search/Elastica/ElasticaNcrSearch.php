@@ -5,14 +5,24 @@ namespace Gdbots\Ncr\Search\Elastica;
 
 use Elastica\Client;
 use Elastica\Index;
+use Elastica\Query;
+use Elastica\ResultSet;
+use Elastica\Search;
 use Elastica\Type;
 use Gdbots\Common\Util\ClassUtils;
+use Gdbots\Common\Util\NumberUtils;
 use Gdbots\Ncr\Exception\SearchOperationFailed;
 use Gdbots\Ncr\NcrSearch;
 use Gdbots\Pbj\Marshaler\Elastica\DocumentMarshaler;
 use Gdbots\Pbj\Schema;
 use Gdbots\Pbj\SchemaQName;
+use Gdbots\Pbj\WellKnown\Microtime;
 use Gdbots\QueryParser\Builder\ElasticaQueryBuilder;
+use Gdbots\QueryParser\Enum\BoolOperator;
+use Gdbots\QueryParser\Enum\ComparisonOperator;
+use Gdbots\QueryParser\Node\Field;
+use Gdbots\QueryParser\Node\Numbr;
+use Gdbots\QueryParser\Node\Word;
 use Gdbots\QueryParser\ParsedQuery;
 use Gdbots\Schemas\Ncr\Mixin\SearchNodesRequest\SearchNodesRequest;
 use Gdbots\Schemas\Ncr\Mixin\SearchNodesResponse\SearchNodesResponse;
@@ -134,7 +144,7 @@ TEXT;
                 $documents[] = $document;
             } catch (\Exception $e) {
                 $message = sprintf(
-                    '%s::Failed to add node [{node_ref}] to batch index request ' .
+                    '%s while adding node [{node_ref}] to batch index request ' .
                     'into ElasticSearch [{index_name}/{type_name}].',
                     ClassUtils::getShortName($e)
                 );
@@ -161,7 +171,7 @@ TEXT;
         } catch (\Exception $e) {
             throw new SearchOperationFailed(
                 sprintf(
-                    '%s::Failed to index batch into ElasticSearch with message: %s',
+                    '%s while indexing batch into ElasticSearch with message: %s',
                     ClassUtils::getShortName($e),
                     $e->getMessage()
                 ),
@@ -181,7 +191,100 @@ TEXT;
         array $qnames = [],
         array $context = []
     ): SearchNodesResponse {
-        // TODO: Implement searchNodes() method.
+        $search = new Search($this->getClient($context));
+
+        if (empty($qnames)) {
+            $search->addIndex($this->indexManager->getIndexPrefix($context) . '*');
+        } else {
+            foreach ($qnames as $qname) {
+                $search->addIndex($this->indexManager->getIndexName($qname, $context));
+                $search->addType($this->indexManager->getTypeName($qname));
+            }
+        }
+
+        $page = $request->get('page');
+        $perPage = $request->get('count');
+        $offset = ($page - 1) * $perPage;
+        $offset = NumberUtils::bound($offset, 0, 1000);
+        $options = [
+            Search::OPTION_TIMEOUT                   => $this->timeout,
+            Search::OPTION_FROM                      => $offset,
+            Search::OPTION_SIZE                      => $perPage,
+            Search::OPTION_SEARCH_IGNORE_UNAVAILABLE => true,
+        ];
+
+        $required = BoolOperator::REQUIRED();
+
+        if ($request->has('status')) {
+            $parsedQuery->addNode(new Field('status', new Word((string)$request->get('status'), $required), $required));
+        }
+
+        $dateFilters = [
+            ['query' => 'created_after', 'field' => 'created_at', 'operator' => ComparisonOperator::GT()],
+            ['query' => 'created_before', 'field' => 'created_at', 'operator' => ComparisonOperator::LT()],
+            ['query' => 'updated_after', 'field' => 'updated_at', 'operator' => ComparisonOperator::GT()],
+            ['query' => 'updated_before', 'field' => 'updated_at', 'operator' => ComparisonOperator::LT()],
+        ];
+
+        foreach ($dateFilters as $f) {
+            if ($request->has($f['query'])) {
+                $parsedQuery->addNode(
+                    new Field(
+                        $f['field'],
+                        new Numbr(Microtime::fromDateTime($request->get($f['query']))->toString(), $f['operator']),
+                        $required
+                    )
+                );
+            }
+        }
+
+        try {
+            $search->setOptionsAndQuery($options, $this->createQuery($request, $parsedQuery));
+            $this->beforeSearch($search, $request);
+            $results = $search->search();
+        } catch (\Exception $e) {
+            $this->logger->error(
+                'ElasticSearch query [{query}] failed.',
+                [
+                    'exception'  => $e,
+                    'pbj_schema' => $request->schema()->getId()->toString(),
+                    'pbj'        => $request->toArray(),
+                    'query'      => $request->get('q'),
+                ]
+            );
+
+            throw new SearchOperationFailed(
+                sprintf(
+                    'ElasticSearch query [%s] failed with message: %s',
+                    $request->get('q'),
+                    ClassUtils::getShortName($e) . '::' . $e->getMessage()
+                ),
+                Code::INTERNAL,
+                $e
+            );
+        }
+
+        $nodes = [];
+        foreach ($results->getResults() as $result) {
+            try {
+                $nodes[] = $this->marshaler->unmarshal($result->getSource());
+            } catch (\Exception $e) {
+                $this->logger->error(
+                    'Source returned from ElasticSearch could not be unmarshaled.',
+                    ['exception' => $e, 'hit' => $result->getHit()]
+                );
+            }
+        }
+
+        $response
+            ->set('total', $results->getTotalHits())
+            ->set('has_more', ($offset + $perPage) < $results->getTotalHits() && $offset < 1000)
+            ->set('time_taken', (int)$results->getTotalTime())
+            ->set('max_score', (float)$results->getMaxScore())
+            ->addToList('nodes', $nodes);
+
+        $this->afterSearch($results, $response);
+        return $response;
     }
 
     /**
@@ -196,5 +299,50 @@ TEXT;
     {
         // override to provide your own logic for client creation.
         return $this->clientManager->getClient();
+    }
+
+    /**
+     * @param Search             $search
+     * @param SearchNodesRequest $request
+     */
+    protected function beforeSearch(Search $search, SearchNodesRequest $request)
+    {
+        // Override to customize the search before it is executed.
+    }
+
+    /**
+     * @param ResultSet           $results
+     * @param SearchNodesResponse $response
+     */
+    protected function afterSearch(ResultSet $results, SearchNodesResponse $response)
+    {
+        // Override to customize the response before it is returned.
+    }
+
+    /**
+     * @param SearchNodesRequest $request
+     * @param ParsedQuery        $parsedQuery
+     *
+     * @return Query
+     */
+    protected function createQuery(SearchNodesRequest $request, ParsedQuery $parsedQuery)
+    {
+        $this->queryBuilder->setDefaultFieldName('_all');
+        $query = $this->queryBuilder->addParsedQuery($parsedQuery)->getBoolQuery();
+        return Query::create($this->createSortedQuery($query, $request));
+    }
+
+    /**
+     * Applies sorting and scoring to the query and returns the final query object
+     * which will be sent to elastic search.
+     *
+     * @param Query\AbstractQuery $query
+     * @param SearchNodesRequest  $request
+     *
+     * @return Query
+     */
+    protected function createSortedQuery(Query\AbstractQuery $query, SearchNodesRequest $request)
+    {
+        return Query::create($query);
     }
 }

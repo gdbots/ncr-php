@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Gdbots\Ncr\Repository;
 
@@ -49,14 +49,14 @@ final class InMemoryNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    public function createStorage(SchemaQName $qname, array $hints = []): void
+    public function createStorage(SchemaQName $qname, array $context = []): void
     {
     }
 
     /**
      * {@inheritdoc}
      */
-    public function describeStorage(SchemaQName $qname, array $hints = []): string
+    public function describeStorage(SchemaQName $qname, array $context = []): string
     {
         $count = count($this->nodes);
         $nodeRefs = implode(PHP_EOL, array_keys($this->nodes));
@@ -73,7 +73,7 @@ TEXT;
     /**
      * {@inheritdoc}
      */
-    public function hasNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): bool
+    public function hasNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): bool
     {
         return isset($this->nodes[$nodeRef->toString()]);
     }
@@ -81,7 +81,7 @@ TEXT;
     /**
      * {@inheritdoc}
      */
-    public function getNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): Node
+    public function getNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): Node
     {
         if (!$this->hasNode($nodeRef)) {
             throw NodeNotFound::forNodeRef($nodeRef);
@@ -98,7 +98,7 @@ TEXT;
     /**
      * {@inheritdoc}
      */
-    public function getNodes(array $nodeRefs, bool $consistent = false, array $hints = []): array
+    public function getNodes(array $nodeRefs, bool $consistent = false, array $context = []): array
     {
         $keys = array_map('strval', $nodeRefs);
         $nodes = array_intersect_key($this->nodes, array_flip($keys));
@@ -116,7 +116,7 @@ TEXT;
     /**
      * {@inheritdoc}
      */
-    public function putNode(Node $node, ?string $expectedEtag = null, array $hints = []): void
+    public function putNode(Node $node, ?string $expectedEtag = null, array $context = []): void
     {
         $nodeRef = NodeRef::fromNode($node);
 
@@ -140,7 +140,7 @@ TEXT;
     /**
      * {@inheritdoc}
      */
-    public function deleteNode(NodeRef $nodeRef, array $hints = []): void
+    public function deleteNode(NodeRef $nodeRef, array $context = []): void
     {
         unset($this->nodes[$nodeRef->toString()]);
     }
@@ -148,7 +148,7 @@ TEXT;
     /**
      * {@inheritdoc}
      */
-    public function findNodeRefs(IndexQuery $query, array $hints = []): IndexQueryResult
+    public function findNodeRefs(IndexQuery $query, array $context = []): IndexQueryResult
     {
         // fixme: handle findNodeRefs in memory
         return new IndexQueryResult($query);
@@ -157,21 +157,21 @@ TEXT;
     /**
      * {@inheritdoc}
      */
-    public function streamNodes(SchemaQName $qname, callable $callback, array $hints = []): void
+    public function streamNodes(SchemaQName $qname, callable $callback, array $context = []): void
     {
         foreach ($this->nodes as $nodeRef => $node) {
             if ($node->isFrozen()) {
                 $this->nodes[$nodeRef] = clone $node;
             }
 
-            $callback(NodeRef::fromString($nodeRef), $this->nodes[$nodeRef]);
+            $callback($this->nodes[$nodeRef], NodeRef::fromString($nodeRef));
         }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function streamNodeRefs(SchemaQName $qname, callable $callback, array $hints = []): void
+    public function streamNodeRefs(SchemaQName $qname, callable $callback, array $context = []): void
     {
         foreach ($this->nodes as $nodeRef => $node) {
             $callback(NodeRef::fromString($nodeRef));

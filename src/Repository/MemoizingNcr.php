@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Gdbots\Ncr\Repository;
 
@@ -45,41 +45,41 @@ final class MemoizingNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    public function createStorage(SchemaQName $qname, array $hints = []): void
+    public function createStorage(SchemaQName $qname, array $context = []): void
     {
-        $this->next->createStorage($qname, $hints);
+        $this->next->createStorage($qname, $context);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function describeStorage(SchemaQName $qname, array $hints = []): string
+    public function describeStorage(SchemaQName $qname, array $context = []): string
     {
-        return $this->next->describeStorage($qname, $hints);
+        return $this->next->describeStorage($qname, $context);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function hasNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): bool
+    public function hasNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): bool
     {
         if (!$consistent && $this->cache->hasNode($nodeRef)) {
             return true;
         }
 
-        return $this->next->hasNode($nodeRef, $consistent, $hints);
+        return $this->next->hasNode($nodeRef, $consistent, $context);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): Node
+    public function getNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): Node
     {
         if (!$consistent && $this->cache->hasNode($nodeRef)) {
             return $this->cache->getNode($nodeRef);
         }
 
-        $node = $this->next->getNode($nodeRef, $consistent, $hints);
+        $node = $this->next->getNode($nodeRef, $consistent, $context);
 
         if ($this->readThrough) {
             $this->cache->addNode($node);
@@ -91,7 +91,7 @@ final class MemoizingNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    public function getNodes(array $nodeRefs, bool $consistent = false, array $hints = []): array
+    public function getNodes(array $nodeRefs, bool $consistent = false, array $context = []): array
     {
         if (empty($nodeRefs)) {
             return [];
@@ -109,7 +109,7 @@ final class MemoizingNcr implements Ncr
             }
         }
 
-        $nodes = empty($nodeRefs) ? [] : $this->next->getNodes($nodeRefs, $consistent, $hints);
+        $nodes = empty($nodeRefs) ? [] : $this->next->getNodes($nodeRefs, $consistent, $context);
 
         if ($this->readThrough && !empty($nodes)) {
             $this->cache->addNodes($nodes);
@@ -125,42 +125,42 @@ final class MemoizingNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    public function putNode(Node $node, ?string $expectedEtag = null, array $hints = []): void
+    public function putNode(Node $node, ?string $expectedEtag = null, array $context = []): void
     {
-        $this->next->putNode($node, $expectedEtag, $hints);
+        $this->next->putNode($node, $expectedEtag, $context);
         $this->cache->addNode($node);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function deleteNode(NodeRef $nodeRef, array $hints = []): void
+    public function deleteNode(NodeRef $nodeRef, array $context = []): void
     {
-        $this->next->deleteNode($nodeRef, $hints);
+        $this->next->deleteNode($nodeRef, $context);
         $this->cache->removeNode($nodeRef);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function findNodeRefs(IndexQuery $query, array $hints = []): IndexQueryResult
+    public function findNodeRefs(IndexQuery $query, array $context = []): IndexQueryResult
     {
-        return $this->next->findNodeRefs($query, $hints);
+        return $this->next->findNodeRefs($query, $context);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function streamNodes(SchemaQName $qname, callable $callback, array $hints = []): void
+    public function streamNodes(SchemaQName $qname, callable $callback, array $context = []): void
     {
-        $this->next->streamNodes($qname, $callback, $hints);
+        $this->next->streamNodes($qname, $callback, $context);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function streamNodeRefs(SchemaQName $qname, callable $callback, array $hints = []): void
+    public function streamNodeRefs(SchemaQName $qname, callable $callback, array $context = []): void
     {
-        $this->next->streamNodeRefs($qname, $callback, $hints);
+        $this->next->streamNodeRefs($qname, $callback, $context);
     }
 }

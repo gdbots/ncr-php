@@ -117,7 +117,7 @@ class IndexManager
         } catch (\Exception $e) {
             throw new SearchOperationFailed(
                 sprintf(
-                    '%s::Unable to create index [%s] for qname [%s].',
+                    '%s while creating index [%s] for qname [%s].',
                     ClassUtils::getShortName($e),
                     $index->getName(),
                     $qname
@@ -150,7 +150,7 @@ class IndexManager
         } catch (\Exception $e) {
             throw new SearchOperationFailed(
                 sprintf(
-                    '%s::Failed to put mapping for type [%s/%s] into ElasticSearch for qname [%s].',
+                    '%s while putting mapping for type [%s/%s] into ElasticSearch for qname [%s].',
                     ClassUtils::getShortName($e),
                     $index->getName(),
                     $type->getName(),
@@ -162,6 +162,19 @@ class IndexManager
         }
 
         return $type;
+    }
+
+    /**
+     * Returns the index prefix which can be used in wildcard NCR searches that
+     * search all indices and types.
+     *
+     * @param array $context Data that helps the NCR Search decide where to read/write data from.
+     *
+     * @return string
+     */
+    final public function getIndexPrefix(array $context = []): string
+    {
+        return $this->filterIndexName($this->prefix, null, $context);
     }
 
     /**
@@ -219,7 +232,7 @@ class IndexManager
 
     /**
      * Filter the index settings before it's returned to the consumer.  Typically used to adjust
-     * the sharding/replica config using the hints.
+     * the sharding/replica config using the context.
      *
      * @param array       $settings Index settings used when creating/updating the index.
      * @param SchemaQName $qname    QName used to derive the unfiltered index name.
@@ -242,7 +255,7 @@ class IndexManager
      *
      * @return string
      */
-    protected function filterIndexName(string $indexName, SchemaQName $qname, array $context): string
+    protected function filterIndexName(string $indexName, ?SchemaQName $qname, array $context): string
     {
         return $indexName;
     }

@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Gdbots\Ncr\Repository;
 
@@ -43,41 +43,41 @@ class Psr6Ncr implements Ncr
     /**
      * {@inheritdoc}
      */
-    final public function createStorage(SchemaQName $qname, array $hints = []): void
+    final public function createStorage(SchemaQName $qname, array $context = []): void
     {
-        $this->next->createStorage($qname, $hints);
+        $this->next->createStorage($qname, $context);
     }
 
     /**
      * {@inheritdoc}
      */
-    final public function describeStorage(SchemaQName $qname, array $hints = []): string
+    final public function describeStorage(SchemaQName $qname, array $context = []): string
     {
-        return $this->next->describeStorage($qname, $hints);
+        return $this->next->describeStorage($qname, $context);
     }
 
     /**
      * {@inheritdoc}
      */
-    final public function hasNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): bool
+    final public function hasNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): bool
     {
         if (!$consistent) {
-            $cacheKey = $this->getCacheKey($nodeRef, $hints);
+            $cacheKey = $this->getCacheKey($nodeRef, $context);
             $cacheItem = $this->cache->getItem($cacheKey);
             if ($cacheItem->isHit()) {
                 return true;
             }
         }
 
-        return $this->next->hasNode($nodeRef, $consistent, $hints);
+        return $this->next->hasNode($nodeRef, $consistent, $context);
     }
 
     /**
      * {@inheritdoc}
      */
-    final public function getNode(NodeRef $nodeRef, bool $consistent = false, array $hints = []): Node
+    final public function getNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): Node
     {
-        $cacheKey = $this->getCacheKey($nodeRef, $hints);
+        $cacheKey = $this->getCacheKey($nodeRef, $context);
         $cacheItem = null;
 
         if (!$consistent) {
@@ -91,7 +91,7 @@ class Psr6Ncr implements Ncr
             }
         }
 
-        $node = $this->next->getNode($nodeRef, $consistent, $hints);
+        $node = $this->next->getNode($nodeRef, $consistent, $context);
 
         if ($this->readThrough) {
             if (null === $cacheItem) {
@@ -108,14 +108,14 @@ class Psr6Ncr implements Ncr
     /**
      * {@inheritdoc}
      */
-    final public function getNodes(array $nodeRefs, bool $consistent = false, array $hints = []): array
+    final public function getNodes(array $nodeRefs, bool $consistent = false, array $context = []): array
     {
         if (empty($nodeRefs)) {
             return [];
         } elseif (count($nodeRefs) === 1) {
             try {
                 $nodeRef = array_shift($nodeRefs);
-                return [(string)$nodeRef => $this->getNode($nodeRef, $consistent, $hints)];
+                return [(string)$nodeRef => $this->getNode($nodeRef, $consistent, $context)];
             } catch (NodeNotFound $e) {
                 return [];
             } catch (\Exception $e) {
@@ -130,7 +130,7 @@ class Psr6Ncr implements Ncr
 
         if (!$consistent || $this->readThrough) {
             foreach ($nodeRefs as $nodeRef) {
-                $cacheKeys[$nodeRef->toString()] = $this->getCacheKey($nodeRef, $hints);
+                $cacheKeys[$nodeRef->toString()] = $this->getCacheKey($nodeRef, $context);
             }
         }
 
@@ -161,7 +161,7 @@ class Psr6Ncr implements Ncr
             }
         }
 
-        $nodes = empty($nodeRefs) ? [] : $this->next->getNodes($nodeRefs, $consistent, $hints);
+        $nodes = empty($nodeRefs) ? [] : $this->next->getNodes($nodeRefs, $consistent, $context);
 
         if ($this->readThrough && !empty($nodes)) {
             if ($consistent) {
@@ -210,11 +210,11 @@ class Psr6Ncr implements Ncr
     /**
      * {@inheritdoc}
      */
-    final public function putNode(Node $node, ?string $expectedEtag = null, array $hints = []): void
+    final public function putNode(Node $node, ?string $expectedEtag = null, array $context = []): void
     {
-        $this->next->putNode($node, $expectedEtag, $hints);
+        $this->next->putNode($node, $expectedEtag, $context);
         $nodeRef = NodeRef::fromNode($node);
-        $cacheItem = $this->cache->getItem($this->getCacheKey($nodeRef, $hints));
+        $cacheItem = $this->cache->getItem($this->getCacheKey($nodeRef, $context));
         $this->beforeSaveCacheItem($cacheItem, $node);
         $this->cache->save($cacheItem->set($node));
     }
@@ -222,34 +222,34 @@ class Psr6Ncr implements Ncr
     /**
      * {@inheritdoc}
      */
-    final public function deleteNode(NodeRef $nodeRef, array $hints = []): void
+    final public function deleteNode(NodeRef $nodeRef, array $context = []): void
     {
-        $this->next->deleteNode($nodeRef, $hints);
-        $this->cache->deleteItem($this->getCacheKey($nodeRef, $hints));
+        $this->next->deleteNode($nodeRef, $context);
+        $this->cache->deleteItem($this->getCacheKey($nodeRef, $context));
     }
 
     /**
      * {@inheritdoc}
      */
-    final public function findNodeRefs(IndexQuery $query, array $hints = []): IndexQueryResult
+    final public function findNodeRefs(IndexQuery $query, array $context = []): IndexQueryResult
     {
-        return $this->next->findNodeRefs($query, $hints);
+        return $this->next->findNodeRefs($query, $context);
     }
 
     /**
      * {@inheritdoc}
      */
-    final public function streamNodes(SchemaQName $qname, callable $callback, array $hints = []): void
+    final public function streamNodes(SchemaQName $qname, callable $callback, array $context = []): void
     {
-        $this->next->streamNodes($qname, $callback, $hints);
+        $this->next->streamNodes($qname, $callback, $context);
     }
 
     /**
      * {@inheritdoc}
      */
-    final public function streamNodeRefs(SchemaQName $qname, callable $callback, array $hints = []): void
+    final public function streamNodeRefs(SchemaQName $qname, callable $callback, array $context = []): void
     {
-        $this->next->streamNodeRefs($qname, $callback, $hints);
+        $this->next->streamNodeRefs($qname, $callback, $context);
     }
 
     /**
@@ -262,11 +262,11 @@ class Psr6Ncr implements Ncr
      * will be stored as serialized php.
      *
      * @param NodeRef $nodeRef
-     * @param array   $hints
+     * @param array   $context
      *
      * @return string
      */
-    protected function getCacheKey(NodeRef $nodeRef, array $hints): string
+    protected function getCacheKey(NodeRef $nodeRef, array $context): string
     {
         return str_replace('-', '_', sprintf(
             '%s.%s.%s.php',
