@@ -49,7 +49,7 @@ class QueryFactory
         }
 
         $required = BoolOperator::REQUIRED();
-        $parsedQuery->addNode(new Field('status', new Word((string)$request->get('status'), $required), $required));
+        $parsedQuery->addNode(new Field('status', new Word((string) $request->get('status'), $required), $required));
     }
 
     /**
