@@ -9,10 +9,10 @@ use Psr\Log\LoggerInterface;
 class AwsAuthV4ClientManager extends ClientManager
 {
     /** @var Credentials */
-    protected $credentials;
+    private $credentials;
 
     /** @var string */
-    protected $region;
+    private $region;
 
     /**
      * @param Credentials     $credentials

@@ -96,7 +96,7 @@ interface Ncr
 
     /**
      * @param SchemaQName $qname
-     * @param callable    $callback The callable that will receive "func(Node, NodeRef)" for each node.
+     * @param callable    $callback The callable that will receive "func(Node)" for each node.
      * @param array       $context  Data that helps the NCR decide where to read/write data from.
      *
      * @throws GdbotsNcrException

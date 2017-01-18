@@ -34,13 +34,13 @@ class ClientManager
      *
      * @var array
      */
-    protected $clusters;
+    private $clusters;
 
     /** @var LoggerInterface */
-    protected $logger;
+    private $logger;
 
     /** @var Client[] */
-    protected $clients = [];
+    private $clients = [];
 
     /**
      * @param array           $clusters
@@ -61,7 +61,7 @@ class ClientManager
      *
      * @return Client
      */
-    public function getClient(string $cluster = 'default'): Client
+    final public function getClient(string $cluster = 'default'): Client
     {
         if (isset($this->clients[$cluster])) {
             return $this->clients[$cluster];
@@ -110,7 +110,7 @@ class ClientManager
      *
      * @return bool
      */
-    public function hasCluster(string $cluster): bool
+    final public function hasCluster(string $cluster): bool
     {
         return isset($this->clusters[$cluster]);
     }
@@ -120,7 +120,7 @@ class ClientManager
      *
      * @return string[]
      */
-    public function getAvailableClusters(): array
+    final public function getAvailableClusters(): array
     {
         return array_keys($this->clusters);
     }

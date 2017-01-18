@@ -553,7 +553,7 @@ final class DynamoDbNcr implements Ncr
                 if ($context['node_refs_only']) {
                     $callback($nodeRef);
                 } else {
-                    $callback($node, $nodeRef);
+                    $callback($node);
                 }
             }
 

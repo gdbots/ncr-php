@@ -164,7 +164,7 @@ TEXT;
                 $this->nodes[$nodeRef] = clone $node;
             }
 
-            $callback($this->nodes[$nodeRef], NodeRef::fromString($nodeRef));
+            $callback($this->nodes[$nodeRef]);
         }
     }
 

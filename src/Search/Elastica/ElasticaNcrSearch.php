@@ -5,8 +5,6 @@ namespace Gdbots\Ncr\Search\Elastica;
 
 use Elastica\Client;
 use Elastica\Index;
-use Elastica\Query;
-use Elastica\ResultSet;
 use Elastica\Search;
 use Elastica\Type;
 use Gdbots\Common\Util\ClassUtils;
@@ -16,13 +14,6 @@ use Gdbots\Ncr\NcrSearch;
 use Gdbots\Pbj\Marshaler\Elastica\DocumentMarshaler;
 use Gdbots\Pbj\Schema;
 use Gdbots\Pbj\SchemaQName;
-use Gdbots\Pbj\WellKnown\Microtime;
-use Gdbots\QueryParser\Builder\ElasticaQueryBuilder;
-use Gdbots\QueryParser\Enum\BoolOperator;
-use Gdbots\QueryParser\Enum\ComparisonOperator;
-use Gdbots\QueryParser\Node\Field;
-use Gdbots\QueryParser\Node\Numbr;
-use Gdbots\QueryParser\Node\Word;
 use Gdbots\QueryParser\ParsedQuery;
 use Gdbots\Schemas\Ncr\Mixin\SearchNodesRequest\SearchNodesRequest;
 use Gdbots\Schemas\Ncr\Mixin\SearchNodesResponse\SearchNodesResponse;
@@ -36,24 +27,24 @@ class ElasticaNcrSearch implements NcrSearch
     /** @var ClientManager */
     protected $clientManager;
 
-    /** @var IndexManager */
-    protected $indexManager;
-
     /** @var LoggerInterface */
     protected $logger;
 
-    /** @var DocumentMarshaler */
-    protected $marshaler;
+    /** @var IndexManager */
+    private $indexManager;
 
-    /** @var ElasticaQueryBuilder */
-    protected $queryBuilder;
+    /** @var DocumentMarshaler */
+    private $marshaler;
+
+    /** @var QueryFactory */
+    private $queryFactory;
 
     /**
      * Used to limit the amount of time a query can take.
      *
      * @var string
      */
-    protected $timeout;
+    private $timeout;
 
     /**
      * @param ClientManager   $clientManager
@@ -72,15 +63,14 @@ class ElasticaNcrSearch implements NcrSearch
         $this->logger = $logger ?: new NullLogger();
         $this->timeout = $timeout ?: '100ms';
         $this->marshaler = new DocumentMarshaler();
-        $this->queryBuilder = new ElasticaQueryBuilder();
     }
 
     /**
      * {@inheritdoc}
      */
-    public function createStorage(SchemaQName $qname, array $context = []): void
+    final public function createStorage(SchemaQName $qname, array $context = []): void
     {
-        $client = $this->getClient($context);
+        $client = $this->getClientForWrite($context);
         $index = $this->indexManager->createIndex($client, $qname, $context);
         $this->indexManager->createType($index, $qname);
     }
@@ -88,9 +78,9 @@ class ElasticaNcrSearch implements NcrSearch
     /**
      * {@inheritdoc}
      */
-    public function describeStorage(SchemaQName $qname, array $context = []): string
+    final public function describeStorage(SchemaQName $qname, array $context = []): string
     {
-        $client = $this->getClient($context);
+        $client = $this->getClientForWrite($context);
         $index = new Index($client, $this->indexManager->getIndexName($qname, $context));
         $type = new Type($index, $this->indexManager->getTypeName($qname));
 
@@ -114,13 +104,13 @@ TEXT;
     /**
      * {@inheritdoc}
      */
-    public function indexNodes(array $nodes, array $context = []): void
+    final public function indexNodes(array $nodes, array $context = []): void
     {
         if (empty($nodes)) {
             return;
         }
 
-        $client = $this->getClient($context);
+        $client = $this->getClientForWrite($context);
         $documents = [];
 
         foreach ($nodes as $node) {
@@ -134,13 +124,11 @@ TEXT;
             try {
                 $indexName = $this->indexManager->getIndexName($qname, $context);
                 $typeName = $this->indexManager->getTypeName($qname);
-
                 $document = $this->marshaler->marshal($node)
                     ->setId($node->get('_id')->toString())
-                    ->remove('_id') // the "_id" field must not exist in the source as well
+                    ->remove('_id')// the "_id" field must not exist in the source as well
                     ->setType($typeName)
                     ->setIndex($indexName);
-
                 $this->indexManager->getNodeMapper($qname)->beforeIndex($document, $node);
                 $documents[] = $document;
             } catch (\Exception $e) {
@@ -185,14 +173,14 @@ TEXT;
     /**
      * {@inheritdoc}
      */
-    public function searchNodes(
+    final public function searchNodes(
         SearchNodesRequest $request,
         ParsedQuery $parsedQuery,
         SearchNodesResponse $response,
         array $qnames = [],
         array $context = []
-    ): SearchNodesResponse {
-        $search = new Search($this->getClient($context));
+    ): void {
+        $search = new Search($this->getClientForRead($context));
 
         if (empty($qnames)) {
             $search->addIndex($this->indexManager->getIndexPrefix($context) . '*');
@@ -214,35 +202,10 @@ TEXT;
             Search::OPTION_SEARCH_IGNORE_UNAVAILABLE => true,
         ];
 
-        $required = BoolOperator::REQUIRED();
-
-        if ($request->has('status')) {
-            $parsedQuery->addNode(new Field('status', new Word((string)$request->get('status'), $required), $required));
-        }
-
-        $dateFilters = [
-            ['query' => 'created_after', 'field' => 'created_at', 'operator' => ComparisonOperator::GT()],
-            ['query' => 'created_before', 'field' => 'created_at', 'operator' => ComparisonOperator::LT()],
-            ['query' => 'updated_after', 'field' => 'updated_at', 'operator' => ComparisonOperator::GT()],
-            ['query' => 'updated_before', 'field' => 'updated_at', 'operator' => ComparisonOperator::LT()],
-        ];
-
-        foreach ($dateFilters as $f) {
-            if ($request->has($f['query'])) {
-                $parsedQuery->addNode(
-                    new Field(
-                        $f['field'],
-                        new Numbr(Microtime::fromDateTime($request->get($f['query']))->toString(), $f['operator']),
-                        $required
-                    )
-                );
-            }
-        }
-
         try {
-            $search->setOptionsAndQuery($options, $this->createQuery($request, $parsedQuery));
-            $this->beforeSearch($search, $request);
-            $results = $search->search();
+            $results = $search
+                ->setOptionsAndQuery($options, $this->getQueryFactory()->create($request, $parsedQuery))
+                ->search();
         } catch (\Exception $e) {
             $this->logger->error(
                 'ElasticSearch query [{query}] failed.',
@@ -285,67 +248,53 @@ TEXT;
             ->set('time_taken', (int)$results->getTotalTime())
             ->set('max_score', (float)$results->getMaxScore())
             ->addToList('nodes', $nodes);
-
-        $this->afterSearch($results, $response);
-        return $response;
     }
 
     /**
-     * Override to provide your own logic which determines which client to use
-     * based on the context provided.  Typically used for multi-tenant applications.
+     * Override to provide your own logic which determines which client
+     * to use for a READ operation based on the context provided.
+     * Typically used for multi-tenant applications.
      *
      * @param array $context
      *
      * @return Client
      */
-    protected function getClient(array $context): Client
+    protected function getClientForRead(array $context): Client
     {
-        // override to provide your own logic for client creation.
+        return $this->getClientForWrite($context);
+    }
+
+    /**
+     * Override to provide your own logic which determines which client
+     * to use for a WRITE operation based on the context provided.
+     * Typically used for multi-tenant applications.
+     *
+     * @param array $context
+     *
+     * @return Client
+     */
+    protected function getClientForWrite(array $context): Client
+    {
         return $this->clientManager->getClient();
     }
 
     /**
-     * @param Search             $search
-     * @param SearchNodesRequest $request
+     * @return QueryFactory
      */
-    protected function beforeSearch(Search $search, SearchNodesRequest $request)
+    final protected function getQueryFactory(): QueryFactory
     {
-        // Override to customize the search before it is executed.
+        if (null === $this->queryFactory) {
+            $this->queryFactory = $this->doGetQueryFactory();
+        }
+
+        return $this->queryFactory;
     }
 
     /**
-     * @param ResultSet           $results
-     * @param SearchNodesResponse $response
+     * @return QueryFactory
      */
-    protected function afterSearch(ResultSet $results, SearchNodesResponse $response)
+    protected function doGetQueryFactory(): QueryFactory
     {
-        // Override to customize the response before it is returned.
-    }
-
-    /**
-     * @param SearchNodesRequest $request
-     * @param ParsedQuery        $parsedQuery
-     *
-     * @return Query
-     */
-    protected function createQuery(SearchNodesRequest $request, ParsedQuery $parsedQuery)
-    {
-        $this->queryBuilder->setDefaultFieldName('_all');
-        $query = $this->queryBuilder->addParsedQuery($parsedQuery)->getBoolQuery();
-        return Query::create($this->createSortedQuery($query, $request));
-    }
-
-    /**
-     * Applies sorting and scoring to the query and returns the final query object
-     * which will be sent to elastic search.
-     *
-     * @param Query\AbstractQuery $query
-     * @param SearchNodesRequest  $request
-     *
-     * @return Query
-     */
-    protected function createSortedQuery(Query\AbstractQuery $query, SearchNodesRequest $request)
-    {
-        return Query::create($query);
+        return new QueryFactory();
     }
 }

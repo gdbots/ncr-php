@@ -60,7 +60,7 @@ class NodeMapper
             $mapping->setParam('dynamic_templates', $dynamicTemplates);
         }
 
-        $this->filterMapping($schema, $mapping);
+        $this->filterMapping($mapping, $schema);
         return $mapping;
     }
 
@@ -90,6 +90,15 @@ class NodeMapper
     }
 
     /**
+     * @param Mapping $mapping
+     * @param Schema  $schema
+     */
+    protected function filterMapping(Mapping $mapping, Schema $schema): void
+    {
+        // Override to customize the mapping
+    }
+
+    /**
      * @return MappingFactory
      */
     final protected function getMappingFactory(): MappingFactory
@@ -99,15 +108,6 @@ class NodeMapper
         }
 
         return $this->mappingFactory;
-    }
-
-    /**
-     * @param Schema  $schema
-     * @param Mapping $mapping
-     */
-    protected function filterMapping(Schema $schema, Mapping $mapping): void
-    {
-        // Override to customize the mapping
     }
 
     /**

@@ -49,8 +49,6 @@ interface NcrSearch
      *                                          If empty, it will search all nodes in all indexes.
      * @param array               $context      Data that helps the NCR Search decide where to read/write data from.
      *
-     * @return SearchNodesResponse
-     *
      * @throws GdbotsNcrException
      */
     public function searchNodes(
@@ -59,5 +57,5 @@ interface NcrSearch
         SearchNodesResponse $response,
         array $qnames = [],
         array $context = []
-    ): SearchNodesResponse;
+    ): void;
 }
