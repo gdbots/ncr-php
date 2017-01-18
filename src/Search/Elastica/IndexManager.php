@@ -76,10 +76,10 @@ class IndexManager
             'index_name'   => 'default',
         ];
 
-        foreach ($this->indexes as $indexName => &$settings) {
-            $settings['fq_index_name'] = 'default' === $indexName ? $this->prefix : "{$this->prefix}-{$indexName}";
-            $settings['number_of_shards'] = NumberUtils::bound($settings['number_of_shards'] ?? 1, 1, 100);
-            $settings['number_of_replicas'] = NumberUtils::bound($settings['number_of_replicas'] ?? 1, 1, 100);
+        foreach ($this->indexes as $indexName => $settings) {
+            $this->indexes[$indexName]['fq_index_name'] = 'default' === $indexName ? $this->prefix : "{$this->prefix}-{$indexName}";
+            $this->indexes[$indexName]['number_of_shards'] = NumberUtils::bound($settings['number_of_shards'] ?? 1, 1, 100);
+            $this->indexes[$indexName]['number_of_replicas'] = NumberUtils::bound($settings['number_of_replicas'] ?? 1, 1, 100);
         }
     }
 
@@ -106,7 +106,7 @@ class IndexManager
         $index = $created[$indexName] = $client->getIndex($indexName);
         $type = $this->types[$qname->toString()] ?? $this->types['default'];
         $mapper = $this->getNodeMapper($qname);
-        $settings = $this->filterIndexSettings($this->indexes[$type['index_name']], $qname, $context);
+        $settings = $this->filterIndexSettings($this->indexes[$type['index_name'] ?? 'default'], $qname, $context);
         unset($settings['fq_index_name']);
 
         try {
@@ -188,7 +188,7 @@ class IndexManager
     final public function getIndexName(SchemaQName $qname, array $context = []): string
     {
         $type = $this->types[$qname->toString()] ?? $this->types['default'];
-        return $this->filterIndexName($this->indexes[$type['index_name']]['fq_index_name'], $qname, $context);
+        return $this->filterIndexName($this->indexes[$type['index_name'] ?? 'default']['fq_index_name'], $qname, $context);
     }
 
     /**

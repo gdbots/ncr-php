@@ -137,6 +137,7 @@ TEXT;
 
                 $document = $this->marshaler->marshal($node)
                     ->setId($node->get('_id')->toString())
+                    ->remove('_id') // the "_id" field must not exist in the source as well
                     ->setType($typeName)
                     ->setIndex($indexName);
 
@@ -267,7 +268,9 @@ TEXT;
         $nodes = [];
         foreach ($results->getResults() as $result) {
             try {
-                $nodes[] = $this->marshaler->unmarshal($result->getSource());
+                $source = $result->getSource();
+                $source['_id'] = (string)$result->getId();
+                $nodes[] = $this->marshaler->unmarshal($source);
             } catch (\Exception $e) {
                 $this->logger->error(
                     'Source returned from ElasticSearch could not be unmarshaled.',
