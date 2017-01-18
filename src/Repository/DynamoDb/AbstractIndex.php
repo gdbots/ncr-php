@@ -65,7 +65,7 @@ abstract class AbstractIndex implements GlobalSecondaryIndex
             ],
             'ExpressionAttributeValues' => [
                 ':v_hash'  => ['S' => $query->getValue()],
-                ':v_qname' => ['S' => $query->getQName()->toString()],
+                ':v_qname' => ['S' => $query->getQName()->toString().':'],
             ],
             // special key to deal with filters that must be
             // processed AFTER the query runs due to limitation of range key
