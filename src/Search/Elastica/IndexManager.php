@@ -21,7 +21,7 @@ class IndexManager
      * An array of indexes keyed by index_name. For example:
      * [
      *     'article' => [
-     *         'number_of_shards'   => 1
+     *         'number_of_shards'   => 5,
      *         'number_of_replicas' => 1,
      *     ]
      * ]
@@ -78,7 +78,7 @@ class IndexManager
 
         foreach ($this->indexes as $indexName => $settings) {
             $this->indexes[$indexName]['fq_index_name'] = 'default' === $indexName ? $this->prefix : "{$this->prefix}-{$indexName}";
-            $this->indexes[$indexName]['number_of_shards'] = NumberUtils::bound($settings['number_of_shards'] ?? 1, 1, 100);
+            $this->indexes[$indexName]['number_of_shards'] = NumberUtils::bound($settings['number_of_shards'] ?? 5, 1, 100);
             $this->indexes[$indexName]['number_of_replicas'] = NumberUtils::bound($settings['number_of_replicas'] ?? 1, 1, 100);
         }
     }
