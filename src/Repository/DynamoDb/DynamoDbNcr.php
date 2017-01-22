@@ -445,27 +445,27 @@ final class DynamoDbNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    public function streamNodes(SchemaQName $qname, callable $callback, array $context = []): void
+    public function pipeNodes(SchemaQName $qname, callable $receiver, array $context = []): void
     {
         $context['node_refs_only'] = false;
-        $this->doStreamNodes($qname, $callback, $context);
+        $this->doPipeNodes($qname, $receiver, $context);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function streamNodeRefs(SchemaQName $qname, callable $callback, array $context = []): void
+    public function pipeNodeRefs(SchemaQName $qname, callable $receiver, array $context = []): void
     {
         $context['node_refs_only'] = true;
-        $this->doStreamNodes($qname, $callback, $context);
+        $this->doPipeNodes($qname, $receiver, $context);
     }
 
     /**
      * @param SchemaQName $qname
-     * @param callable    $callback
+     * @param callable    $receiver
      * @param array       $context
      */
-    private function doStreamNodes(SchemaQName $qname, callable $callback, array $context): void
+    private function doPipeNodes(SchemaQName $qname, callable $receiver, array $context): void
     {
         $tableName = $this->tableManager->getNodeTableName($qname, $context);
         $skipErrors = filter_var($context['skip_errors'] ?? false, FILTER_VALIDATE_BOOLEAN);
@@ -522,7 +522,7 @@ final class DynamoDbNcr implements Ncr
         }
 
         $fulfilled = function (ResultInterface $result, string $iterKey) use (
-            $qname, $callback, $tableName, $context, $params, &$pending, &$iter2seg
+            $qname, $receiver, $tableName, $context, $params, &$pending, &$iter2seg
         ) {
             $segment = $iter2seg['prev'][$iterKey];
 
@@ -551,9 +551,9 @@ final class DynamoDbNcr implements Ncr
                 }
 
                 if ($context['node_refs_only']) {
-                    $callback($nodeRef);
+                    $receiver($nodeRef);
                 } else {
-                    $callback($node);
+                    $receiver($node);
                 }
             }
 

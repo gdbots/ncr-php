@@ -239,17 +239,17 @@ class Psr6Ncr implements Ncr
     /**
      * {@inheritdoc}
      */
-    final public function streamNodes(SchemaQName $qname, callable $callback, array $context = []): void
+    final public function pipeNodes(SchemaQName $qname, callable $receiver, array $context = []): void
     {
-        $this->next->streamNodes($qname, $callback, $context);
+        $this->next->pipeNodes($qname, $receiver, $context);
     }
 
     /**
      * {@inheritdoc}
      */
-    final public function streamNodeRefs(SchemaQName $qname, callable $callback, array $context = []): void
+    final public function pipeNodeRefs(SchemaQName $qname, callable $receiver, array $context = []): void
     {
-        $this->next->streamNodeRefs($qname, $callback, $context);
+        $this->next->pipeNodeRefs($qname, $receiver, $context);
     }
 
     /**

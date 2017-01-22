@@ -151,16 +151,16 @@ final class MemoizingNcr implements Ncr
     /**
      * {@inheritdoc}
      */
-    public function streamNodes(SchemaQName $qname, callable $callback, array $context = []): void
+    public function pipeNodes(SchemaQName $qname, callable $receiver, array $context = []): void
     {
-        $this->next->streamNodes($qname, $callback, $context);
+        $this->next->pipeNodes($qname, $receiver, $context);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function streamNodeRefs(SchemaQName $qname, callable $callback, array $context = []): void
+    public function pipeNodeRefs(SchemaQName $qname, callable $receiver, array $context = []): void
     {
-        $this->next->streamNodeRefs($qname, $callback, $context);
+        $this->next->pipeNodeRefs($qname, $receiver, $context);
     }
 }

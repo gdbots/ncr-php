@@ -157,24 +157,24 @@ TEXT;
     /**
      * {@inheritdoc}
      */
-    public function streamNodes(SchemaQName $qname, callable $callback, array $context = []): void
+    public function pipeNodes(SchemaQName $qname, callable $receiver, array $context = []): void
     {
         foreach ($this->nodes as $nodeRef => $node) {
             if ($node->isFrozen()) {
                 $this->nodes[$nodeRef] = clone $node;
             }
 
-            $callback($this->nodes[$nodeRef]);
+            $receiver($this->nodes[$nodeRef]);
         }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function streamNodeRefs(SchemaQName $qname, callable $callback, array $context = []): void
+    public function pipeNodeRefs(SchemaQName $qname, callable $receiver, array $context = []): void
     {
         foreach ($this->nodes as $nodeRef => $node) {
-            $callback(NodeRef::fromString($nodeRef));
+            $receiver(NodeRef::fromString($nodeRef));
         }
     }
 

@@ -95,20 +95,26 @@ interface Ncr
     public function findNodeRefs(IndexQuery $query, array $context = []): IndexQueryResult;
 
     /**
+     * Reads nodes from the NCR (unordered) and executes the $receiver for every
+     * node returned, i.e. "$receiver($node);".
+     *
      * @param SchemaQName $qname
-     * @param callable    $callback The callable that will receive "func(Node)" for each node.
+     * @param callable    $receiver The callable that will receive the node. "function f(Node $node)".
      * @param array       $context  Data that helps the NCR decide where to read/write data from.
      *
      * @throws GdbotsNcrException
      */
-    public function streamNodes(SchemaQName $qname, callable $callback, array $context = []): void;
+    public function pipeNodes(SchemaQName $qname, callable $receiver, array $context = []): void;
 
     /**
+     * Reads nodeRefs from the NCR (unordered) and executes the $receiver for every
+     * NodeRef returned, i.e. "$receiver($nodeRef);".
+     *
      * @param SchemaQName $qname
-     * @param callable    $callback The callable that will receive "func(NodeRef)" for each node.
+     * @param callable    $receiver The callable that will receive the NodeRef. "function f(NodeRef $nodeRef)".
      * @param array       $context  Data that helps the NCR decide where to read/write data from.
      *
      * @throws GdbotsNcrException
      */
-    public function streamNodeRefs(SchemaQName $qname, callable $callback, array $context = []): void;
+    public function pipeNodeRefs(SchemaQName $qname, callable $receiver, array $context = []): void;
 }
