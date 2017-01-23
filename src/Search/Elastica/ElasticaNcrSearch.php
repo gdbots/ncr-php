@@ -275,7 +275,7 @@ TEXT;
      */
     protected function getClientForWrite(array $context): Client
     {
-        return $this->clientManager->getClient();
+        return $this->clientManager->getClient($context['cluster'] ?? 'default');
     }
 
     /**

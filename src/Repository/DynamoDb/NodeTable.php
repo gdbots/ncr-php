@@ -47,7 +47,7 @@ class NodeTable
      *
      * @throws RepositoryOperationFailed
      */
-    final public function create(DynamoDbClient $client, string $tableName)
+    final public function create(DynamoDbClient $client, string $tableName): void
     {
         try {
             $client->describeTable(['TableName' => $tableName]);

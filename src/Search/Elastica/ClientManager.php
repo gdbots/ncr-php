@@ -4,7 +4,6 @@ declare(strict_types = 1);
 namespace Gdbots\Ncr\Search\Elastica;
 
 use Elastica\Client;
-use Gdbots\Pbjx\Exception\InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 
 class ClientManager
@@ -68,7 +67,7 @@ class ClientManager
         }
 
         if (!$this->hasCluster($cluster)) {
-            throw new InvalidArgumentException(
+            throw new \InvalidArgumentException(
                 sprintf(
                     'The cluster [%s] is not one of the available clusters [%s].',
                     $cluster,
