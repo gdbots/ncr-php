@@ -20,12 +20,8 @@ class AwsAuthV4ClientManager extends ClientManager
      * @param array           $clusters
      * @param LoggerInterface $logger
      */
-    public function __construct(
-        Credentials $credentials,
-        string $region,
-        array $clusters,
-        ?LoggerInterface $logger = null
-    ) {
+    public function __construct(Credentials $credentials, string $region, array $clusters, ?LoggerInterface $logger = null)
+    {
         parent::__construct($clusters, $logger);
         $this->credentials = $credentials;
         $this->region = $region;

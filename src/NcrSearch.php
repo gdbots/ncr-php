@@ -51,11 +51,5 @@ interface NcrSearch
      *
      * @throws GdbotsNcrException
      */
-    public function searchNodes(
-        SearchNodesRequest $request,
-        ParsedQuery $parsedQuery,
-        SearchNodesResponse $response,
-        array $qnames = [],
-        array $context = []
-    ): void;
+    public function searchNodes(SearchNodesRequest $request, ParsedQuery $parsedQuery, SearchNodesResponse $response, array $qnames = [], array $context = []): void;
 }

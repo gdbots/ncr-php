@@ -8,9 +8,9 @@ use Gdbots\Ncr\NcrCache;
 use Gdbots\Ncr\NcrLazyLoader;
 use Gdbots\Ncr\Repository\InMemoryNcr;
 use Gdbots\Ncr\Repository\MemoizingNcr;
-use Gdbots\Pbjx\DefaultPbjx;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Pbjx\RegisteringServiceLocator;
+use Gdbots\Pbjx\SimplePbjx;
 use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchRequestV1;
 use Gdbots\Tests\Ncr\Fixtures\FakeNode;
@@ -38,7 +38,7 @@ class MemoizingNcrTest extends \PHPUnit_Framework_TestCase
     public function setUp()
     {
         $this->locator = new RegisteringServiceLocator();
-        $this->pbjx = new DefaultPbjx($this->locator);
+        $this->pbjx = new SimplePbjx($this->locator);
         $this->ncrLazyLoader = new NcrLazyLoader($this->pbjx);
         $this->ncrCache = new NcrCache($this->ncrLazyLoader);
         $this->inMemoryNcr = new InMemoryNcr();

@@ -5,14 +5,15 @@ namespace Gdbots\Tests\Ncr;
 
 use Gdbots\Ncr\NcrLazyLoader;
 use Gdbots\Pbj\MessageRef;
-use Gdbots\Pbjx\DefaultPbjx;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Pbjx\RegisteringServiceLocator;
 use Gdbots\Pbjx\RequestHandler;
+use Gdbots\Pbjx\SimplePbjx;
 use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchRequestV1;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchResponseV1;
 use Gdbots\Schemas\Pbjx\Mixin\Request\Request;
+use Gdbots\Schemas\Pbjx\Mixin\Response\Response;
 use Gdbots\Tests\Ncr\Fixtures\FakeNode;
 
 class NcrLazyLoaderTest extends \PHPUnit_Framework_TestCase
@@ -29,7 +30,7 @@ class NcrLazyLoaderTest extends \PHPUnit_Framework_TestCase
     public function setUp()
     {
         $this->locator = new RegisteringServiceLocator();
-        $this->pbjx = new DefaultPbjx($this->locator);
+        $this->pbjx = new SimplePbjx($this->locator);
         $this->ncrLazyLoader = new NcrLazyLoader($this->pbjx);
     }
 
@@ -77,7 +78,7 @@ class NcrLazyLoaderTest extends \PHPUnit_Framework_TestCase
         {
             public $worked = false;
 
-            public function handleRequest(Request $request, Pbjx $pbjx)
+            public function handleRequest(Request $request, Pbjx $pbjx): Response
             {
                 $this->worked = $request->isInSet('node_refs', NodeRef::fromString('acme:article:123'));
                 return GetNodeBatchResponseV1::create();

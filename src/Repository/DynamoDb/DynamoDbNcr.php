@@ -48,12 +48,8 @@ final class DynamoDbNcr implements Ncr
      * @param array           $config
      * @param LoggerInterface $logger
      */
-    public function __construct(
-        DynamoDbClient $client,
-        TableManager $tableManager,
-        array $config = [],
-        ?LoggerInterface $logger = null
-    ) {
+    public function __construct(DynamoDbClient $client, TableManager $tableManager, array $config = [], ?LoggerInterface $logger = null)
+    {
         // defaults
         $config += [
             'batch_size' => 100,

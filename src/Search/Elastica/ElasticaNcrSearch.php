@@ -173,13 +173,8 @@ TEXT;
     /**
      * {@inheritdoc}
      */
-    final public function searchNodes(
-        SearchNodesRequest $request,
-        ParsedQuery $parsedQuery,
-        SearchNodesResponse $response,
-        array $qnames = [],
-        array $context = []
-    ): void {
+    final public function searchNodes(SearchNodesRequest $request, ParsedQuery $parsedQuery, SearchNodesResponse $response, array $qnames = [], array $context = []): void
+    {
         $search = new Search($this->getClientForRead($context));
 
         if (empty($qnames)) {

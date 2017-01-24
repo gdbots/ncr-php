@@ -5,9 +5,9 @@ namespace Gdbots\Tests\Ncr;
 
 use Gdbots\Ncr\NcrCache;
 use Gdbots\Ncr\NcrLazyLoader;
-use Gdbots\Pbjx\DefaultPbjx;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Pbjx\RegisteringServiceLocator;
+use Gdbots\Pbjx\SimplePbjx;
 use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Tests\Ncr\Fixtures\FakeNode;
 
@@ -28,7 +28,7 @@ class NcrCacheTest extends \PHPUnit_Framework_TestCase
     public function setUp()
     {
         $this->locator = new RegisteringServiceLocator();
-        $this->pbjx = new DefaultPbjx($this->locator);
+        $this->pbjx = new SimplePbjx($this->locator);
         $this->ncrLazyLoader = new NcrLazyLoader($this->pbjx);
         $this->ncrCache = new NcrCache($this->ncrLazyLoader);
     }

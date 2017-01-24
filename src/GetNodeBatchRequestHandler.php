@@ -13,7 +13,7 @@ use Gdbots\Schemas\Ncr\Request\GetNodeBatchRequest;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchResponse;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchResponseV1;
 
-class GetNodeBatchRequestHandler implements RequestHandler, NcrAware
+final class GetNodeBatchRequestHandler implements RequestHandler, NcrAware
 {
     use RequestHandlerTrait;
     use NcrAwareTrait;
