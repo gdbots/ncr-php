@@ -145,6 +145,7 @@ final class NcrLazyLoader
 
         try {
             $request = $this->getNodeBatchRequest;
+            $this->getNodeBatchRequest = null;
             $this->pbjx->request($request);
         } catch (\Exception $e) {
             $this->logger->error(
@@ -152,7 +153,5 @@ final class NcrLazyLoader
                 ['exception' => $e, 'pbj' => $request->toArray()]
             );
         }
-
-        $this->getNodeBatchRequest = null;
     }
 }
