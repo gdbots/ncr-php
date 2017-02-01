@@ -9,6 +9,7 @@ use Gdbots\QueryParser\ParsedQuery;
 use Gdbots\Schemas\Ncr\Mixin\Indexed\Indexed;
 use Gdbots\Schemas\Ncr\Mixin\SearchNodesRequest\SearchNodesRequest;
 use Gdbots\Schemas\Ncr\Mixin\SearchNodesResponse\SearchNodesResponse;
+use Gdbots\Schemas\Ncr\NodeRef;
 
 interface NcrSearch
 {
@@ -37,6 +38,14 @@ interface NcrSearch
      * @throws GdbotsNcrException
      */
     public function indexNodes(array $nodes, array $context = []): void;
+
+    /**
+     * @param NodeRef[] $nodeRefs An array of NodeRefs to delete from the search index.
+     * @param array     $context  Data that helps the NCR Search decide where to read/write data from.
+     *
+     * @throws GdbotsNcrException
+     */
+    public function deleteNodes(array $nodeRefs, array $context = []): void;
 
     /**
      * Executes a search request and populates the provided response object with

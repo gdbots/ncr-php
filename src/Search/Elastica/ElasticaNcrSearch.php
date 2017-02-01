@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Gdbots\Ncr\Search\Elastica;
 
 use Elastica\Client;
+use Elastica\Document;
 use Elastica\Index;
 use Elastica\Search;
 use Elastica\Type;
@@ -161,6 +162,69 @@ TEXT;
             throw new SearchOperationFailed(
                 sprintf(
                     '%s while indexing batch into ElasticSearch with message: %s',
+                    ClassUtils::getShortName($e),
+                    $e->getMessage()
+                ),
+                Code::INTERNAL,
+                $e
+            );
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    final public function deleteNodes(array $nodeRefs, array $context = []): void
+    {
+        if (empty($nodeRefs)) {
+            return;
+        }
+
+        $client = $this->getClientForWrite($context);
+        $documents = [];
+
+        /** @var NodeRef $nodeRef */
+        foreach ($nodeRefs as $nodeRef) {
+            $qname = $nodeRef->getQName();
+            $indexName = null;
+            $typeName = null;
+
+            try {
+                $indexName = $this->indexManager->getIndexName($qname, $context);
+                $typeName = $this->indexManager->getTypeName($qname);
+                $documents[] = (new Document())
+                    ->setId((string)$nodeRef->getId())
+                    ->setType($typeName)
+                    ->setIndex($indexName);
+            } catch (\Exception $e) {
+                $message = sprintf(
+                    '%s while adding node [{node_ref}] to batch delete request ' .
+                    'from ElasticSearch [{index_name}/{type_name}].',
+                    ClassUtils::getShortName($e)
+                );
+
+                $this->logger->error($message, [
+                    'exception'  => $e,
+                    'index_name' => $indexName,
+                    'type_name'  => $typeName,
+                    'node_ref'   => $nodeRef->toString(),
+                ]);
+            }
+        }
+
+        if (empty($documents)) {
+            return;
+        }
+
+        try {
+            $response = $client->deleteDocuments($documents);
+            if (!$response->isOk()) {
+                throw new \Exception($response->getStatus() . '::' . $response->getError());
+            }
+        } catch (\Exception $e) {
+            throw new SearchOperationFailed(
+                sprintf(
+                    '%s while deleting batch from ElasticSearch with message: %s',
                     ClassUtils::getShortName($e),
                     $e->getMessage()
                 ),
