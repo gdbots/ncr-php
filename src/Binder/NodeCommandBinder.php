@@ -20,6 +20,8 @@ use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 use Gdbots\Schemas\Pbjx\Mixin\Command\Command;
 
+// fixme: restrict binding for input of "old_node", etc.
+// this will allow the fetching of old_node in custom controllers
 class NodeCommandBinder implements EventSubscriber
 {
     /**
