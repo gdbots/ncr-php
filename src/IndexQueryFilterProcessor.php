@@ -18,7 +18,9 @@ final class IndexQueryFilterProcessor
      */
     public static function filter(array $nodes, array $filters): array
     {
-        return array_filter($nodes, function($node) use ($filters) {
+        $nodes = array_filter($nodes, function($node) use ($filters) {
+            $check = 0;
+
             foreach ($filters as $filter) {
                 if ($node->has($filter->getField())) {
                     $value = $node->get($filter->getField());
@@ -28,27 +30,33 @@ final class IndexQueryFilterProcessor
                         switch ($filter->getOperator()) {
                             case IndexQueryFilterOperator::EQUAL_TO:
                                 Assertion::eq($value, $value2);
-                                return true;
+                                $check++;
+                                break;
 
                             case IndexQueryFilterOperator::NOT_EQUAL_TO:
                                 Assertion::notEq($value, $value2);
-                                return true;
+                                $check++;
+                                break;
 
                             case IndexQueryFilterOperator::GREATER_THAN:
                                 Assertion::greaterThan($value, $value2);
-                                return true;
+                                $check++;
+                                break;
 
                             case IndexQueryFilterOperator::GREATER_THAN_OR_EQUAL_TO:
                                 Assertion::greaterOrEqualThan($value, $value2);
-                                return true;
+                                $check++;
+                                break;
 
                             case IndexQueryFilterOperator::LESS_THAN:
                                 Assertion::lessThan($value, $value2);
-                                return true;
+                                $check++;
+                                break;
 
                             case IndexQueryFilterOperator::LESS_THAN_OR_EQUAL_TO:
                                 Assertion::lessOrEqualThan($value, $value2);
-                                return true;
+                                $check++;
+                                break;
                         }
                     } catch (InvalidArgumentException $e) {
                         // do nothing
@@ -56,7 +64,9 @@ final class IndexQueryFilterProcessor
                 }
             }
 
-            return false;
+            return $check === count($filters);
         });
+
+        return array_values($nodes);
     }
 }
