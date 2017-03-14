@@ -24,7 +24,13 @@ final class FakeNode extends AbstractMessage implements
     protected static function defineSchema()
     {
         $schema = new Schema('pbj:gdbots:tests.ncr:fixtures:fake-node:1-0-0', __CLASS__,
-            [],
+            [
+                Fb::create('string_value', T\StringType::create())
+                    ->build(),
+
+                Fb::create('int_value', T\IntType::create())
+                    ->build(),
+            ],
             [
                 NodeV1Mixin::create(),
             ]
