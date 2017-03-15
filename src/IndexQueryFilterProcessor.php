@@ -8,65 +8,82 @@ use Gdbots\Ncr\Enum\IndexQueryFilterOperator;
 use Gdbots\Pbj\Assertion;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 
-final class IndexQueryFilterProcessor
+class IndexQueryFilterProcessor
 {
     /**
-     * @param Node[]             $nodes
+     * @param Node[]             $items
      * @param IndexQueryFilter[] $filters
      *
-     * @return Node[]
+     * @return array
      */
-    public static function filter(array $nodes, array $filters): array
+    public function filter(array $items, array $filters = []): array
     {
-        $nodes = array_filter($nodes, function($node) use ($filters) {
-            $check = 0;
+        if (empty($filters)) {
+            return [];
+        }
 
-            foreach ($filters as $filter) {
-                if ($node->has($filter->getField())) {
-                    $value = $node->get($filter->getField());
-                    $value2 = $filter->getValue();
+        return array_filter($items, function($item) use ($filters) {
+            return $this->assertValue($item->toArray(), $filters);
+        });
+    }
 
-                    try {
-                        switch ($filter->getOperator()) {
-                            case IndexQueryFilterOperator::EQUAL_TO:
-                                Assertion::eq($value, $value2);
-                                $check++;
-                                break;
+    /**
+     * @param array              $item
+     * @param IndexQueryFilter[] $filters
+     *
+     * @return bool
+     */
+    protected function assertValue(array $item, array $filters = []): bool
+    {
+        if (empty($filters)) {
+            return false;
+        }
 
-                            case IndexQueryFilterOperator::NOT_EQUAL_TO:
-                                Assertion::notEq($value, $value2);
-                                $check++;
-                                break;
+        $check = 0;
 
-                            case IndexQueryFilterOperator::GREATER_THAN:
-                                Assertion::greaterThan($value, $value2);
-                                $check++;
-                                break;
+        foreach ($filters as $filter) {
+            if (isset($item[$filter->getField()])) {
+                $value = $item[$filter->getField()];
+                $value2 = $filter->getValue();
 
-                            case IndexQueryFilterOperator::GREATER_THAN_OR_EQUAL_TO:
-                                Assertion::greaterOrEqualThan($value, $value2);
-                                $check++;
-                                break;
+                try {
+                    switch ($filter->getOperator()) {
+                        case IndexQueryFilterOperator::EQUAL_TO:
+                            Assertion::eq($value, $value2);
+                            $check++;
+                            break;
 
-                            case IndexQueryFilterOperator::LESS_THAN:
-                                Assertion::lessThan($value, $value2);
-                                $check++;
-                                break;
+                        case IndexQueryFilterOperator::NOT_EQUAL_TO:
+                            Assertion::notEq($value, $value2);
+                            $check++;
+                            break;
 
-                            case IndexQueryFilterOperator::LESS_THAN_OR_EQUAL_TO:
-                                Assertion::lessOrEqualThan($value, $value2);
-                                $check++;
-                                break;
-                        }
-                    } catch (InvalidArgumentException $e) {
-                        // do nothing
+                        case IndexQueryFilterOperator::GREATER_THAN:
+                            Assertion::greaterThan($value, $value2);
+                            $check++;
+                            break;
+
+                        case IndexQueryFilterOperator::GREATER_THAN_OR_EQUAL_TO:
+                            Assertion::greaterOrEqualThan($value, $value2);
+                            $check++;
+                            break;
+
+                        case IndexQueryFilterOperator::LESS_THAN:
+                            Assertion::lessThan($value, $value2);
+                            $check++;
+                            break;
+
+                        case IndexQueryFilterOperator::LESS_THAN_OR_EQUAL_TO:
+                            Assertion::lessOrEqualThan($value, $value2);
+                            $check++;
+                            break;
                     }
+                } catch (InvalidArgumentException $e) {
+                    // do nothing
                 }
             }
+        }
 
-            return $check === count($filters);
-        });
-
-        return array_values($nodes);
+        return $check === count($filters);
     }
 }

@@ -6,6 +6,7 @@ namespace Gdbots\Ncr\Repository;
 use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Ncr\Exception\OptimisticCheckFailed;
 use Gdbots\Ncr\IndexQuery;
+use Gdbots\Ncr\IndexQueryFilterProcessor;
 use Gdbots\Ncr\IndexQueryResult;
 use Gdbots\Ncr\Ncr;
 use Gdbots\Pbj\SchemaQName;
@@ -150,8 +151,17 @@ TEXT;
      */
     public function findNodeRefs(IndexQuery $query, array $context = []): IndexQueryResult
     {
-        // fixme: handle findNodeRefs in memory
-        return new IndexQueryResult($query);
+        $nodeRefs = [];
+
+        if ($query->getFilters()) {
+            $processor = new IndexQueryFilterProcessor();
+            $nodes = $processor->filter($this->nodes, $query->getFilters());
+            foreach ($nodes as $nodeRef => $node) {
+                $nodeRefs[] = NodeRef::fromString($nodeRef);
+            }
+        }
+
+        return new IndexQueryResult($query, $nodeRefs);
     }
 
     /**

@@ -409,11 +409,18 @@ final class DynamoDbNcr implements Ncr
             return new IndexQueryResult($query);
         }
 
+        if ($unprocessedFilters) {
+            $processor = new IndexQueryFilterProcessor();
+            $processor->setLogger($this->logger);
+            $processor->setMarshaler($this->marshaler);
+
+            $response['Items'] = $processor->filter($response['Items'], $unprocessedFilters);
+        }
+
         $nodeRefs = [];
         foreach ($response['Items'] as $item) {
             try {
-                // todo: handle $unprocessedFilters
-                $nodeRefs[] = NodeRef::fromString($item[NodeTable::HASH_KEY_NAME]['S']);
+                $nodeRef = NodeRef::fromString($item[NodeTable::HASH_KEY_NAME]['S']);
             } catch (\Exception $e) {
                 $this->logger->error(
                     'NodeRef returned from IndexQuery [{index_alias}] on DynamoDb table [{table_name}] is invalid.',
