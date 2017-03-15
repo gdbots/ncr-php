@@ -3,34 +3,11 @@ declare(strict_types = 1);
 
 namespace Gdbots\Ncr\Repository\DynamoDb;
 
-use Gdbots\Ncr\IndexQueryFilterProcessor;
-use Gdbots\Pbj\Marshaler\DynamoDb\ItemMarshaler;
-use Psr\Log\LoggerInterface;
+use Aws\DynamoDb\Marshaler;
+use Gdbots\Ncr\IndexQueryFilterProcessor as BaseIndexQueryFilterProcessor;
 
-final class IndexQueryFilterProcessor extends IndexQueryFilterProcessor
+final class IndexQueryFilterProcessor extends BaseIndexQueryFilterProcessor
 {
-    /** @var LoggerInterface */
-    private $logger;
-
-    /** @var ItemMarshaler */
-    private $marshaler;
-
-    /**
-     * @param LoggerInterface $logger
-     */
-    public function setLogger(?LoggerInterface $logger = null): void
-    {
-        $this->logger = $logger ?: new NullLogger();
-    }
-
-    /**
-     * @param ItemMarshaler $marshaler
-     */
-    public function setMarshaler(ItemMarshaler $marshaler): void
-    {
-        $this->marshaler = new ItemMarshaler();
-    }
-
     /**
      * {@inheritdoc}
      */
@@ -40,21 +17,10 @@ final class IndexQueryFilterProcessor extends IndexQueryFilterProcessor
             return [];
         }
 
-        return array_filter($items, function($item) use ($marshaler, $filters) {
-            try {
-                /** @var Node $node */
-                $node = $this->marshaler->unmarshal($item);
-            } catch (\Exception $e) {
-                $this->logger->error(
-                    'Item returned from DynamoDb table could not be unmarshaled.',
-                    [
-                        'exception' => $e,
-                        'item' => $item,
-                    ]
-                );
-            }
+        $marshaler = new Marshaler();
 
-            return $this->assertValue($node->toArray(), $filters);
+        return array_filter($items, function($item) use ($marshaler, $filters) {
+            return $this->assertValue($marshaler->unmarshalItem($item), $filters);
         });
     }
 }

@@ -411,9 +411,6 @@ final class DynamoDbNcr implements Ncr
 
         if ($unprocessedFilters) {
             $processor = new IndexQueryFilterProcessor();
-            $processor->setLogger($this->logger);
-            $processor->setMarshaler($this->marshaler);
-
             $response['Items'] = $processor->filter($response['Items'], $unprocessedFilters);
         }
 
