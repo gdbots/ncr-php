@@ -3,6 +3,7 @@ declare(strict_types = 1);
 
 namespace Gdbots\Tests\Ncr\Repository;
 
+use Acme\Schemas\Iam\Node\UserV1;
 use Gdbots\Ncr\GetNodeBatchRequestHandler;
 use Gdbots\Ncr\NcrCache;
 use Gdbots\Ncr\NcrLazyLoader;
@@ -13,7 +14,6 @@ use Gdbots\Pbjx\RegisteringServiceLocator;
 use Gdbots\Pbjx\SimplePbjx;
 use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchRequestV1;
-use Gdbots\Tests\Ncr\Fixtures\FakeNode;
 
 class MemoizingNcrTest extends \PHPUnit_Framework_TestCase
 {
@@ -47,7 +47,7 @@ class MemoizingNcrTest extends \PHPUnit_Framework_TestCase
 
     public function testGetNode()
     {
-        $node = FakeNode::create();
+        $node = UserV1::create();
         $nodeRef = NodeRef::fromNode($node);
 
         $this->inMemoryNcr->putNode($node);
@@ -60,7 +60,7 @@ class MemoizingNcrTest extends \PHPUnit_Framework_TestCase
 
     public function testPutNode()
     {
-        $node = FakeNode::create();
+        $node = UserV1::create();
         $nodeRef = NodeRef::fromNode($node);
 
         $this->ncr->putNode($node);
@@ -71,8 +71,8 @@ class MemoizingNcrTest extends \PHPUnit_Framework_TestCase
 
     public function testGetNodes()
     {
-        $node1 = FakeNode::create();
-        $node2 = FakeNode::create();
+        $node1 = UserV1::create();
+        $node2 = UserV1::create();
         $nodeRef1 = NodeRef::fromNode($node1);
         $nodeRef2 = NodeRef::fromNode($node2);
 
@@ -90,8 +90,8 @@ class MemoizingNcrTest extends \PHPUnit_Framework_TestCase
 
     public function testGetNodesFromMemoizerOnly()
     {
-        $node1 = FakeNode::create();
-        $node2 = FakeNode::create();
+        $node1 = UserV1::create();
+        $node2 = UserV1::create();
         $nodeRef1 = NodeRef::fromNode($node1);
         $nodeRef2 = NodeRef::fromNode($node2);
 
@@ -124,7 +124,7 @@ class MemoizingNcrTest extends \PHPUnit_Framework_TestCase
 
     public function testDeleteNode()
     {
-        $node = FakeNode::create();
+        $node = UserV1::create();
         $nodeRef = NodeRef::fromNode($node);
 
         $this->inMemoryNcr->putNode($node);
@@ -137,13 +137,12 @@ class MemoizingNcrTest extends \PHPUnit_Framework_TestCase
 
     public function testLazyLoad()
     {
-        $expectedNode = FakeNode::create();
+        $expectedNode = UserV1::create();
         $nodeRef = NodeRef::fromNode($expectedNode);
         $this->inMemoryNcr->putNode($expectedNode);
         $this->ncrLazyLoader->addNodeRefs([$nodeRef]);
 
-        $handler = new GetNodeBatchRequestHandler();
-        $handler->setNcr($this->ncr);
+        $handler = new GetNodeBatchRequestHandler($this->ncr);
         $this->locator->registerRequestHandler(GetNodeBatchRequestV1::schema()->getCurie(), $handler);
 
         $this->assertFalse($this->ncrCache->hasNode($nodeRef));

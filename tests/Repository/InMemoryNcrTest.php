@@ -3,10 +3,10 @@ declare(strict_types = 1);
 
 namespace Gdbots\Tests\Ncr\Repository;
 
+use Acme\Schemas\Iam\Node\UserV1;
 use Gdbots\Ncr\Repository\InMemoryNcr;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\NodeRef;
-use Gdbots\Tests\Ncr\Fixtures\FakeNode;
 
 class InMemoryNcrTest extends \PHPUnit_Framework_TestCase
 {
@@ -20,7 +20,7 @@ class InMemoryNcrTest extends \PHPUnit_Framework_TestCase
 
     public function testHasNode()
     {
-        $node = FakeNode::create();
+        $node = UserV1::create();
         $nodeRef = NodeRef::fromNode($node);
 
         $this->ncr->putNode($node);
@@ -31,7 +31,7 @@ class InMemoryNcrTest extends \PHPUnit_Framework_TestCase
 
     public function testGetAndPutNode()
     {
-        $expectedNode = FakeNode::create();
+        $expectedNode = UserV1::create();
         $this->ncr->putNode($expectedNode);
         $nodeRef = NodeRef::fromNode($expectedNode);
         $actualNode = $this->ncr->getNode($nodeRef);
@@ -40,7 +40,7 @@ class InMemoryNcrTest extends \PHPUnit_Framework_TestCase
 
     public function testDeleteNode()
     {
-        $node = FakeNode::create();
+        $node = UserV1::create();
         $this->ncr->putNode($node);
         $nodeRef = NodeRef::fromNode($node);
         $this->assertTrue($this->ncr->hasNode($nodeRef));
@@ -52,7 +52,7 @@ class InMemoryNcrTest extends \PHPUnit_Framework_TestCase
     public function testPutNodeWithValidExpectedEtag()
     {
         $expectedEtag = 'test';
-        $expectedNode = FakeNode::create()->set('etag', $expectedEtag);
+        $expectedNode = UserV1::create()->set('etag', $expectedEtag);
         $this->ncr->putNode($expectedNode);
         $nodeRef = NodeRef::fromNode($expectedNode);
 
@@ -67,7 +67,7 @@ class InMemoryNcrTest extends \PHPUnit_Framework_TestCase
     public function testPutNodeWithInvalidExpectedEtag1()
     {
         $expectedEtag = 'test';
-        $expectedNode = FakeNode::create()->set('etag', $expectedEtag);
+        $expectedNode = UserV1::create()->set('etag', $expectedEtag);
         $this->ncr->putNode($expectedNode);
         $nodeRef = NodeRef::fromNode($expectedNode);
 
@@ -82,7 +82,7 @@ class InMemoryNcrTest extends \PHPUnit_Framework_TestCase
     public function testPutNodeWithInvalidExpectedEtag2()
     {
         $expectedEtag = 'test';
-        $expectedNode = FakeNode::create()->set('etag', $expectedEtag);
+        $expectedNode = UserV1::create()->set('etag', $expectedEtag);
         $this->ncr->putNode($expectedNode);
         $nodeRef = NodeRef::fromNode($expectedNode);
 
@@ -97,7 +97,7 @@ class InMemoryNcrTest extends \PHPUnit_Framework_TestCase
         $nodeRefs = [];
 
         for ($i = 0; $i < 50; $i++) {
-            $node = FakeNode::create();
+            $node = UserV1::create();
             $nodeRef = NodeRef::fromNode($node);
             $nodes[$nodeRef->toString()] = $node;
             $nodeRefs[] = $nodeRef;
