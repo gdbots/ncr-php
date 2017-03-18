@@ -3,9 +3,6 @@ declare(strict_types = 1);
 
 namespace Gdbots\Ncr;
 
-use Gdbots\Ncr\DependencyInjection\NcrAware;
-use Gdbots\Ncr\DependencyInjection\NcrAwareTrait;
-use Gdbots\Pbjx\Pbjx;
 use Gdbots\Pbjx\RequestHandler;
 use Gdbots\Pbjx\RequestHandlerTrait;
 use Gdbots\Schemas\Ncr\NodeRef;
@@ -13,18 +10,27 @@ use Gdbots\Schemas\Ncr\Request\GetNodeBatchRequest;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchResponse;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchResponseV1;
 
-final class GetNodeBatchRequestHandler implements RequestHandler, NcrAware
+final class GetNodeBatchRequestHandler implements RequestHandler
 {
     use RequestHandlerTrait;
-    use NcrAwareTrait;
+
+    /** @var Ncr */
+    private $ncr;
+
+    /**
+     * @param Ncr $ncr
+     */
+    public function __construct(Ncr $ncr)
+    {
+        $this->ncr = $ncr;
+    }
 
     /**
      * @param GetNodeBatchRequest $request
-     * @param Pbjx                $pbjx
      *
      * @return GetNodeBatchResponse
      */
-    protected function handle(GetNodeBatchRequest $request, Pbjx $pbjx): GetNodeBatchResponse
+    protected function handle(GetNodeBatchRequest $request): GetNodeBatchResponse
     {
         $nodeRefs = $request->get('node_refs');
         $response = GetNodeBatchResponseV1::create();

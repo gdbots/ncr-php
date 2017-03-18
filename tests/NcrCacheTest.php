@@ -3,13 +3,13 @@ declare(strict_types = 1);
 
 namespace Gdbots\Tests\Ncr;
 
+use Acme\Schemas\Iam\Node\UserV1;
 use Gdbots\Ncr\NcrCache;
 use Gdbots\Ncr\NcrLazyLoader;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Pbjx\RegisteringServiceLocator;
 use Gdbots\Pbjx\SimplePbjx;
 use Gdbots\Schemas\Ncr\NodeRef;
-use Gdbots\Tests\Ncr\Fixtures\FakeNode;
 
 class NcrCacheTest extends \PHPUnit_Framework_TestCase
 {
@@ -35,7 +35,7 @@ class NcrCacheTest extends \PHPUnit_Framework_TestCase
 
     public function testHasNode()
     {
-        $node = FakeNode::create();
+        $node = UserV1::create();
         $nodeRef = NodeRef::fromNode($node);
         $this->assertFalse($this->ncrCache->hasNode($nodeRef));
         $this->ncrCache->addNode($node);
@@ -47,7 +47,7 @@ class NcrCacheTest extends \PHPUnit_Framework_TestCase
 
     public function testGetNode()
     {
-        $expectedNode = FakeNode::create();
+        $expectedNode = UserV1::create();
         $nodeRef = NodeRef::fromNode($expectedNode);
 
         $this->ncrCache->addNode($expectedNode);
@@ -62,8 +62,8 @@ class NcrCacheTest extends \PHPUnit_Framework_TestCase
 
     public function testClear()
     {
-        $node1 = FakeNode::create();
-        $node2 = FakeNode::create();
+        $node1 = UserV1::create();
+        $node2 = UserV1::create();
 
         $this->ncrCache->addNodes([$node1, $node2]);
         $this->assertTrue($this->ncrCache->hasNode(NodeRef::fromNode($node1)));
