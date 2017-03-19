@@ -215,6 +215,17 @@ final class IndexQueryBuilder
     }
 
     /**
+     * @param IndexQueryFilter $filter
+     *
+     * @return self
+     */
+    public function addFilter(IndexQueryFilter $filter): self
+    {
+        $this->filters[] = $filter;
+        return $this;
+    }
+
+    /**
      * @return self
      */
     public function clearFilters(): self

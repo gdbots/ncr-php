@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Gdbots\Tests\Ncr\Fixtures;
 
 use Gdbots\Pbj\AbstractMessage;
-use Gdbots\Pbj\Enum\Format;
 use Gdbots\Pbj\FieldBuilder as Fb;
 use Gdbots\Pbj\MessageResolver;
 use Gdbots\Pbj\Schema;
@@ -25,10 +24,15 @@ final class FakeNode extends AbstractMessage implements
     {
         $schema = new Schema('pbj:gdbots:tests.ncr:fixtures:fake-node:1-0-0', __CLASS__,
             [
-                Fb::create('string_value', T\StringType::create())
+                Fb::create('_id', T\IdentifierType::create())
+                    ->className(FakeNodeId::class)
+                    ->required()
                     ->build(),
-
-                Fb::create('int_value', T\IntType::create())
+                Fb::create('relation', T\StringType::create())
+                    ->build(),
+                Fb::create('age', T\TinyIntType::create())
+                    ->build(),
+                Fb::create('is_child', T\BooleanType::create())
                     ->build(),
             ],
             [

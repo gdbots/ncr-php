@@ -3,7 +3,6 @@ declare(strict_types = 1);
 
 namespace Gdbots\Ncr\Repository\DynamoDb;
 
-use Aws\DynamoDb\Marshaler;
 use Gdbots\Ncr\IndexQueryFilterProcessor as BaseIndexQueryFilterProcessor;
 
 final class IndexQueryFilterProcessor extends BaseIndexQueryFilterProcessor
@@ -11,16 +10,13 @@ final class IndexQueryFilterProcessor extends BaseIndexQueryFilterProcessor
     /**
      * {@inheritdoc}
      */
-    public function filter(array $items, array $filters = []): array
+    protected function extractValue($item, string $field)
     {
-        if (empty($filters)) {
-            return [];
+        if (!is_array($item) || !isset($item[$field])) {
+            return null;
         }
 
-        $marshaler = new Marshaler();
-
-        return array_filter($items, function($item) use ($marshaler, $filters) {
-            return $this->assertValue($marshaler->unmarshalItem($item), $filters);
-        });
+        list(, $value) = each($item[$field]);
+        return $value;
     }
 }

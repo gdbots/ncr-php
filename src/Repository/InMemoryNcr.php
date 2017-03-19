@@ -3,9 +3,11 @@ declare(strict_types = 1);
 
 namespace Gdbots\Ncr\Repository;
 
+use Gdbots\Ncr\Enum\IndexQueryFilterOperator;
 use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Ncr\Exception\OptimisticCheckFailed;
 use Gdbots\Ncr\IndexQuery;
+use Gdbots\Ncr\IndexQueryFilter;
 use Gdbots\Ncr\IndexQueryFilterProcessor;
 use Gdbots\Ncr\IndexQueryResult;
 use Gdbots\Ncr\Ncr;
@@ -20,7 +22,10 @@ use Gdbots\Schemas\Ncr\NodeRef;
 final class InMemoryNcr implements Ncr
 {
     /** @var PhpArraySerializer */
-    private static $serializer;
+    private $serializer;
+
+    /** @var IndexQueryFilterProcessor */
+    private $filterProcessor;
 
     /**
      * Array of nodes keyed by their NodeRef.
@@ -151,17 +156,42 @@ TEXT;
      */
     public function findNodeRefs(IndexQuery $query, array $context = []): IndexQueryResult
     {
-        $nodeRefs = [];
-
-        if ($query->getFilters()) {
-            $processor = new IndexQueryFilterProcessor();
-            $nodes = $processor->filter($this->nodes, $query->getFilters());
-            foreach ($nodes as $nodeRef => $node) {
-                $nodeRefs[] = NodeRef::fromString($nodeRef);
-            }
+        if (null === $this->filterProcessor) {
+            $this->filterProcessor = new IndexQueryFilterProcessor();
         }
 
-        return new IndexQueryResult($query, $nodeRefs);
+        /*
+         * The InMemoryNcr must treat the index query alias (the primary filter)
+         * like all other filters because it has no native way to provide an index.
+         */
+        $filters = $query->getFilters();
+        $filters[] = new IndexQueryFilter($query->getAlias(), IndexQueryFilterOperator::EQUAL_TO(), $query->getValue());
+        $nodes = $this->filterProcessor->filter($this->nodes, $filters);
+
+        $nodeRefs = [];
+        foreach ($nodes as $nodeRef => $node) {
+            $nodeRefs[$nodeRef] = NodeRef::fromString($nodeRef);
+        }
+
+        $count = count($nodeRefs);
+        $nextCursor = null;
+
+        if ($query->sortAsc()) {
+            ksort($nodeRefs);
+        } else {
+            krsort($nodeRefs);
+        }
+
+        if ($query->hasCursor()) {
+            $nodeRefs = array_slice($nodeRefs, (int)$query->getCursor(), $query->getCount());
+            $count = count($nodeRefs);
+        }
+
+        if ($count > $query->getCount()) {
+            $nextCursor = (string)($count - 1);
+        }
+
+        return new IndexQueryResult($query, array_values($nodeRefs), $nextCursor);
     }
 
     /**
@@ -195,12 +225,12 @@ TEXT;
      */
     private function createNodeFromArray(array $data = []): Node
     {
-        if (null === self::$serializer) {
-            self::$serializer = new PhpArraySerializer();
+        if (null === $this->serializer) {
+            $this->serializer = new PhpArraySerializer();
         }
 
         /** @var Node $node */
-        $node = self::$serializer->deserialize($data);
+        $node = $this->serializer->deserialize($data);
         return $node;
     }
 }

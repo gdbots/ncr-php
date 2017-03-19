@@ -42,6 +42,9 @@ final class DynamoDbNcr implements Ncr
     /** @var ItemMarshaler */
     private $marshaler;
 
+    /** @var IndexQueryFilterProcessor */
+    private $filterProcessor;
+
     /**
      * @param DynamoDbClient  $client
      * @param TableManager    $tableManager
@@ -410,14 +413,16 @@ final class DynamoDbNcr implements Ncr
         }
 
         if ($unprocessedFilters) {
-            $processor = new IndexQueryFilterProcessor();
-            $response['Items'] = $processor->filter($response['Items'], $unprocessedFilters);
+            if (null === $this->filterProcessor) {
+                $this->filterProcessor = new IndexQueryFilterProcessor();
+            }
+            $response['Items'] = $this->filterProcessor->filter($response['Items'], $unprocessedFilters);
         }
 
         $nodeRefs = [];
         foreach ($response['Items'] as $item) {
             try {
-                $nodeRef = NodeRef::fromString($item[NodeTable::HASH_KEY_NAME]['S']);
+                $nodeRefs[] = NodeRef::fromString($item[NodeTable::HASH_KEY_NAME]['S']);
             } catch (\Exception $e) {
                 $this->logger->error(
                     'NodeRef returned from IndexQuery [{index_alias}] on DynamoDb table [{table_name}] is invalid.',

@@ -1,11 +1,11 @@
 <?php
 declare(strict_types = 1);
 
-namespace Gdbots\Tests\Ncr;
+namespace Gdbots\Tests\Ncr\Repository\DynamoDb;
 
 use Gdbots\Ncr\IndexQueryFilter;
-use Gdbots\Ncr\IndexQueryFilterProcessor;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
+use Gdbots\Ncr\Repository\DynamoDb\IndexQueryFilterProcessor;
+use Gdbots\Ncr\Repository\DynamoDb\NodeTable;
 use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Tests\Ncr\Fixtures\SimpsonsTrait;
 
@@ -30,20 +30,20 @@ class IndexQueryFilterProcessorTest extends \PHPUnit_Framework_TestCase
      */
     public function testFilters(string $name, array $filters, array $expected)
     {
-        $nodes = $this->processor->filter($this->getSimpsonsAsNodes(), $filters);
-        $this->assertEquals($expected, $this->getNodeRefs($nodes), "Test filter [{$name}] failed.");
+        $items = $this->processor->filter($this->getSimpsonsAsDynamoDbItems(), $filters);
+        $this->assertEquals($expected, $this->getNodeRefs($items), "Test filter [{$name}] failed.");
     }
 
     /**
-     * @param Node[] $nodes
+     * @param array $items
      *
      * @return NodeRef[]
      */
-    protected function getNodeRefs(array $nodes): array
+    protected function getNodeRefs(array $items): array
     {
         $nodeRefs = [];
-        foreach ($nodes as $node) {
-            $nodeRefs[] = NodeRef::fromNode($node);
+        foreach ($items as $item) {
+            $nodeRefs[] = NodeRef::fromString($item[NodeTable::HASH_KEY_NAME]['S']);
         }
 
         return $nodeRefs;
