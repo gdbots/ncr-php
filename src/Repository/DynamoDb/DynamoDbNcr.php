@@ -42,6 +42,9 @@ final class DynamoDbNcr implements Ncr
     /** @var ItemMarshaler */
     private $marshaler;
 
+    /** @var IndexQueryFilterProcessor */
+    private $filterProcessor;
+
     /**
      * @param DynamoDbClient  $client
      * @param TableManager    $tableManager
@@ -409,10 +412,16 @@ final class DynamoDbNcr implements Ncr
             return new IndexQueryResult($query);
         }
 
+        if ($unprocessedFilters) {
+            if (null === $this->filterProcessor) {
+                $this->filterProcessor = new IndexQueryFilterProcessor();
+            }
+            $response['Items'] = $this->filterProcessor->filter($response['Items'], $unprocessedFilters);
+        }
+
         $nodeRefs = [];
         foreach ($response['Items'] as $item) {
             try {
-                // todo: handle $unprocessedFilters
                 $nodeRefs[] = NodeRef::fromString($item[NodeTable::HASH_KEY_NAME]['S']);
             } catch (\Exception $e) {
                 $this->logger->error(

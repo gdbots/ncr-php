@@ -4,12 +4,18 @@ declare(strict_types = 1);
 namespace Gdbots\Tests\Ncr\Repository;
 
 use Acme\Schemas\Iam\Node\UserV1;
+use Gdbots\Ncr\IndexQueryBuilder;
+use Gdbots\Ncr\IndexQueryFilter;
 use Gdbots\Ncr\Repository\InMemoryNcr;
+use Gdbots\Pbj\SchemaQName;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\NodeRef;
+use Gdbots\Tests\Ncr\Fixtures\SimpsonsTrait;
 
 class InMemoryNcrTest extends \PHPUnit_Framework_TestCase
 {
+    use SimpsonsTrait;
+
     /** @var InMemoryNcr */
     protected $ncr;
 
@@ -112,14 +118,44 @@ class InMemoryNcrTest extends \PHPUnit_Framework_TestCase
         $expectedNodeRefs = array_slice($nodeRefs, 0, 2);
         $actualNodes = $this->ncr->getNodes($expectedNodeRefs);
         $actualNodeRefs = array_keys($actualNodes);
-        asort($actualNodeRefs);
+        sort($actualNodeRefs);
         $expectedNodeRefs = array_map('strval', $expectedNodeRefs);
-        asort($expectedNodeRefs);
+        sort($expectedNodeRefs);
         $this->assertSame(array_values($actualNodeRefs), array_values($expectedNodeRefs));
         $this->assertCount(2, $actualNodes);
 
         foreach ($actualNodes as $actualNodeRef => $actualNode) {
             $this->assertTrue($actualNode->equals($nodes[$actualNodeRef]));
+        }
+    }
+
+    public function testFindNodeRefs()
+    {
+        foreach ($this->getSimpsonsAsNodes() as $node) {
+            $this->ncr->putNode($node);
+        }
+
+        foreach ($this->getSimpsonsIndexQueryFilterTests() as $test) {
+            /** @var IndexQueryFilter $filter */
+            $filter = array_shift($test['filters']);
+            $qb = IndexQueryBuilder::create(
+                SchemaQName::fromString('gdbots:fake-node'),
+                $filter->getField(),
+                (string)$filter->getValue()
+            );
+
+            foreach ($test['filters'] as $filter) {
+                $qb->addFilter($filter);
+            }
+
+            $result = $this->ncr->findNodeRefs($qb->build());
+            $expectedNodeRefs = array_map('strval', $test['expected']);
+            $actualNodeRefs = array_map('strval', $result->getNodeRefs());
+
+            sort($expectedNodeRefs);
+            sort($actualNodeRefs);
+
+            $this->assertEquals($expectedNodeRefs, $actualNodeRefs, "Test filter [{$test['name']}] failed.");
         }
     }
 }
