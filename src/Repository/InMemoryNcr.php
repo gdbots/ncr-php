@@ -3,6 +3,7 @@ declare(strict_types = 1);
 
 namespace Gdbots\Ncr\Repository;
 
+use Gdbots\Common\Util\NumberUtils;
 use Gdbots\Ncr\Enum\IndexQueryFilterOperator;
 use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Ncr\Exception\OptimisticCheckFailed;
@@ -174,7 +175,6 @@ TEXT;
         }
 
         $count = count($nodeRefs);
-        $nextCursor = null;
 
         if ($query->sortAsc()) {
             ksort($nodeRefs);
@@ -182,16 +182,12 @@ TEXT;
             krsort($nodeRefs);
         }
 
-        if ($query->hasCursor()) {
-            $nodeRefs = array_slice($nodeRefs, (int)$query->getCursor(), $query->getCount());
-            $count = count($nodeRefs);
-        }
+        $offset = NumberUtils::bound($query->getCursor(), 0, $count);
+        $nodeRefs = array_slice(array_values($nodeRefs), $offset, $query->getCount());
+        $nextCursor = $offset + $query->getCount();
+        $nextCursor = $nextCursor >= $count ? null : (string)$nextCursor;
 
-        if ($count > $query->getCount()) {
-            $nextCursor = (string)($count - 1);
-        }
-
-        return new IndexQueryResult($query, array_values($nodeRefs), $nextCursor);
+        return new IndexQueryResult($query, $nodeRefs, $nextCursor);
     }
 
     /**

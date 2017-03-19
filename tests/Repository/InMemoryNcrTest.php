@@ -158,4 +158,105 @@ class InMemoryNcrTest extends \PHPUnit_Framework_TestCase
             $this->assertEquals($expectedNodeRefs, $actualNodeRefs, "Test filter [{$test['name']}] failed.");
         }
     }
+
+    public function testFindNodeRefsPaged1()
+    {
+        foreach ($this->getSimpsonsAsNodes() as $node) {
+            $this->ncr->putNode($node);
+        }
+
+        $qb = IndexQueryBuilder::create(SchemaQName::fromString('gdbots:fake-node'), 'status', 'draft')
+            ->filterLt('age', 39)
+            ->setCount(1);
+
+        $result = $this->ncr->findNodeRefs($qb->build());
+        $this->assertCount(1, $result);
+        $this->assertTrue($result->hasMore());
+        $this->assertEquals([NodeRef::fromString('gdbots:fake-node:bart')], $result->getNodeRefs());
+
+        $qb->setCursor($result->getNextCursor());
+        $result = $this->ncr->findNodeRefs($qb->build());
+        $this->assertCount(1, $result);
+        $this->assertTrue($result->hasMore());
+        $this->assertEquals([NodeRef::fromString('gdbots:fake-node:lisa')], $result->getNodeRefs());
+
+        $qb->setCursor($result->getNextCursor());
+        $result = $this->ncr->findNodeRefs($qb->build());
+        $this->assertCount(1, $result);
+        $this->assertTrue($result->hasMore());
+        $this->assertEquals([NodeRef::fromString('gdbots:fake-node:maggie')], $result->getNodeRefs());
+
+        $qb->setCursor($result->getNextCursor());
+        $result = $this->ncr->findNodeRefs($qb->build());
+        $this->assertCount(1, $result);
+        $this->assertTrue($result->hasMore());
+        $this->assertEquals([NodeRef::fromString('gdbots:fake-node:marge')], $result->getNodeRefs());
+
+        $qb->setCursor($result->getNextCursor());
+        $result = $this->ncr->findNodeRefs($qb->build());
+        $this->assertCount(1, $result);
+        $this->assertFalse($result->hasMore());
+        $this->assertEquals([NodeRef::fromString('gdbots:fake-node:milhouse')], $result->getNodeRefs());
+    }
+
+    public function testFindNodeRefsPaged3()
+    {
+        foreach ($this->getSimpsonsAsNodes() as $node) {
+            $this->ncr->putNode($node);
+        }
+
+        $qb = IndexQueryBuilder::create(SchemaQName::fromString('gdbots:fake-node'), 'status', 'draft')
+            ->filterLt('age', 39)
+            ->setCount(3);
+
+        $result = $this->ncr->findNodeRefs($qb->build());
+        $this->assertCount(3, $result);
+        $this->assertTrue($result->hasMore());
+        $this->assertEquals(
+            [
+                NodeRef::fromString('gdbots:fake-node:bart'),
+                NodeRef::fromString('gdbots:fake-node:lisa'),
+                NodeRef::fromString('gdbots:fake-node:maggie'),
+            ],
+            $result->getNodeRefs()
+        );
+
+        $qb->setCursor($result->getNextCursor());
+        $result = $this->ncr->findNodeRefs($qb->build());
+        $this->assertCount(2, $result);
+        $this->assertFalse($result->hasMore());
+        $this->assertEquals(
+            [
+                NodeRef::fromString('gdbots:fake-node:marge'),
+                NodeRef::fromString('gdbots:fake-node:milhouse'),
+            ],
+            $result->getNodeRefs()
+        );
+    }
+
+
+    public function testFindNodeRefsPaged25()
+    {
+        foreach ($this->getSimpsonsAsNodes() as $node) {
+            $this->ncr->putNode($node);
+        }
+
+        $qb = IndexQueryBuilder::create(SchemaQName::fromString('gdbots:fake-node'), 'status', 'draft')
+            ->filterLt('age', 39)
+            ->setCount(25);
+
+        $result = $this->ncr->findNodeRefs($qb->build());
+        $this->assertCount(5, $result);
+        $this->assertFalse($result->hasMore());
+        $this->assertEquals(
+            [
+                NodeRef::fromString('gdbots:fake-node:bart'),
+                NodeRef::fromString('gdbots:fake-node:lisa'),
+                NodeRef::fromString('gdbots:fake-node:maggie'),
+                NodeRef::fromString('gdbots:fake-node:marge'),
+                NodeRef::fromString('gdbots:fake-node:milhouse'),
+            ],
+            $result->getNodeRefs()
+        );
+    }
 }
