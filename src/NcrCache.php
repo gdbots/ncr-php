@@ -1,0 +1,154 @@
+<?php
+declare(strict_types = 1);
+
+namespace Gdbots\Ncr;
+
+use Gdbots\Ncr\Exception\NodeNotFound;
+use Gdbots\Schemas\Ncr\Mixin\Node\Node;
+use Gdbots\Schemas\Ncr\NodeRef;
+
+/**
+ * NcrCache is a first level cache which is ONLY seen and used by
+ * the current request.  It is used to cache all nodes returned
+ * from get node request(s).  This cache is used during Pbjx
+ * request processing or if the NCR is running in the current
+ * process and is using the MemoizingNcr.
+ *
+ * This cache should not be used when asking for a consistent result.
+ *
+ * NcrCache is NOT an identity map and the NCR is NOT an ORM. In some
+ * cases you may get the same exact object but it's not a guarantee so
+ * don't do something like this:
+ *  $nodeRef = NodeRef::fromString('acme:article:123');
+ *  $cache->getNode($nodeRef) !== $cache->getNode($nodeRef);
+ *
+ * If you need to check equality, use the message interface:
+ *
+ * $node1 = $cache->getNode($nodeRef);
+ * $node2 = $cache->getNode($nodeRef);
+ * $node->equals($node2); // returns true if their data is the same
+ *
+ */
+final class NcrCache
+{
+    /** @var NcrLazyLoader */
+    private $lazyLoader;
+
+    /**
+     * Array of nodes keyed by their NodeRef.
+     *
+     * @var Node[]
+     */
+    private $nodes = [];
+
+    /**
+     * The maximum number of items to keep in cache.
+     *  0 means unlimited
+     *
+     * @var int
+     */
+    private $maxItems = 500;
+
+    /**
+     * @param NcrLazyLoader $lazyLoader
+     * @param int           $maxItems
+     */
+    public function __construct(NcrLazyLoader $lazyLoader, int $maxItems = 500)
+    {
+        $this->lazyLoader = $lazyLoader;
+        $this->maxItems = $maxItems;
+    }
+
+    /**
+     * @param NodeRef $nodeRef The NodeRef to check for in the NcrCache.
+     *
+     * @return bool
+     */
+    public function hasNode(NodeRef $nodeRef): bool
+    {
+        return isset($this->nodes[$nodeRef->toString()]);
+    }
+
+    /**
+     * @param NodeRef $nodeRef The NodeRef to get from the NcrCache.
+     *
+     * @return Node
+     *
+     * @throws NodeNotFound
+     */
+    public function getNode(NodeRef $nodeRef): Node
+    {
+        if (!$this->hasNode($nodeRef)) {
+            if ($this->lazyLoader->hasNodeRef($nodeRef)) {
+                $this->lazyLoader->flush();
+                if (!$this->hasNode($nodeRef)) {
+                    throw NodeNotFound::forNodeRef($nodeRef);
+                }
+            } else {
+                throw NodeNotFound::forNodeRef($nodeRef);
+            }
+        }
+
+        $node = $this->nodes[$nodeRef->toString()];
+        if ($node->isFrozen()) {
+            $node = $this->nodes[$nodeRef->toString()] = clone $node;
+        }
+
+        return $node;
+    }
+
+    /**
+     * @param Node $node The Node to put into the NcrCache.
+     */
+    public function addNode(Node $node): void
+    {
+        $this->pruneNodeCache();
+        $nodeRef = NodeRef::fromNode($node);
+        $this->nodes[$nodeRef->toString()] = $node;
+        $this->lazyLoader->removeNodeRefs([$nodeRef]);
+    }
+
+    /**
+     * @param Node[] $nodes The Nodes to put into the NcrCache.
+     */
+    public function addNodes(array $nodes): void
+    {
+        $this->pruneNodeCache();
+        $nodeRefs = [];
+
+        foreach ($nodes as $node) {
+            $nodeRef = NodeRef::fromNode($node);
+            $nodeRefs[] = $nodeRef;
+            $this->nodes[$nodeRef->toString()] = $node;
+        }
+
+        $this->lazyLoader->removeNodeRefs($nodeRefs);
+    }
+
+    /**
+     * @param NodeRef $nodeRef The NodeRef to delete from the NcrCache.
+     */
+    public function removeNode(NodeRef $nodeRef): void
+    {
+        unset($this->nodes[$nodeRef->toString()]);
+        $this->lazyLoader->removeNodeRefs([$nodeRef]);
+    }
+
+    /**
+     * Clears the NcrCache.
+     */
+    public function clear(): void
+    {
+        $this->nodes = [];
+    }
+
+    /**
+     * Prunes node cache by removing 20% of the cache if it is full.
+     */
+    private function pruneNodeCache(): void
+    {
+        if ($this->maxItems > 0 && count($this->nodes) > $this->maxItems) {
+            $this->nodes = array_slice($this->nodes, $this->maxItems * 0.2, null, true);
+        }
+    }
+}
