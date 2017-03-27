@@ -50,6 +50,20 @@ final class NcrLazyLoader
     }
 
     /**
+     * Returns the NodeRefs that the lazy loader has queued up.
+     *
+     * @return NodeRef[]
+     */
+    public function getNodeRefs(): array
+    {
+        if (null === $this->getNodeBatchRequest) {
+            return [];
+        }
+
+        return $this->getNodeBatchRequest->get('node_refs', []);
+    }
+
+    /**
      * Finds NodeRefs in the provided messages based on the paths provided.  The paths
      * is an array of ['field_name' => 'qname'] which will be used to create the
      * NodeRefs if the field is populated on any of the messages.

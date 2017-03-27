@@ -5,8 +5,7 @@
   "license": "Apache-2.0",
   "require": {
     "php": ">=7.1",
-    "gdbots/pbjx": "dev-es as 1.0.0",
-    "gdbots/schemas": "dev-es as 1.0.0",
+    "gdbots/pbjx": "~2.0",
     "psr/cache": "~1",
     "psr/log": "~1"
   },
