@@ -30,7 +30,7 @@ class NcrCacheTest extends \PHPUnit_Framework_TestCase
         $this->locator = new RegisteringServiceLocator();
         $this->pbjx = new SimplePbjx($this->locator);
         $this->ncrLazyLoader = new NcrLazyLoader($this->pbjx);
-        $this->ncrCache = new NcrCache($this->ncrLazyLoader);
+        $this->ncrCache = new NcrCache($this->ncrLazyLoader, 10);
     }
 
     public function testHasNode()
@@ -72,5 +72,36 @@ class NcrCacheTest extends \PHPUnit_Framework_TestCase
         $this->ncrCache->clear();
         $this->assertFalse($this->ncrCache->hasNode(NodeRef::fromNode($node1)));
         $this->assertFalse($this->ncrCache->hasNode(NodeRef::fromNode($node2)));
+    }
+
+    public function testPrune()
+    {
+        $nodes = [];
+        $count = 10;
+
+        $i = 0;
+        do {
+            $nodes[] = UserV1::create();
+            $i++;
+        } while ($i < $count);
+
+        foreach ($nodes as $node) {
+            $this->ncrCache->addNode($node);
+            $this->assertTrue($this->ncrCache->hasNode(NodeRef::fromNode($node)));
+        }
+
+        // these will cause a prune to occur
+        $this->ncrCache->addNode(UserV1::create());
+        $this->ncrCache->addNode(UserV1::create());
+
+        $found = 0;
+        foreach ($nodes as $node) {
+            if ($this->ncrCache->hasNode(NodeRef::fromNode($node))) {
+                $found++;
+            }
+        }
+
+        // 20% of the cache should have been removed
+        $this->assertSame($count - (int)($count * .2), $found);
     }
 }

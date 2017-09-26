@@ -1,5 +1,5 @@
 <?php
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
@@ -148,7 +148,7 @@ final class NcrCache
     private function pruneNodeCache(): void
     {
         if ($this->maxItems > 0 && count($this->nodes) > $this->maxItems) {
-            $this->nodes = array_slice($this->nodes, $this->maxItems * 0.2, null, true);
+            $this->nodes = array_slice($this->nodes, (int)($this->maxItems * 0.2), null, true);
         }
     }
 }
