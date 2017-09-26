@@ -12,7 +12,7 @@
   "require-dev": {
     "phpunit/phpunit": "~4.3",
     "aws/aws-sdk-php": "~3.19",
-    "gdbots/acme-schemas": "dev-master",
+    "gdbots/acme-schemas": "~1.1",
     "ruflin/elastica": "~3.2"
   },
   "autoload": {
@@ -24,6 +24,9 @@
     "psr-4": {
       "Gdbots\\Tests\\Ncr\\": "tests"
     }
+  },
+  "scripts": {
+    "test": "vendor/bin/phpunit"
   },
   "extra": {
     "branch-alias": {

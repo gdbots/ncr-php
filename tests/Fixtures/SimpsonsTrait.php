@@ -47,7 +47,7 @@ trait SimpsonsTrait
 
         foreach ($this->getSimpsonsAsNodes() as $node) {
             $item = $marshaler->marshal($node);
-            $item[NodeTable::HASH_KEY_NAME] = ['S' => NodeRef::fromNode($node)];
+            $item[NodeTable::HASH_KEY_NAME] = ['S' => NodeRef::fromNode($node)->toString()];
             $nodeTable->beforePutItem($item, $node);
             $items[] = $item;
         }

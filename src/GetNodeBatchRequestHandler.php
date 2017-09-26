@@ -1,5 +1,5 @@
 <?php
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
@@ -45,7 +45,9 @@ final class GetNodeBatchRequestHandler implements RequestHandler
         }
 
         $missing = array_keys(array_diff_key(array_flip(array_map('strval', $nodeRefs)), $nodes));
-        $missing = array_map(function ($str) { return NodeRef::fromString($str); }, $missing);
+        $missing = array_map(function ($str) {
+            return NodeRef::fromString($str);
+        }, $missing);
         $response->addToSet('missing_node_refs', $missing);
 
         return $response;
