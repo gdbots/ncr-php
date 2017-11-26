@@ -50,6 +50,17 @@ class NodeMapper
         // elastica or elasticsearch throws exception when _id is in the properties
         // likely due to it being a builtin field.
         $properties = $mapping->getProperties();
+
+        // we use multi-field indexing on title to create sortable field
+        // on nodes for general search and listing (title.raw)
+        if ('text' === $properties['title']['type']) {
+            // elastica >=5 uses "text" for string type
+            $properties['title']['fields'] = ['raw' => ['type' => 'text', 'analyzer' => 'pbj_keyword']];
+        } else {
+            // elastica <5 uses "string" for string type
+            $properties['title']['fields'] = ['raw' => ['type' => 'string', 'analyzer' => 'pbj_keyword_analyzer']];
+        }
+
         unset($properties['_id']);
         $mapping
             ->setAllField(['enabled' => true, 'analyzer' => $this->getDefaultAnalyzer()])

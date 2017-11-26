@@ -7,7 +7,6 @@ use Gdbots\Ncr\Enum\IndexQueryFilterOperator;
 use Gdbots\Ncr\IndexQueryFilter;
 use Gdbots\Ncr\Repository\DynamoDb\NodeTable;
 use Gdbots\Pbj\Marshaler\DynamoDb\ItemMarshaler;
-use Gdbots\Pbj\Type as T;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\NodeRef;
 

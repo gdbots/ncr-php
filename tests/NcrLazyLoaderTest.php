@@ -1,5 +1,5 @@
 <?php
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace Gdbots\Tests\Ncr;
 
@@ -15,8 +15,9 @@ use Gdbots\Schemas\Ncr\Request\GetNodeBatchRequestV1;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchResponseV1;
 use Gdbots\Schemas\Pbjx\Mixin\Request\Request;
 use Gdbots\Schemas\Pbjx\Mixin\Response\Response;
+use PHPUnit\Framework\TestCase;
 
-class NcrLazyLoaderTest extends \PHPUnit_Framework_TestCase
+class NcrLazyLoaderTest extends TestCase
 {
     /** @var RegisteringServiceLocator */
     protected $locator;

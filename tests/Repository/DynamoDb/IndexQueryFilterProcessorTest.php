@@ -1,5 +1,5 @@
 <?php
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace Gdbots\Tests\Ncr\Repository\DynamoDb;
 
@@ -8,8 +8,9 @@ use Gdbots\Ncr\Repository\DynamoDb\IndexQueryFilterProcessor;
 use Gdbots\Ncr\Repository\DynamoDb\NodeTable;
 use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Tests\Ncr\Fixtures\SimpsonsTrait;
+use PHPUnit\Framework\TestCase;
 
-class IndexQueryFilterProcessorTest extends \PHPUnit_Framework_TestCase
+class IndexQueryFilterProcessorTest extends TestCase
 {
     use SimpsonsTrait;
 
