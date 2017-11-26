@@ -1,5 +1,5 @@
 <?php
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace Gdbots\Tests\Ncr\Repository;
 
@@ -11,8 +11,9 @@ use Gdbots\Pbj\SchemaQName;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Tests\Ncr\Fixtures\SimpsonsTrait;
+use PHPUnit\Framework\TestCase;
 
-class InMemoryNcrTest extends \PHPUnit_Framework_TestCase
+class InMemoryNcrTest extends TestCase
 {
     use SimpsonsTrait;
 

@@ -16,7 +16,6 @@ final class IndexQueryFilterProcessor extends BaseIndexQueryFilterProcessor
             return null;
         }
 
-        list(, $value) = each($item[$field]);
-        return $value;
+        return current($item[$field]);
     }
 }

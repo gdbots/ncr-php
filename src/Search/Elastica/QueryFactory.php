@@ -72,7 +72,10 @@ class QueryFactory
                 $parsedQuery->addNode(
                     new Field(
                         $f['field'],
-                        new Numbr(Microtime::fromDateTime($request->get($f['query']))->toString(), $f['operator']),
+                        new Numbr(
+                            (float)Microtime::fromDateTime($request->get($f['query']))->toString(),
+                            $f['operator']
+                        ),
                         $required
                     )
                 );
@@ -89,6 +92,7 @@ class QueryFactory
     protected function forSearchNodesRequest(SearchNodesRequest $request, ParsedQuery $parsedQuery): AbstractQuery
     {
         $builder = new ElasticaQueryBuilder();
-        return $builder->setDefaultFieldName('_all')->addParsedQuery($parsedQuery)->getBoolQuery();
+        $builder->setDefaultFieldName('_all')->addParsedQuery($parsedQuery);
+        return $builder->getBoolQuery();
     }
 }

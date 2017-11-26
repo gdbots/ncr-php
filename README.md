@@ -7,7 +7,7 @@ ncr-php
 
 Node Content Repository for php.  Using this library assumes that you've already created and compiled your own pbj classes using the [Pbjc](https://github.com/gdbots/pbjc-php) and are making use of the __"gdbots:ncr:mixin:*"__ mixins from [gdbots/schemas](https://github.com/gdbots/schemas).
 
-> If your project is using Symfony3 use the [gdbots/ncr-bundle-php](https://github.com/gdbots/ncr-bundle-php) to simplify the integration.
+> If your project is using Symfony use the [gdbots/ncr-bundle-php](https://github.com/gdbots/ncr-bundle-php) to simplify the integration.
 
 
 # Nodes and Edges

@@ -1,5 +1,5 @@
 <?php
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace Gdbots\Tests\Ncr\Repository;
 
@@ -14,8 +14,9 @@ use Gdbots\Pbjx\RegisteringServiceLocator;
 use Gdbots\Pbjx\SimplePbjx;
 use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchRequestV1;
+use PHPUnit\Framework\TestCase;
 
-class MemoizingNcrTest extends \PHPUnit_Framework_TestCase
+class MemoizingNcrTest extends TestCase
 {
     /** @var RegisteringServiceLocator */
     protected $locator;
