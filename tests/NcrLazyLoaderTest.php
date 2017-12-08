@@ -84,6 +84,11 @@ class NcrLazyLoaderTest extends TestCase
                 $this->worked = $request->isInSet('node_refs', NodeRef::fromString('acme:user:123'));
                 return GetNodeBatchResponseV1::create();
             }
+
+            public static function handlesCuries(): array
+            {
+                return [];
+            }
         };
 
         $this->locator->registerRequestHandler(GetNodeBatchRequestV1::schema()->getCurie(), $handler);

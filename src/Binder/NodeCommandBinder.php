@@ -8,6 +8,7 @@ use Gdbots\Ncr\Exception\OptimisticCheckFailed;
 use Gdbots\Pbj\Assertion;
 use Gdbots\Pbj\MessageResolver;
 use Gdbots\Pbj\SchemaCurie;
+use Gdbots\Pbjx\DependencyInjection\PbjxBinder;
 use Gdbots\Pbjx\Event\PbjxEvent;
 use Gdbots\Pbjx\EventSubscriber;
 use Gdbots\Pbjx\Exception\RequestHandlingFailed;
@@ -22,7 +23,7 @@ use Gdbots\Schemas\Pbjx\Mixin\Command\Command;
 
 // fixme: restrict binding for input of "old_node", etc.
 // this will allow the fetching of old_node in custom controllers
-class NodeCommandBinder implements EventSubscriber
+class NodeCommandBinder implements EventSubscriber, PbjxBinder
 {
     /**
      * @param PbjxEvent $pbjxEvent

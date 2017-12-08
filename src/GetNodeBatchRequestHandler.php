@@ -7,6 +7,7 @@ use Gdbots\Pbjx\RequestHandler;
 use Gdbots\Pbjx\RequestHandlerTrait;
 use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchRequest;
+use Gdbots\Schemas\Ncr\Request\GetNodeBatchRequestV1;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchResponse;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchResponseV1;
 
@@ -51,5 +52,15 @@ final class GetNodeBatchRequestHandler implements RequestHandler
         $response->addToSet('missing_node_refs', $missing);
 
         return $response;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public static function handlesCuries(): array
+    {
+        return [
+            GetNodeBatchRequestV1::schema()->getCurie(),
+        ];
     }
 }
