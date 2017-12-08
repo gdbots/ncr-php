@@ -2,6 +2,13 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.2.0
+__BREAKING CHANGES__
+
+* Require `"gdbots/pbjx": "^2.1.1"`.
+* Remove all `Gdbots\Ncr\DependencyInjection\*` classes since Symfony 4 autowiring wipes out the need for it.
+
+
 ## v0.1.2
 * Update `gdbots/pbjx` composer constraint to require `^2.1`.
 * Add Elasticsearch 5.x support in `Gdbots\Ncr\Search\Elastica\NodeMapper` and also use 
