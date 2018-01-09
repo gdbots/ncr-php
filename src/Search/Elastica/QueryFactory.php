@@ -41,22 +41,60 @@ class QueryFactory
     /**
      * @param SearchNodesRequest $request
      * @param ParsedQuery        $parsedQuery
+     *
+     * @return AbstractQuery
      */
-    protected function applyStatus(SearchNodesRequest $request, ParsedQuery $parsedQuery): void
+    protected function forSearchNodesRequest(SearchNodesRequest $request, ParsedQuery $parsedQuery): AbstractQuery
     {
-        if (!$request->has('status')) {
+        $builder = new ElasticaQueryBuilder();
+        $builder->setDefaultFieldName('_all')->addParsedQuery($parsedQuery);
+        $query = $builder->getBoolQuery();
+
+        $this->filterStatuses($request, $query);
+        return $query;
+    }
+
+    /**
+     * Add the "statuses" into one terms query as it's more efficient.
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-terms-query.html
+     *
+     * @param SearchNodesRequest $request
+     * @param Query\BoolQuery    $query
+     */
+    protected function filterStatuses(SearchNodesRequest $request, Query\BoolQuery $query): void
+    {
+        if (!$request->has('statuses')) {
             return;
         }
 
-        $required = BoolOperator::REQUIRED();
-        $parsedQuery->addNode(new Field('status', new Word((string)$request->get('status'), $required), $required));
+        $statuses = array_map('strval', $request->get('statuses'));
+        $query->addFilter(new Query\Terms('status', $statuses));
     }
 
     /**
      * @param SearchNodesRequest $request
      * @param ParsedQuery        $parsedQuery
      */
-    protected function applyDateFilters(SearchNodesRequest $request, ParsedQuery $parsedQuery): void
+    private function applyStatus(SearchNodesRequest $request, ParsedQuery $parsedQuery): void
+    {
+        if (!$request->has('status')) {
+            return;
+        }
+
+        $required = BoolOperator::REQUIRED();
+        $parsedQuery->addNode(new Field(
+            'status',
+            new Word((string)$request->get('status'), $required),
+            $required
+        ));
+    }
+
+    /**
+     * @param SearchNodesRequest $request
+     * @param ParsedQuery        $parsedQuery
+     */
+    private function applyDateFilters(SearchNodesRequest $request, ParsedQuery $parsedQuery): void
     {
         $required = BoolOperator::REQUIRED();
 
@@ -81,18 +119,5 @@ class QueryFactory
                 );
             }
         }
-    }
-
-    /**
-     * @param SearchNodesRequest $request
-     * @param ParsedQuery        $parsedQuery
-     *
-     * @return AbstractQuery
-     */
-    protected function forSearchNodesRequest(SearchNodesRequest $request, ParsedQuery $parsedQuery): AbstractQuery
-    {
-        $builder = new ElasticaQueryBuilder();
-        $builder->setDefaultFieldName('_all')->addParsedQuery($parsedQuery);
-        return $builder->getBoolQuery();
     }
 }

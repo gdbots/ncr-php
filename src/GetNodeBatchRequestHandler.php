@@ -40,7 +40,12 @@ final class GetNodeBatchRequestHandler implements RequestHandler
             return $response;
         }
 
-        $nodes = $this->ncr->getNodes($nodeRefs, $request->get('consistent_read'), $request->get('context', []));
+        $nodes = $this->ncr->getNodes(
+            $nodeRefs,
+            $request->get('consistent_read'),
+            $request->get('context', [])
+        );
+
         foreach ($nodes as $nodeRef => $node) {
             $response->addToMap('nodes', $nodeRef, $node);
         }
