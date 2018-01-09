@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.2.1
+* Add handling for `statuses` field from `gdbots:ncr:mixin:search-nodes-request` in `Gdbots\Ncr\Search\Elastica\QueryFactory`.
+
+
 ## v0.2.0
 __BREAKING CHANGES__
 

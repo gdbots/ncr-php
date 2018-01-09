@@ -15,8 +15,6 @@ use Gdbots\Pbjx\Exception\RequestHandlingFailed;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Schemas\Ncr\Mixin\GetNodeRequest\GetNodeRequest;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
-use Gdbots\Schemas\Ncr\Mixin\RenameNode\RenameNode;
-use Gdbots\Schemas\Ncr\Mixin\UpdateNode\UpdateNode;
 use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 use Gdbots\Schemas\Pbjx\Mixin\Command\Command;
@@ -30,7 +28,7 @@ class NodeCommandBinder implements EventSubscriber, PbjxBinder
      */
     final public function bindUpdateNode(PbjxEvent $pbjxEvent): void
     {
-        /** @var UpdateNode|Command $command */
+        /** @var Command $command */
         $command = $pbjxEvent->getMessage();
 
         $node = $this->getNodeForCommand($command, $pbjxEvent::getPbjx());
@@ -44,7 +42,7 @@ class NodeCommandBinder implements EventSubscriber, PbjxBinder
      */
     final public function bindRenameNode(PbjxEvent $pbjxEvent): void
     {
-        /** @var RenameNode|Command $command */
+        /** @var Command $command */
         $command = $pbjxEvent->getMessage();
 
         Assertion::true($command->has('new_slug'), 'Field "new_slug" is required.', 'new_slug');
