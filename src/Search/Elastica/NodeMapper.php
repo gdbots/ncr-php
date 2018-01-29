@@ -55,7 +55,7 @@ class NodeMapper
         // on nodes for general search and listing (title.raw)
         if ('text' === $properties['title']['type']) {
             // elastica >=5 uses "text" for string type
-            $properties['title']['fields'] = ['raw' => ['type' => 'text', 'analyzer' => 'pbj_keyword']];
+            $properties['title']['fields'] = ['raw' => ['type' => 'keyword', 'normalizer' => 'pbj_keyword']];
         } else {
             // elastica <5 uses "string" for string type
             $properties['title']['fields'] = ['raw' => ['type' => 'string', 'analyzer' => 'pbj_keyword_analyzer']];

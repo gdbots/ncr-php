@@ -146,6 +146,7 @@ class NodeTable
 
     /**
      * Returns true if this NodeTable has the given index.
+     *
      * @see GlobalSecondaryIndex::getAlias()
      *
      * @param string $alias
