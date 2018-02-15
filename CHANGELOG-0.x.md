@@ -2,6 +2,11 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.2.3
+* Add `NodeEtagEnricher` that will automatically update the node's etag field during updates.
+* Replace all `} catch (\Exception $e) {` with `} catch (\Throwable $e) {`.
+
+
 ## v0.2.2
 * Add normalizer settings in `Gdbots\Ncr\Search\Elastica\IndexManager` and use that for the _raw_ fields in `Gdbots\Ncr\Search\Elastica\NodeMapper` so ElasticSearch sorting works.  The keyword type must be used for these unless you enable fielddata which is generally not recommended.
  

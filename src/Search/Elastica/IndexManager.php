@@ -123,7 +123,7 @@ class IndexManager
                 ];
                 $index->create($settings);
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             throw new SearchOperationFailed(
                 sprintf(
                     '%s while creating index [%s] for qname [%s].',
@@ -156,7 +156,7 @@ class IndexManager
 
         try {
             $mapping->send();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             throw new SearchOperationFailed(
                 sprintf(
                     '%s while putting mapping for type [%s/%s] into ElasticSearch for qname [%s].',

@@ -3,25 +3,29 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr\Search\Elastica;
 
-use Aws\Credentials\Credentials;
+use Aws\Credentials\CredentialsInterface;
 use Psr\Log\LoggerInterface;
 
 class AwsAuthV4ClientManager extends ClientManager
 {
-    /** @var Credentials */
+    /** @var CredentialsInterface */
     private $credentials;
 
     /** @var string */
     private $region;
 
     /**
-     * @param Credentials     $credentials
-     * @param string          $region
-     * @param array           $clusters
-     * @param LoggerInterface $logger
+     * @param CredentialsInterface $credentials
+     * @param string               $region
+     * @param array                $clusters
+     * @param LoggerInterface      $logger
      */
-    public function __construct(Credentials $credentials, string $region, array $clusters, ?LoggerInterface $logger = null)
-    {
+    public function __construct(
+        CredentialsInterface $credentials,
+        string $region,
+        array $clusters,
+        ?LoggerInterface $logger = null
+    ) {
         parent::__construct($clusters, $logger);
         $this->credentials = $credentials;
         $this->region = $region;

@@ -118,7 +118,7 @@ class Psr6Ncr implements Ncr
                 return [(string)$nodeRef => $this->getNode($nodeRef, $consistent, $context)];
             } catch (NodeNotFound $e) {
                 return [];
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 throw $e;
             }
         }

@@ -132,7 +132,7 @@ TEXT;
                     ->setIndex($indexName);
                 $this->indexManager->getNodeMapper($qname)->beforeIndex($document, $node);
                 $documents[] = $document;
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 $message = sprintf(
                     '%s while adding node [{node_ref}] to batch index request ' .
                     'into ElasticSearch [{index_name}/{type_name}].',
@@ -158,7 +158,7 @@ TEXT;
             if (!$response->isOk()) {
                 throw new \Exception($response->getStatus() . '::' . $response->getError());
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             throw new SearchOperationFailed(
                 sprintf(
                     '%s while indexing batch into ElasticSearch with message: %s',
@@ -196,7 +196,7 @@ TEXT;
                     ->setId((string)$nodeRef->getId())
                     ->setType($typeName)
                     ->setIndex($indexName);
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 $message = sprintf(
                     '%s while adding node [{node_ref}] to batch delete request ' .
                     'from ElasticSearch [{index_name}/{type_name}].',
@@ -221,7 +221,7 @@ TEXT;
             if (!$response->isOk()) {
                 throw new \Exception($response->getStatus() . '::' . $response->getError());
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             throw new SearchOperationFailed(
                 sprintf(
                     '%s while deleting batch from ElasticSearch with message: %s',
@@ -265,7 +265,7 @@ TEXT;
             $results = $search
                 ->setOptionsAndQuery($options, $this->getQueryFactory()->create($request, $parsedQuery))
                 ->search();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $this->logger->error(
                 'ElasticSearch query [{query}] failed.',
                 [
@@ -293,7 +293,7 @@ TEXT;
                 $source = $result->getSource();
                 $source['_id'] = (string)$result->getId();
                 $nodes[] = $this->marshaler->unmarshal($source);
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 $this->logger->error(
                     'Source returned from ElasticSearch could not be unmarshaled.',
                     ['exception' => $e, 'hit' => $result->getHit()]
