@@ -48,7 +48,7 @@ final class InMemoryNcr implements Ncr
 
                 $nodeRef = NodeRef::fromNode($node);
                 $this->nodes[$nodeRef->toString()] = $node;
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
             }
         }
     }

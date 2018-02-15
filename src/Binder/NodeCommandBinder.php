@@ -19,8 +19,6 @@ use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 use Gdbots\Schemas\Pbjx\Mixin\Command\Command;
 
-// fixme: restrict binding for input of "old_node", etc.
-// this will allow the fetching of old_node in custom controllers
 class NodeCommandBinder implements EventSubscriber, PbjxBinder
 {
     /**
@@ -68,9 +66,9 @@ class NodeCommandBinder implements EventSubscriber, PbjxBinder
      *
      * @return Node
      *
-     * @throws \Exception
+     * @throws \Throwable
      */
-    private function getNodeForCommand(Command $command, Pbjx $pbjx): Node
+    protected function getNodeForCommand(Command $command, Pbjx $pbjx): Node
     {
         Assertion::true($command->has('node_ref'), 'Field "node_ref" is required.', 'node_ref');
         /** @var NodeRef $nodeRef */
@@ -96,7 +94,7 @@ class NodeCommandBinder implements EventSubscriber, PbjxBinder
             }
 
             throw $e;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             throw $e;
         }
 

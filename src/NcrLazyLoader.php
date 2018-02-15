@@ -161,7 +161,7 @@ final class NcrLazyLoader
             $request = $this->getNodeBatchRequest;
             $this->getNodeBatchRequest = null;
             $this->pbjx->request($request);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $this->logger->error(
                 sprintf('%s::NcrLazyLoader::flush() could not complete.', ClassUtils::getShortName($e)),
                 ['exception' => $e, 'pbj' => $request->toArray()]

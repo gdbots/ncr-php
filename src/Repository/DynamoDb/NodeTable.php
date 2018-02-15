@@ -101,7 +101,7 @@ class NodeTable
             ]);
 
             $client->waitUntil('TableExists', ['TableName' => $tableName]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             throw new RepositoryOperationFailed(
                 sprintf(
                     '%s::Unable to create table [%s] in region [%s].',
@@ -130,7 +130,7 @@ class NodeTable
         try {
             $result = $client->describeTable(['TableName' => $tableName]);
             return json_encode($result->toArray(), JSON_PRETTY_PRINT);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             throw new RepositoryOperationFailed(
                 sprintf(
                     '%s::Unable to describe table [%s] in region [%s].',

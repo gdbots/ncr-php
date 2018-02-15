@@ -51,8 +51,12 @@ final class DynamoDbNcr implements Ncr
      * @param array           $config
      * @param LoggerInterface $logger
      */
-    public function __construct(DynamoDbClient $client, TableManager $tableManager, array $config = [], ?LoggerInterface $logger = null)
-    {
+    public function __construct(
+        DynamoDbClient $client,
+        TableManager $tableManager,
+        array $config = [],
+        ?LoggerInterface $logger = null
+    ) {
         // defaults
         $config += [
             'batch_size' => 100,
@@ -102,7 +106,7 @@ final class DynamoDbNcr implements Ncr
                 'ExpressionAttributeNames' => ['#node_ref' => NodeTable::HASH_KEY_NAME],
                 'Key'                      => [NodeTable::HASH_KEY_NAME => ['S' => $nodeRef->toString()]],
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             if ($e instanceof AwsException) {
                 $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
                 if ('ResourceNotFoundException' === $errorName) {
@@ -145,7 +149,7 @@ final class DynamoDbNcr implements Ncr
                 'TableName'      => $tableName,
                 'Key'            => [NodeTable::HASH_KEY_NAME => ['S' => $nodeRef->toString()]],
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             if ($e instanceof AwsException) {
                 $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
                 if ('ResourceNotFoundException' === $errorName) {
@@ -179,7 +183,7 @@ final class DynamoDbNcr implements Ncr
         try {
             /** @var Node $node */
             $node = $this->marshaler->unmarshal($response['Item']);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $this->logger->error(
                 'Item returned from DynamoDb table [{table_name}] for [{node_ref}] could not be unmarshaled.',
                 [
@@ -210,7 +214,7 @@ final class DynamoDbNcr implements Ncr
                 return [(string)$nodeRef => $this->getNode($nodeRef, $consistent, $context)];
             } catch (NodeNotFound $e) {
                 return [];
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 throw $e;
             }
         }
@@ -237,7 +241,7 @@ final class DynamoDbNcr implements Ncr
             try {
                 $nodeRef = NodeRef::fromString($item[NodeTable::HASH_KEY_NAME]['S']);
                 $nodes[$nodeRef->toString()] = $this->marshaler->unmarshal($item);
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 $this->logger->error(
                     'Item returned from DynamoDb table could not be unmarshaled.',
                     ['exception' => $e, 'item' => $item, 'context' => $context]
@@ -270,7 +274,7 @@ final class DynamoDbNcr implements Ncr
             $table->beforePutItem($item, $node);
             $params['Item'] = $item;
             $this->client->putItem($params);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             if ($e instanceof AwsException) {
                 $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
                 if ('ConditionalCheckFailedException' === $errorName) {
@@ -318,7 +322,7 @@ final class DynamoDbNcr implements Ncr
                 'TableName' => $tableName,
                 'Key'       => [NodeTable::HASH_KEY_NAME => ['S' => $nodeRef->toString()]],
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             if ($e instanceof AwsException) {
                 $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
                 if ('ResourceNotFoundException' === $errorName) {
@@ -383,7 +387,7 @@ final class DynamoDbNcr implements Ncr
 
         try {
             $response = $this->client->query($params);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             if ($e instanceof AwsException) {
                 $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
                 if ('ProvisionedThroughputExceededException' === $errorName) {
@@ -423,7 +427,7 @@ final class DynamoDbNcr implements Ncr
         foreach ($response['Items'] as $item) {
             try {
                 $nodeRefs[] = NodeRef::fromString($item[NodeTable::HASH_KEY_NAME]['S']);
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 $this->logger->error(
                     'NodeRef returned from IndexQuery [{index_alias}] on DynamoDb table [{table_name}] is invalid.',
                     [
@@ -538,7 +542,7 @@ final class DynamoDbNcr implements Ncr
                     if (!$context['node_refs_only']) {
                         $node = $this->marshaler->unmarshal($item);
                     }
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     $this->logger->error(
                         'Item returned from DynamoDb table [{table_name}] segment [{segment}] ' .
                         'for QName [{qname}] could not be unmarshaled.',
