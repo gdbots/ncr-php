@@ -8,7 +8,6 @@ use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 use Gdbots\Schemas\Ncr\Mixin\NodePublished\NodePublished;
 use Gdbots\Schemas\Ncr\Mixin\NodeScheduled\NodeScheduled;
 use Gdbots\Schemas\Ncr\Mixin\PublishNode\PublishNode;
-use Gdbots\Schemas\Ncr\NodeRef;
 
 abstract class AbstractPublishNodeHandler extends AbstractNodeCommandHandler
 {
@@ -26,11 +25,8 @@ abstract class AbstractPublishNodeHandler extends AbstractNodeCommandHandler
      */
     protected function handle(PublishNode $command, Pbjx $pbjx): void
     {
-        /** @var NodeRef $nodeRef */
-        $nodeRef = $command->get('node_ref');
         $node = $this->getNode($command, $pbjx);
-
-        $time = time() + $this->anticipationThreshold;
+        $now = time() + $this->anticipationThreshold;
 
         /** @var \DateTime $publishAt */
         $publishAt = $command->get('publish_at') ?: $command->get('occurred_at')->toDateTime();
@@ -41,7 +37,7 @@ abstract class AbstractPublishNodeHandler extends AbstractNodeCommandHandler
             ? $node->get('published_at')->getTimestamp()
             : null;
 
-        if ($time >= $publishAt->getTimestamp()) {
+        if ($now >= $publishAt->getTimestamp()) {
             if ($currStatus->equals(NodeStatus::PUBLISHED()) && $currPublishedAt === $publishAt->getTimestamp()) {
                 return;
             }
@@ -56,13 +52,13 @@ abstract class AbstractPublishNodeHandler extends AbstractNodeCommandHandler
         }
 
         $pbjx->copyContext($command, $event);
-        $event->set('node_ref', $nodeRef);
+        $event->set('node_ref', $command->get('node_ref'));
 
         if ($node->has('slug')) {
             $event->set('slug', $node->get('slug'));
         }
 
-        $this->filterEvent($event, $node);
+        $this->enrichEvent($event, $node);
         $streamId = $this->createStreamId($command, $event);
         $this->putEvents($command, $pbjx, $streamId, [$event]);
     }

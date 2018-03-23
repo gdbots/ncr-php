@@ -45,7 +45,7 @@ abstract class AbstractNodeCommandHandler implements CommandHandler
      * @param Event $event
      * @param Node  $node
      */
-    protected function filterEvent(Event $event, Node $node): void
+    protected function enrichEvent(Event $event, Node $node): void
     {
         // override to customize the event before putEvents is run.
     }
