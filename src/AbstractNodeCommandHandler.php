@@ -3,7 +3,10 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
+use Gdbots\Common\Util\ClassUtils;
 use Gdbots\Ncr\Event\BindFromNodeEvent;
+use Gdbots\Ncr\Exception\InvalidArgumentException;
+use Gdbots\Pbj\Message;
 use Gdbots\Pbjx\CommandHandler;
 use Gdbots\Pbjx\CommandHandlerTrait;
 use Gdbots\Pbjx\Exception\GdbotsPbjxException;
@@ -30,27 +33,43 @@ abstract class AbstractNodeCommandHandler implements CommandHandler
     }
 
     /**
-     * @param NodeRef $nodeRef
-     * @param Command $command
-     * @param Pbjx    $pbjx
+     * @param Node $node
      *
-     * @return Node
+     * @throws InvalidArgumentException
      */
-    protected function getNode(NodeRef $nodeRef, Command $command, Pbjx $pbjx): Node
+    protected function assertIsNodeSupported(Node $node): void
     {
-        $context = $this->createNcrContext($command);
-        return $this->ncr->getNode($nodeRef, true, $context);
+        if (!$this->isNodeSupported($node)) {
+            $class = ClassUtils::getShortName(static::class);
+            throw new InvalidArgumentException(
+                "Node [{$node::schema()->getCurie()}] not supported by [{$class}]."
+            );
+        }
+    }
+
+    /**
+     * Determines if the given node can or should be handled by this handler.
+     * A sanity/security check to ensure mismatched node refs are not given
+     * maliciously or otherwise to unsuspecting handlers.
+     *
+     * @param Node $node
+     *
+     * @return bool
+     */
+    protected function isNodeSupported(Node $node): bool
+    {
+        return true;
     }
 
     /**
      * Creates the context object that is passed to Ncr methods.
      * @see Ncr::getNode
      *
-     * @param Command $command
+     * @param Message $message
      *
      * @return array
      */
-    protected function createNcrContext(Command $command): array
+    protected function createNcrContext(Message $message): array
     {
         return [];
     }
@@ -102,12 +121,12 @@ abstract class AbstractNodeCommandHandler implements CommandHandler
      * Creates the context object that is passed to EventStore methods.
      * @see EventStore::putEvents
      *
-     * @param Command  $command
+     * @param Message  $message
      * @param StreamId $streamId
      *
      * @return array
      */
-    protected function createEventStoreContext(Command $command, StreamId $streamId): array
+    protected function createEventStoreContext(Message $message, StreamId $streamId): array
     {
         return [];
     }

@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.2.4
+* Add optional abstract services for common node handlers and projectors.
+
+
 ## v0.2.3
 * Add `NodeEtagEnricher` that will automatically update the node's etag field during updates.
 * Replace all `} catch (\Exception $e) {` with `} catch (\Throwable $e) {`.

@@ -28,7 +28,8 @@ abstract class AbstractPublishNodeHandler extends AbstractNodeCommandHandler
     {
         /** @var NodeRef $nodeRef */
         $nodeRef = $command->get('node_ref');
-        $node = $this->getNode($nodeRef, $command, $pbjx);
+        $node = $this->ncr->getNode($nodeRef, true, $this->createNcrContext($command));
+        $this->assertIsNodeSupported($node);
         $now = time() + $this->anticipationThreshold;
 
         /** @var \DateTime $publishAt */
