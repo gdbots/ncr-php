@@ -8,6 +8,7 @@ use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 use Gdbots\Schemas\Ncr\Mixin\NodePublished\NodePublished;
 use Gdbots\Schemas\Ncr\Mixin\NodeScheduled\NodeScheduled;
 use Gdbots\Schemas\Ncr\Mixin\PublishNode\PublishNode;
+use Gdbots\Schemas\Ncr\NodeRef;
 
 abstract class AbstractPublishNodeHandler extends AbstractNodeCommandHandler
 {
@@ -25,7 +26,9 @@ abstract class AbstractPublishNodeHandler extends AbstractNodeCommandHandler
      */
     protected function handle(PublishNode $command, Pbjx $pbjx): void
     {
-        $node = $this->getNode($command, $pbjx);
+        /** @var NodeRef $nodeRef */
+        $nodeRef = $command->get('node_ref');
+        $node = $this->getNode($nodeRef, $command, $pbjx);
         $now = time() + $this->anticipationThreshold;
 
         /** @var \DateTime $publishAt */
@@ -52,14 +55,14 @@ abstract class AbstractPublishNodeHandler extends AbstractNodeCommandHandler
         }
 
         $pbjx->copyContext($command, $event);
-        $event->set('node_ref', $command->get('node_ref'));
+        $event->set('node_ref', $nodeRef);
 
         if ($node->has('slug')) {
             $event->set('slug', $node->get('slug'));
         }
 
-        $this->enrichEvent($event, $node);
-        $streamId = $this->createStreamId($command, $event);
+        $this->bindFromNode($event, $node, $pbjx);
+        $streamId = $this->createStreamId($nodeRef, $command, $event);
         $this->putEvents($command, $pbjx, $streamId, [$event]);
     }
 
