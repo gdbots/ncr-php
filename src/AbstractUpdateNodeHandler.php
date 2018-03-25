@@ -31,6 +31,15 @@ abstract class AbstractUpdateNodeHandler extends AbstractNodeCommandHandler
     {
         /** @var NodeRef $nodeRef */
         $nodeRef = $command->get('node_ref');
+        // if we decide to allow the incoming old_node to be trusted
+        // this is fetched by the server in NodeCommandBinder but there's
+        // a slight chance it's stale by the time the handler runs since
+        // the handler is not always in the same process (gearman).
+        /*
+        $oldNode = $command->has('old_node')
+            ? $command->get('old_node')
+            : $this->ncr->getNode($nodeRef, true, $this->createNcrContext($command));
+        */
         $oldNode = $this->ncr->getNode($nodeRef, true, $this->createNcrContext($command));
         $this->assertIsNodeSupported($oldNode);
         $oldNode->freeze();
@@ -82,7 +91,7 @@ abstract class AbstractUpdateNodeHandler extends AbstractNodeCommandHandler
             ->set('old_node', $oldNode)
             ->set('new_node', $newNode);
 
-        $this->filterEvent($event, $command);
+        $this->filterEvent($event, $command, $pbjx);
         $streamId = $this->createStreamId($nodeRef, $command, $event);
         $this->putEvents($command, $pbjx, $streamId, [$event]);
     }
@@ -90,8 +99,9 @@ abstract class AbstractUpdateNodeHandler extends AbstractNodeCommandHandler
     /**
      * @param NodeUpdated $event
      * @param UpdateNode  $command
+     * @param Pbjx        $pbjx
      */
-    protected function filterEvent(NodeUpdated $event, UpdateNode $command): void
+    protected function filterEvent(NodeUpdated $event, UpdateNode $command, Pbjx $pbjx): void
     {
         // override to customize the event before putEvents is run.
     }

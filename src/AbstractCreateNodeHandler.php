@@ -33,7 +33,7 @@ abstract class AbstractCreateNodeHandler extends AbstractNodeCommandHandler
             ->set('last_event_ref', $event->generateMessageRef());
 
         $event->set('node', $node);
-        $this->filterEvent($event, $command);
+        $this->filterEvent($event, $command, $pbjx);
         $streamId = $this->createStreamId(NodeRef::fromNode($node), $command, $event);
         $this->putEvents($command, $pbjx, $streamId, [$event]);
     }
@@ -41,8 +41,9 @@ abstract class AbstractCreateNodeHandler extends AbstractNodeCommandHandler
     /**
      * @param NodeCreated $event
      * @param CreateNode  $command
+     * @param Pbjx        $pbjx
      */
-    protected function filterEvent(NodeCreated $event, CreateNode $command): void
+    protected function filterEvent(NodeCreated $event, CreateNode $command, Pbjx $pbjx): void
     {
         // override to customize the event before putEvents is run.
     }

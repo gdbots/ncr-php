@@ -4,9 +4,7 @@ declare(strict_types=1);
 namespace Gdbots\Ncr;
 
 use Gdbots\Common\Util\ClassUtils;
-use Gdbots\Ncr\Event\BindFromNodeEvent;
 use Gdbots\Ncr\Exception\InvalidArgumentException;
-use Gdbots\Pbj\Message;
 use Gdbots\Pbjx\CommandHandler;
 use Gdbots\Pbjx\CommandHandlerTrait;
 use Gdbots\Pbjx\Exception\GdbotsPbjxException;
@@ -20,6 +18,7 @@ use Gdbots\Schemas\Pbjx\StreamId;
 abstract class AbstractNodeCommandHandler implements CommandHandler
 {
     use CommandHandlerTrait;
+    use PbjxHandlerTrait;
 
     /**
      * @param Node $node
@@ -51,36 +50,6 @@ abstract class AbstractNodeCommandHandler implements CommandHandler
     }
 
     /**
-     * Creates the context object that is passed to Ncr methods.
-     * @see Ncr::getNode
-     *
-     * @param Message $message
-     *
-     * @return array
-     */
-    protected function createNcrContext(Message $message): array
-    {
-        return [];
-    }
-
-    /**
-     * During the handling of a command zero or more events may be
-     * created. The handler generally has the current node which
-     * provides an opportunity to bind data to the event from the
-     * node before it's persisted.
-     *
-     * @param Event $event
-     * @param Node  $node
-     * @param Pbjx  $pbjx
-     */
-    protected function bindFromNode(Event $event, Node $node, Pbjx $pbjx): void
-    {
-        $node->freeze();
-        $pbjxEvent = new BindFromNodeEvent($event, $node);
-        $pbjx->trigger($event, 'bind_from_node', $pbjxEvent, false);
-    }
-
-    /**
      * @param NodeRef $nodeRef
      * @param Command $command
      * @param Event   $event
@@ -104,19 +73,5 @@ abstract class AbstractNodeCommandHandler implements CommandHandler
     {
         $context = $this->createEventStoreContext($command, $streamId);
         $pbjx->getEventStore()->putEvents($streamId, $events, null, $context);
-    }
-
-    /**
-     * Creates the context object that is passed to EventStore methods.
-     * @see EventStore::putEvents
-     *
-     * @param Message  $message
-     * @param StreamId $streamId
-     *
-     * @return array
-     */
-    protected function createEventStoreContext(Message $message, StreamId $streamId): array
-    {
-        return [];
     }
 }
