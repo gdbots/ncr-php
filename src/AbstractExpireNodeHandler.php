@@ -10,6 +10,17 @@ use Gdbots\Schemas\Ncr\NodeRef;
 
 abstract class AbstractExpireNodeHandler extends AbstractNodeCommandHandler
 {
+    /** @var Ncr */
+    protected $ncr;
+
+    /**
+     * @param Ncr $ncr
+     */
+    public function __construct(Ncr $ncr)
+    {
+        $this->ncr = $ncr;
+    }
+
     /**
      * @param ExpireNode $command
      * @param Pbjx       $pbjx

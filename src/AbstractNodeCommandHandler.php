@@ -21,17 +21,6 @@ abstract class AbstractNodeCommandHandler implements CommandHandler
 {
     use CommandHandlerTrait;
 
-    /** @var Ncr */
-    protected $ncr;
-
-    /**
-     * @param Ncr $ncr
-     */
-    public function __construct(Ncr $ncr)
-    {
-        $this->ncr = $ncr;
-    }
-
     /**
      * @param Node $node
      *

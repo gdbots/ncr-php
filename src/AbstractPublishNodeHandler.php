@@ -19,6 +19,17 @@ abstract class AbstractPublishNodeHandler extends AbstractNodeCommandHandler
      */
     protected $anticipationThreshold = 15;
 
+    /** @var Ncr */
+    protected $ncr;
+
+    /**
+     * @param Ncr $ncr
+     */
+    public function __construct(Ncr $ncr)
+    {
+        $this->ncr = $ncr;
+    }
+
     /**
      * @param PublishNode $command
      * @param Pbjx        $pbjx
