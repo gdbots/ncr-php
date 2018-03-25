@@ -46,4 +46,14 @@ trait PbjxHandlerTrait
     {
         return [];
     }
+
+    /**
+     * @param Message $message
+     *
+     * @return array
+     */
+    protected function createNcrSearchContext(Message $message): array
+    {
+        return [];
+    }
 }

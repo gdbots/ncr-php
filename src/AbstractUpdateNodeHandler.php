@@ -91,7 +91,7 @@ abstract class AbstractUpdateNodeHandler extends AbstractNodeCommandHandler
             ->set('old_node', $oldNode)
             ->set('new_node', $newNode);
 
-        $this->filterEvent($event, $command, $pbjx);
+        $this->beforePutEvents($event, $command, $pbjx);
         $streamId = $this->createStreamId($nodeRef, $command, $event);
         $this->putEvents($command, $pbjx, $streamId, [$event]);
     }
@@ -101,7 +101,7 @@ abstract class AbstractUpdateNodeHandler extends AbstractNodeCommandHandler
      * @param UpdateNode  $command
      * @param Pbjx        $pbjx
      */
-    protected function filterEvent(NodeUpdated $event, UpdateNode $command, Pbjx $pbjx): void
+    protected function beforePutEvents(NodeUpdated $event, UpdateNode $command, Pbjx $pbjx): void
     {
         // override to customize the event before putEvents is run.
     }
