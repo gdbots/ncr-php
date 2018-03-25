@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
+use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Pbjx\Pbjx;
+use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 use Gdbots\Schemas\Ncr\Mixin\DeleteNode\DeleteNode;
 use Gdbots\Schemas\Ncr\Mixin\NodeDeleted\NodeDeleted;
 use Gdbots\Schemas\Ncr\NodeRef;
@@ -29,14 +31,20 @@ abstract class AbstractDeleteNodeHandler extends AbstractNodeCommandHandler
     {
         /** @var NodeRef $nodeRef */
         $nodeRef = $command->get('node_ref');
-        $node = $this->ncr->getNode($nodeRef, true, $this->createNcrContext($command));
-        $this->assertIsNodeSupported($node);
-        /*
-        if ($node->get('status')->equals(NodeStatus::DELETED())) {
-            // already soft-deleted, ignore?
+
+        try {
+            $node = $this->ncr->getNode($nodeRef, true, $this->createNcrContext($command));
+            $this->assertIsNodeSupported($node);
+            if ($node->get('status')->equals(NodeStatus::DELETED())) {
+                // already soft-deleted, ignore
+                return;
+            }
+        } catch (NodeNotFound $e) {
+            // doesn't exist, ignore
             return;
+        } catch (\Throwable $t) {
+            throw $t;
         }
-        */
 
         $event = $this->createNodeDeleted($command, $pbjx);
         $pbjx->copyContext($command, $event);

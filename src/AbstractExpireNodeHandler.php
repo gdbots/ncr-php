@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
+use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Pbjx\Pbjx;
+use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 use Gdbots\Schemas\Ncr\Mixin\ExpireNode\ExpireNode;
 use Gdbots\Schemas\Ncr\Mixin\NodeExpired\NodeExpired;
 use Gdbots\Schemas\Ncr\NodeRef;
@@ -29,16 +31,22 @@ abstract class AbstractExpireNodeHandler extends AbstractNodeCommandHandler
     {
         /** @var NodeRef $nodeRef */
         $nodeRef = $command->get('node_ref');
-        $node = $this->ncr->getNode($nodeRef, true, $this->createNcrContext($command));
-        $this->assertIsNodeSupported($node);
-        /*
-        // @var NodeStatus $currStatus
-        $currStatus = $node->get('status');
-        if ($currStatus->equals(NodeStatus::DELETED()) || $currStatus->equals(NodeStatus::EXPIRED())) {
-            // already expired or soft-deleted nodes can be ignored?
+
+        try {
+            $node = $this->ncr->getNode($nodeRef, true, $this->createNcrContext($command));
+            $this->assertIsNodeSupported($node);
+            /** @var NodeStatus $currStatus */
+            $currStatus = $node->get('status');
+            if ($currStatus->equals(NodeStatus::DELETED()) || $currStatus->equals(NodeStatus::EXPIRED())) {
+                // already expired or soft-deleted nodes can be ignored
+                return;
+            }
+        } catch (NodeNotFound $e) {
+            // doesn't exist, ignore
             return;
+        } catch (\Throwable $t) {
+            throw $t;
         }
-        */
 
         $event = $this->createNodeExpired($command, $pbjx);
         $pbjx->copyContext($command, $event);

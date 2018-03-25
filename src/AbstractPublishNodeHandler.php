@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Gdbots\Ncr;
 
 use Gdbots\Pbjx\Pbjx;
+use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 use Gdbots\Schemas\Ncr\Mixin\NodePublished\NodePublished;
 use Gdbots\Schemas\Ncr\Mixin\NodeScheduled\NodeScheduled;
 use Gdbots\Schemas\Ncr\Mixin\PublishNode\PublishNode;
@@ -45,28 +46,22 @@ abstract class AbstractPublishNodeHandler extends AbstractNodeCommandHandler
         $publishAt = $command->get('publish_at') ?: $command->get('occurred_at')->toDateTime();
         $now = time() + $this->anticipationThreshold;
 
-        /*
-        // @var NodeStatus $currStatus
+        /** @var NodeStatus $currStatus */
         $currStatus = $node->get('status');
         $currPublishedAt = $node->has('published_at')
             ? $node->get('published_at')->getTimestamp()
             : null;
-        */
 
         if ($now >= $publishAt->getTimestamp()) {
-            /*
             if ($currStatus->equals(NodeStatus::PUBLISHED()) && $currPublishedAt === $publishAt->getTimestamp()) {
                 return;
             }
-            */
             $event = $this->createNodePublished($command, $pbjx);
             $event->set('published_at', $publishAt);
         } else {
-            /*
             if ($currStatus->equals(NodeStatus::SCHEDULED()) && $currPublishedAt === $publishAt->getTimestamp()) {
                 return;
             }
-            */
             $event = $this->createNodeScheduled($command, $pbjx);
             $event->set('publish_at', $publishAt);
         }
