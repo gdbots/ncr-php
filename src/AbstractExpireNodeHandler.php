@@ -34,18 +34,20 @@ abstract class AbstractExpireNodeHandler extends AbstractNodeCommandHandler
 
         try {
             $node = $this->ncr->getNode($nodeRef, true, $this->createNcrContext($command));
-            $this->assertIsNodeSupported($node);
-            /** @var NodeStatus $currStatus */
-            $currStatus = $node->get('status');
-            if ($currStatus->equals(NodeStatus::DELETED()) || $currStatus->equals(NodeStatus::EXPIRED())) {
-                // already expired or soft-deleted nodes can be ignored
-                return;
-            }
         } catch (NodeNotFound $e) {
             // doesn't exist, ignore
             return;
         } catch (\Throwable $t) {
             throw $t;
+        }
+
+        $this->assertIsNodeSupported($node);
+
+        /** @var NodeStatus $currStatus */
+        $currStatus = $node->get('status');
+        if ($currStatus->equals(NodeStatus::DELETED()) || $currStatus->equals(NodeStatus::EXPIRED())) {
+            // already expired or soft-deleted nodes can be ignored
+            return;
         }
 
         $event = $this->createNodeExpired($command, $pbjx);

@@ -34,16 +34,18 @@ abstract class AbstractDeleteNodeHandler extends AbstractNodeCommandHandler
 
         try {
             $node = $this->ncr->getNode($nodeRef, true, $this->createNcrContext($command));
-            $this->assertIsNodeSupported($node);
-            if ($node->get('status')->equals(NodeStatus::DELETED())) {
-                // already soft-deleted, ignore
-                return;
-            }
         } catch (NodeNotFound $e) {
             // doesn't exist, ignore
             return;
         } catch (\Throwable $t) {
             throw $t;
+        }
+
+        $this->assertIsNodeSupported($node);
+
+        if ($node->get('status')->equals(NodeStatus::DELETED())) {
+            // already soft-deleted, ignore
+            return;
         }
 
         $event = $this->createNodeDeleted($command, $pbjx);
