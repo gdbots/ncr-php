@@ -123,9 +123,22 @@ abstract class AbstractNodeProjector implements PbjxProjector
      */
     protected function handleNodeExpired(NodeExpired $event, Pbjx $pbjx): void
     {
-        $node = $this->ncr->getNode($event->get('node_ref'), true, $this->createNcrContext($event));
+        /** @var NodeRef $nodeRef */
+        $nodeRef = $event->get('node_ref');
+        $node = $this->ncr->getNode($nodeRef, true, $this->createNcrContext($event));
+
+        /** @var NodeStatus $prevStatus */
+        $prevStatus = $node->get('status');
         $node->set('status', NodeStatus::EXPIRED());
         $this->updateAndIndexNode($node, $event, $pbjx);
+
+        if ($event->isReplay()) {
+            return;
+        }
+
+        if ($node instanceof Publishable && $prevStatus->equals(NodeStatus::SCHEDULED())) {
+            $pbjx->cancelJobs(["{$nodeRef}.publish"]);
+        }
     }
 
     /**
@@ -174,7 +187,7 @@ abstract class AbstractNodeProjector implements PbjxProjector
             return;
         }
 
-        if ($prevStatus->equals(NodeStatus::SCHEDULED())) {
+        if ($node instanceof Publishable && $prevStatus->equals(NodeStatus::SCHEDULED())) {
             $pbjx->cancelJobs(["{$nodeRef}.publish"]);
         }
     }
@@ -198,7 +211,7 @@ abstract class AbstractNodeProjector implements PbjxProjector
             return;
         }
 
-        if ($prevStatus->equals(NodeStatus::SCHEDULED())) {
+        if ($node instanceof Publishable && $prevStatus->equals(NodeStatus::SCHEDULED())) {
             $pbjx->cancelJobs(["{$nodeRef}.publish"]);
         }
     }
@@ -295,10 +308,21 @@ abstract class AbstractNodeProjector implements PbjxProjector
      */
     protected function handleNodeUpdated(NodeUpdated $event, Pbjx $pbjx): void
     {
+        $context = $this->createNcrContext($event);
+
+        /** @var NodeRef $nodeRef */
+        $nodeRef = $event->get('node_ref');
+
+        /** @var Node $oldNode */
+        $oldNode = $event->has('old_node')
+            ? $event->get('old_node')
+            : $this->ncr->getNode($nodeRef, true, $context);
+        $oldNode->freeze();
+
         /** @var Node $newNode */
         $newNode = $event->get('new_node');
         $expectedEtag = $event->isReplay() ? null : $event->get('old_etag');
-        $this->ncr->putNode($newNode, $expectedEtag, $this->createNcrContext($event));
+        $this->ncr->putNode($newNode, $expectedEtag, $context);
 
         if ($event->isReplay()) {
             return;
@@ -309,7 +333,7 @@ abstract class AbstractNodeProjector implements PbjxProjector
         }
 
         if ($newNode instanceof Expirable) {
-            $this->cancelOrCreateExpireNodeJob($newNode, $event, $pbjx, $event->get('old_node'));
+            $this->cancelOrCreateExpireNodeJob($newNode, $event, $pbjx, $oldNode);
         }
     }
 
@@ -339,15 +363,14 @@ abstract class AbstractNodeProjector implements PbjxProjector
             return;
         }
 
-        if (null !== $oldExpiresAt && null === $newExpiresAt) {
-            $pbjx->cancelJobs(["{$nodeRef}.expire"]);
+        if (null === $newExpiresAt) {
+            if (null !== $oldExpiresAt) {
+                $pbjx->cancelJobs(["{$nodeRef}.expire"]);
+            }
             return;
         }
 
-        if (null !== $newExpiresAt) {
-            $this->createExpireNodeJob($newNode, $event, $pbjx);
-            return;
-        }
+        $this->createExpireNodeJob($newNode, $event, $pbjx);
     }
 
     /**
@@ -423,7 +446,7 @@ abstract class AbstractNodeProjector implements PbjxProjector
         }
 
         /** @var NodeRef $nodeRef */
-        $nodeRef = NodeRef::fromNode($node);
+        $nodeRef = $event->get('node_ref') ?: NodeRef::fromNode($node);
 
         /** @var \DateTime $expiresAt */
         $expiresAt = $node->get('expires_at');

@@ -31,16 +31,10 @@ abstract class AbstractUpdateNodeHandler extends AbstractNodeCommandHandler
     {
         /** @var NodeRef $nodeRef */
         $nodeRef = $command->get('node_ref');
-        // if we decide to allow the incoming old_node to be trusted
-        // this is fetched by the server in NodeCommandBinder but there's
-        // a slight chance it's stale by the time the handler runs since
-        // the handler is not always in the same process (gearman).
-        /*
+        /** @var Node $oldNode */
         $oldNode = $command->has('old_node')
             ? $command->get('old_node')
             : $this->ncr->getNode($nodeRef, true, $this->createNcrContext($command));
-        */
-        $oldNode = $this->ncr->getNode($nodeRef, true, $this->createNcrContext($command));
         $this->assertIsNodeSupported($oldNode);
         $oldNode->freeze();
 
@@ -50,10 +44,10 @@ abstract class AbstractUpdateNodeHandler extends AbstractNodeCommandHandler
         /** @var Node $newNode */
         $newNode = clone $command->get('new_node');
         $this->assertIsNodeSupported($newNode);
-        $newNodeRef = NodeRef::fromNode($newNode);
-        if (!$nodeRef->equals($newNodeRef)) {
+
+        if (!$nodeRef->equals(NodeRef::fromNode($oldNode)) || !$nodeRef->equals(NodeRef::fromNode($newNode))) {
             throw new InvalidArgumentException(
-                "The old [{$nodeRef}] and new [{$newNodeRef}] node refs must match."
+                "The old_node and new_node must have node ref [{$nodeRef}]."
             );
         }
 
