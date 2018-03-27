@@ -6,7 +6,6 @@ namespace Gdbots\Ncr;
 use Gdbots\Ncr\Exception\LogicException;
 use Gdbots\Pbj\Message;
 use Gdbots\Pbjx\DependencyInjection\PbjxProjector;
-use Gdbots\Pbjx\EventSubscriberTrait;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 use Gdbots\Schemas\Ncr\Mixin\Expirable\Expirable;
@@ -33,8 +32,6 @@ use Gdbots\Schemas\Pbjx\Mixin\Event\Event;
 
 abstract class AbstractNodeProjector implements PbjxProjector
 {
-    use EventSubscriberTrait;
-
     /** @var Ncr */
     protected $ncr;
 
