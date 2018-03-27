@@ -24,7 +24,7 @@ class NodeCommandBinder implements EventSubscriber, PbjxBinder
     /**
      * @param PbjxEvent $pbjxEvent
      */
-    final public function bindUpdateNode(PbjxEvent $pbjxEvent): void
+    public function bindUpdateNode(PbjxEvent $pbjxEvent): void
     {
         /** @var Command $command */
         $command = $pbjxEvent->getMessage();
@@ -38,7 +38,7 @@ class NodeCommandBinder implements EventSubscriber, PbjxBinder
     /**
      * @param PbjxEvent $pbjxEvent
      */
-    final public function bindRenameNode(PbjxEvent $pbjxEvent): void
+    public function bindRenameNode(PbjxEvent $pbjxEvent): void
     {
         /** @var Command $command */
         $command = $pbjxEvent->getMessage();
@@ -49,15 +49,6 @@ class NodeCommandBinder implements EventSubscriber, PbjxBinder
             ->set('node_status', $node->get('status'))
             ->set('old_slug', $node->get('slug'))
             ->set('expected_etag', $node->get('etag'));
-    }
-
-    /**
-     * @param GetNodeRequest $request
-     * @param Command        $command
-     */
-    protected function enrichGetNodeRequest(GetNodeRequest $request, Command $command): void
-    {
-        // override to customize the GetNodeRequest
     }
 
     /**
@@ -73,20 +64,13 @@ class NodeCommandBinder implements EventSubscriber, PbjxBinder
         Assertion::true($command->has('node_ref'), 'Field "node_ref" is required.', 'node_ref');
         /** @var NodeRef $nodeRef */
         $nodeRef = $command->get('node_ref');
-        $curie = $command::schema()->getCurie();
-
-        /** @var GetNodeRequest $class */
-        $class = MessageResolver::resolveCurie(SchemaCurie::fromString(
-            "{$curie->getVendor()}:{$curie->getPackage()}:request:get-{$nodeRef->getLabel()}-request"
-        ));
 
         try {
-            $request = $class::create()
+            $request = $this->createGetNodeRequest($command, $pbjx)
                 ->set('consistent_read', true)
                 ->set('node_ref', $nodeRef)
                 ->set('qname', $nodeRef->getQName()->toString());
 
-            $this->enrichGetNodeRequest($request, $command);
             $response = $pbjx->copyContext($command, $request)->request($request);
         } catch (RequestHandlingFailed $e) {
             if (Code::NOT_FOUND === $e->getResponse()->get('error_code')) {
@@ -105,6 +89,28 @@ class NodeCommandBinder implements EventSubscriber, PbjxBinder
         }
 
         return $response->get('node')->freeze();
+    }
+
+    /**
+     * @param Command $command
+     * @param Pbjx    $pbjx
+     *
+     * @return GetNodeRequest
+     */
+    protected function createGetNodeRequest(Command $command, Pbjx $pbjx): GetNodeRequest
+    {
+        /** @var NodeRef $nodeRef */
+        $nodeRef = $command->get('node_ref');
+        $curie = $command::schema()->getCurie();
+
+        /** @var GetNodeRequest $class */
+        $class = MessageResolver::resolveCurie(SchemaCurie::fromString(
+            "{$curie->getVendor()}:{$curie->getPackage()}:request:get-{$nodeRef->getLabel()}-request"
+        ));
+
+        /** @var GetNodeRequest $request */
+        $request = $class::schema()->createMessage();
+        return $request;
     }
 
     /**
