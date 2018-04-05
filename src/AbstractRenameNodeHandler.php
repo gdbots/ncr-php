@@ -55,5 +55,10 @@ abstract class AbstractRenameNodeHandler extends AbstractNodeCommandHandler
      *
      * @return NodeRenamed
      */
-    abstract protected function createNodeRenamed(RenameNode $command, Pbjx $pbjx): NodeRenamed;
+    protected function createNodeRenamed(RenameNode $command, Pbjx $pbjx): NodeRenamed
+    {
+        /** @var NodeRenamed $event */
+        $event = $this->createEventFromCommand($command, 'renamed');
+        return $event;
+    }
 }

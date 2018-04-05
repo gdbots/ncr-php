@@ -59,6 +59,7 @@ abstract class AbstractGetNodeRequestHandler extends AbstractRequestHandler
             throw new NodeNotFound('No method to locate node.');
         }
 
+        $this->assertIsNodeSupported($node);
         return $this->createGetNodeResponse($request, $pbjx)->set('node', $node);
     }
 
@@ -68,5 +69,10 @@ abstract class AbstractGetNodeRequestHandler extends AbstractRequestHandler
      *
      * @return GetNodeResponse
      */
-    abstract protected function createGetNodeResponse(GetNodeRequest $request, Pbjx $pbjx): GetNodeResponse;
+    protected function createGetNodeResponse(GetNodeRequest $request, Pbjx $pbjx): GetNodeResponse
+    {
+        /** @var GetNodeResponse $response */
+        $response = $this->createResponseFromRequest($request, $pbjx);
+        return $response;
+    }
 }

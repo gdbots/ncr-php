@@ -82,5 +82,10 @@ abstract class AbstractGetNodeHistoryRequestHandler extends AbstractRequestHandl
      *
      * @return GetEventsResponse
      */
-    abstract protected function createGetEventsResponse(GetEventsRequest $request, Pbjx $pbjx): GetEventsResponse;
+    protected function createGetEventsResponse(GetEventsRequest $request, Pbjx $pbjx): GetEventsResponse
+    {
+        /** @var GetEventsResponse $response */
+        $response = $this->createResponseFromRequest($request, $pbjx);
+        return $response;
+    }
 }

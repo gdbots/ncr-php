@@ -2,6 +2,14 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.0
+* Add conventional resolution for messages in abstract handlers (only override in concrete handler if needed).
+* Add `UniqueNodeValidator` which ensures node ids and slugs are not duplicated.
+* Ignore already deleted nodes in `AbstractNodeProjector`.
+* Rename `PbjxHandlerTrait` to `PbjxHelperTrait` as it's now used in binders and validators.
+* Modify `NodeCommandBinder` to use `PbjxHelperTrait` and change `getNodeForCommand` to `getNode(PbjxEvent $pbjxEvent): Node`.
+
+
 ## v0.2.4
 * Add optional abstract services for common node handlers and projectors.
 

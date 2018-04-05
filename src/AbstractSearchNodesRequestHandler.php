@@ -86,6 +86,8 @@ abstract class AbstractSearchNodesRequestHandler extends AbstractRequestHandler
         // todo: use an inflector here for better default qname factory
         if ('people' === $label) {
             $label = 'person';
+        } elseif ('categories' === $label) {
+            $label = 'category';
         }
 
         return [SchemaQName::fromString("{$vendor}:{$label}")];
@@ -97,5 +99,10 @@ abstract class AbstractSearchNodesRequestHandler extends AbstractRequestHandler
      *
      * @return SearchNodesResponse
      */
-    abstract protected function createSearchNodesResponse(SearchNodesRequest $request, Pbjx $pbjx): SearchNodesResponse;
+    protected function createSearchNodesResponse(SearchNodesRequest $request, Pbjx $pbjx): SearchNodesResponse
+    {
+        /** @var SearchNodesResponse $response */
+        $response = $this->createResponseFromRequest($request, $pbjx);
+        return $response;
+    }
 }

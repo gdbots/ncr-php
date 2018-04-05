@@ -56,5 +56,10 @@ abstract class AbstractUnpublishNodeHandler extends AbstractNodeCommandHandler
      *
      * @return NodeUnpublished
      */
-    abstract protected function createNodeUnpublished(UnpublishNode $command, Pbjx $pbjx): NodeUnpublished;
+    protected function createNodeUnpublished(UnpublishNode $command, Pbjx $pbjx): NodeUnpublished
+    {
+        /** @var NodeUnpublished $event */
+        $event = $this->createEventFromCommand($command, 'unpublished');
+        return $event;
+    }
 }

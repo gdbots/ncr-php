@@ -62,6 +62,7 @@ final class NodeEtagEnricher implements EventSubscriber, PbjxEnricher
     public static function getSubscribedEvents()
     {
         return [
+            // run these very late to ensure etag is set last
             'gdbots:ncr:mixin:node-created.enrich' => [['enrichNodeCreated', -5000]],
             'gdbots:ncr:mixin:node-updated.enrich' => [['enrichNodeUpdated', -5000]],
         ];

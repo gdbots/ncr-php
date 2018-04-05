@@ -51,5 +51,10 @@ abstract class AbstractUnlockNodeHandler extends AbstractNodeCommandHandler
      *
      * @return NodeUnlocked
      */
-    abstract protected function createNodeUnlocked(UnlockNode $command, Pbjx $pbjx): NodeUnlocked;
+    protected function createNodeUnlocked(UnlockNode $command, Pbjx $pbjx): NodeUnlocked
+    {
+        /** @var NodeUnlocked $event */
+        $event = $this->createEventFromCommand($command, 'unlocked');
+        return $event;
+    }
 }

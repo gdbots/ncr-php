@@ -66,5 +66,10 @@ abstract class AbstractDeleteNodeHandler extends AbstractNodeCommandHandler
      *
      * @return NodeDeleted
      */
-    abstract protected function createNodeDeleted(DeleteNode $command, Pbjx $pbjx): NodeDeleted;
+    protected function createNodeDeleted(DeleteNode $command, Pbjx $pbjx): NodeDeleted
+    {
+        /** @var NodeDeleted $event */
+        $event = $this->createEventFromCommand($command, 'deleted');
+        return $event;
+    }
 }

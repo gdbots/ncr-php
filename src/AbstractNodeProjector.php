@@ -3,8 +3,9 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
-use Gdbots\Ncr\Exception\LogicException;
-use Gdbots\Pbj\Message;
+use Gdbots\Ncr\Exception\NodeNotFound;
+use Gdbots\Pbj\MessageResolver;
+use Gdbots\Pbj\SchemaCurie;
 use Gdbots\Pbjx\DependencyInjection\PbjxProjector;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
@@ -27,11 +28,12 @@ use Gdbots\Schemas\Ncr\Mixin\NodeUpdated\NodeUpdated;
 use Gdbots\Schemas\Ncr\Mixin\Publishable\Publishable;
 use Gdbots\Schemas\Ncr\Mixin\PublishNode\PublishNode;
 use Gdbots\Schemas\Ncr\NodeRef;
-use Gdbots\Schemas\Pbjx\Enum\Code;
 use Gdbots\Schemas\Pbjx\Mixin\Event\Event;
 
 abstract class AbstractNodeProjector implements PbjxProjector
 {
+    use PbjxHelperTrait;
+
     /** @var Ncr */
     protected $ncr;
 
@@ -83,7 +85,15 @@ abstract class AbstractNodeProjector implements PbjxProjector
         $context = $this->createNcrContext($event);
         /** @var NodeRef $nodeRef */
         $nodeRef = $event->get('node_ref');
-        $node = $this->ncr->getNode($nodeRef, true, $context);
+
+        try {
+            $node = $this->ncr->getNode($nodeRef, true, $context);
+        } catch (NodeNotFound $e) {
+            // ignore already deleted nodes.
+            return;
+        } catch (\Throwable $t) {
+            throw $t;
+        }
 
         if ($this->useSoftDelete) {
             $node->set('status', NodeStatus::DELETED());
@@ -398,37 +408,20 @@ abstract class AbstractNodeProjector implements PbjxProjector
     }
 
     /**
-     * @param Message $message
-     *
-     * @return array
-     */
-    protected function createNcrContext(Message $message): array
-    {
-        return [];
-    }
-
-    /**
-     * @param Message $message
-     *
-     * @return array
-     */
-    protected function createNcrSearchContext(Message $message): array
-    {
-        return [];
-    }
-
-    /**
      * @param Node  $node
      * @param Event $event
      * @param Pbjx  $pbjx
      *
      * @return ExpireNode
-     *
-     * @throws LogicException
      */
     protected function createExpireNode(Node $node, Event $event, Pbjx $pbjx): ExpireNode
     {
-        throw new LogicException('You must implement createExpireNode.', Code::UNIMPLEMENTED);
+        $curie = $node::schema()->getCurie();
+        $commandCurie = "{$curie->getVendor()}:{$curie->getPackage()}:command:expire-{$curie->getMessage()}";
+
+        /** @var ExpireNode $class */
+        $class = MessageResolver::resolveCurie(SchemaCurie::fromString($commandCurie));
+        return $class::create();
     }
 
     /**
@@ -459,11 +452,14 @@ abstract class AbstractNodeProjector implements PbjxProjector
      * @param Pbjx  $pbjx
      *
      * @return PublishNode
-     *
-     * @throws LogicException
      */
     protected function createPublishNode(Node $node, Event $event, Pbjx $pbjx): PublishNode
     {
-        throw new LogicException('You must implement createPublishNode.', Code::UNIMPLEMENTED);
+        $curie = $node::schema()->getCurie();
+        $commandCurie = "{$curie->getVendor()}:{$curie->getPackage()}:command:publish-{$curie->getMessage()}";
+
+        /** @var PublishNode $class */
+        $class = MessageResolver::resolveCurie(SchemaCurie::fromString($commandCurie));
+        return $class::create();
     }
 }

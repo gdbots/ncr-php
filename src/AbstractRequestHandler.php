@@ -9,5 +9,5 @@ use Gdbots\Pbjx\RequestHandlerTrait;
 abstract class AbstractRequestHandler implements RequestHandler
 {
     use RequestHandlerTrait;
-    use PbjxHandlerTrait;
+    use PbjxHelperTrait;
 }

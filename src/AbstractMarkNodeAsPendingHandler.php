@@ -56,5 +56,10 @@ abstract class AbstractMarkNodeAsPendingHandler extends AbstractNodeCommandHandl
      *
      * @return NodeMarkedAsPending
      */
-    abstract protected function createNodeMarkedAsPending(MarkNodeAsPending $command, Pbjx $pbjx): NodeMarkedAsPending;
+    protected function createNodeMarkedAsPending(MarkNodeAsPending $command, Pbjx $pbjx): NodeMarkedAsPending
+    {
+        /** @var NodeMarkedAsPending $event */
+        $event = $this->createEventFromCommand($command, 'marked-as-pending');
+        return $event;
+    }
 }

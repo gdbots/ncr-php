@@ -106,5 +106,10 @@ abstract class AbstractUpdateNodeHandler extends AbstractNodeCommandHandler
      *
      * @return NodeUpdated
      */
-    abstract protected function createNodeUpdated(UpdateNode $command, Pbjx $pbjx): NodeUpdated;
+    protected function createNodeUpdated(UpdateNode $command, Pbjx $pbjx): NodeUpdated
+    {
+        /** @var NodeUpdated $event */
+        $event = $this->createEventFromCommand($command, 'updated');
+        return $event;
+    }
 }

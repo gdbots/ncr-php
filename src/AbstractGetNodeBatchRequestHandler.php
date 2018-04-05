@@ -39,6 +39,7 @@ abstract class AbstractGetNodeBatchRequestHandler extends AbstractRequestHandler
         $context = $this->createNcrContext($request);
         $nodes = $this->ncr->getNodes($nodeRefs, $request->get('consistent_read'), $context);
         foreach ($nodes as $nodeRef => $node) {
+            $this->assertIsNodeSupported($node);
             $response->addToMap('nodes', $nodeRef, $node);
         }
 
@@ -57,5 +58,10 @@ abstract class AbstractGetNodeBatchRequestHandler extends AbstractRequestHandler
      *
      * @return GetNodeBatchResponse
      */
-    abstract protected function createGetNodeBatchResponse(GetNodeBatchRequest $request, Pbjx $pbjx): GetNodeBatchResponse;
+    protected function createGetNodeBatchResponse(GetNodeBatchRequest $request, Pbjx $pbjx): GetNodeBatchResponse
+    {
+        /** @var GetNodeBatchResponse $response */
+        $response = $this->createResponseFromRequest($request, $pbjx);
+        return $response;
+    }
 }

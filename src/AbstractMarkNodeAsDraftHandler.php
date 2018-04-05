@@ -56,5 +56,10 @@ abstract class AbstractMarkNodeAsDraftHandler extends AbstractNodeCommandHandler
      *
      * @return NodeMarkedAsDraft
      */
-    abstract protected function createNodeMarkedAsDraft(MarkNodeAsDraft $command, Pbjx $pbjx): NodeMarkedAsDraft;
+    protected function createNodeMarkedAsDraft(MarkNodeAsDraft $command, Pbjx $pbjx): NodeMarkedAsDraft
+    {
+        /** @var NodeMarkedAsDraft $event */
+        $event = $this->createEventFromCommand($command, 'marked-as-draft');
+        return $event;
+    }
 }
