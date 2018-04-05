@@ -13,6 +13,8 @@ use Gdbots\Pbjx\Pbjx;
 use Gdbots\Schemas\Ncr\Mixin\GetNodeRequest\GetNodeRequest;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\NodeRef;
+use Gdbots\Schemas\Pbjx\Mixin\Request\Request;
+use Gdbots\Schemas\Pbjx\Mixin\Response\Response;
 use Gdbots\Schemas\Pbjx\StreamId;
 
 trait PbjxHelperTrait
@@ -37,13 +39,15 @@ trait PbjxHelperTrait
      * A sanity/security check to ensure mismatched node refs are not given
      * maliciously or otherwise to unsuspecting handlers.
      *
+     * Override this method in your own handler, binder, validator, etc.
+     *
      * @param Node $node
      *
      * @return bool
      */
     protected function isNodeSupported(Node $node): bool
     {
-        return true;
+        return false;
     }
 
     /**
@@ -62,6 +66,15 @@ trait PbjxHelperTrait
     }
 
     /**
+     * A conventional factory to create a get node request from an existing message
+     * and node ref.  Various pbjx lifecycle events need to fetch the node for the
+     * operation currently executing. For example, when attempting to update a node
+     * we fetch the current node in order to make some validations possible.
+     *
+     * Override this method if the convention doesn't match or needs to have a special
+     * case handled.  You can also override when you need to populate data on the
+     * get node request before it's processed (multi-tenant apps sometimes need this).
+     *
      * @param Message $message
      * @param NodeRef $nodeRef
      * @param Pbjx    $pbjx
@@ -77,6 +90,23 @@ trait PbjxHelperTrait
             "{$curie->getVendor()}:{$curie->getPackage()}:request:get-{$nodeRef->getLabel()}-request"
         ));
 
+        return $class::create();
+    }
+
+    /**
+     * Conventionally the response messages are named the same as the request but
+     * with a "-response" suffix.  Override when needed.
+     *
+     * @param Request $request
+     * @param Pbjx    $pbjx
+     *
+     * @return Response
+     */
+    protected function createResponseFromRequest(Request $request, Pbjx $pbjx): Response
+    {
+        $curie = str_replace('-request', '-response', $request::schema()->getCurie()->toString());
+        /** @var Response $class */
+        $class = MessageResolver::resolveCurie(SchemaCurie::fromString($curie));
         return $class::create();
     }
 

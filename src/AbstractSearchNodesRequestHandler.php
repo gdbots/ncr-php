@@ -102,7 +102,7 @@ abstract class AbstractSearchNodesRequestHandler extends AbstractRequestHandler
     protected function createSearchNodesResponse(SearchNodesRequest $request, Pbjx $pbjx): SearchNodesResponse
     {
         /** @var SearchNodesResponse $response */
-        $response = $this->createResponseFromRequest($request);
+        $response = $this->createResponseFromRequest($request, $pbjx);
         return $response;
     }
 }

@@ -72,7 +72,7 @@ abstract class AbstractGetNodeRequestHandler extends AbstractRequestHandler
     protected function createGetNodeResponse(GetNodeRequest $request, Pbjx $pbjx): GetNodeResponse
     {
         /** @var GetNodeResponse $response */
-        $response = $this->createResponseFromRequest($request);
+        $response = $this->createResponseFromRequest($request, $pbjx);
         return $response;
     }
 }

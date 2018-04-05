@@ -61,7 +61,7 @@ abstract class AbstractGetNodeBatchRequestHandler extends AbstractRequestHandler
     protected function createGetNodeBatchResponse(GetNodeBatchRequest $request, Pbjx $pbjx): GetNodeBatchResponse
     {
         /** @var GetNodeBatchResponse $response */
-        $response = $this->createResponseFromRequest($request);
+        $response = $this->createResponseFromRequest($request, $pbjx);
         return $response;
     }
 }
