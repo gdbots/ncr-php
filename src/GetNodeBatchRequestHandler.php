@@ -11,6 +11,11 @@ use Gdbots\Schemas\Ncr\Request\GetNodeBatchRequestV1;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchResponse;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchResponseV1;
 
+/**
+ * This handler SHOULD only be used internally.
+ * Clients should not be able to make this request as it
+ * allows for access to batch request any kind of node.
+ */
 final class GetNodeBatchRequestHandler implements RequestHandler
 {
     use RequestHandlerTrait;

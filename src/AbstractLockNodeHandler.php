@@ -64,5 +64,10 @@ abstract class AbstractLockNodeHandler extends AbstractNodeCommandHandler
      *
      * @return NodeLocked
      */
-    abstract protected function createNodeLocked(LockNode $command, Pbjx $pbjx): NodeLocked;
+    protected function createNodeLocked(LockNode $command, Pbjx $pbjx): NodeLocked
+    {
+        /** @var NodeLocked $event */
+        $event = $this->createEventFromCommand($command, 'locked');
+        return $event;
+    }
 }

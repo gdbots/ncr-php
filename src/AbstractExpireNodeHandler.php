@@ -68,5 +68,10 @@ abstract class AbstractExpireNodeHandler extends AbstractNodeCommandHandler
      *
      * @return NodeExpired
      */
-    abstract protected function createNodeExpired(ExpireNode $command, Pbjx $pbjx): NodeExpired;
+    protected function createNodeExpired(ExpireNode $command, Pbjx $pbjx): NodeExpired
+    {
+        /** @var NodeExpired $event */
+        $event = $this->createEventFromCommand($command, 'expired');
+        return $event;
+    }
 }

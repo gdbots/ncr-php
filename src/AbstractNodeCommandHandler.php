@@ -3,13 +3,12 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
-use Gdbots\Common\Util\ClassUtils;
-use Gdbots\Ncr\Exception\InvalidArgumentException;
+use Gdbots\Pbj\MessageResolver;
+use Gdbots\Pbj\SchemaCurie;
 use Gdbots\Pbjx\CommandHandler;
 use Gdbots\Pbjx\CommandHandlerTrait;
 use Gdbots\Pbjx\Exception\GdbotsPbjxException;
 use Gdbots\Pbjx\Pbjx;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Pbjx\Mixin\Command\Command;
 use Gdbots\Schemas\Pbjx\Mixin\Event\Event;
@@ -18,36 +17,7 @@ use Gdbots\Schemas\Pbjx\StreamId;
 abstract class AbstractNodeCommandHandler implements CommandHandler
 {
     use CommandHandlerTrait;
-    use PbjxHandlerTrait;
-
-    /**
-     * @param Node $node
-     *
-     * @throws InvalidArgumentException
-     */
-    protected function assertIsNodeSupported(Node $node): void
-    {
-        if (!$this->isNodeSupported($node)) {
-            $class = ClassUtils::getShortName(static::class);
-            throw new InvalidArgumentException(
-                "Node [{$node::schema()->getCurie()}] not supported by [{$class}]."
-            );
-        }
-    }
-
-    /**
-     * Determines if the given node can or should be handled by this handler.
-     * A sanity/security check to ensure mismatched node refs are not given
-     * maliciously or otherwise to unsuspecting handlers.
-     *
-     * @param Node $node
-     *
-     * @return bool
-     */
-    protected function isNodeSupported(Node $node): bool
-    {
-        return true;
-    }
+    use PbjxHelperTrait;
 
     /**
      * @param NodeRef $nodeRef
@@ -73,5 +43,27 @@ abstract class AbstractNodeCommandHandler implements CommandHandler
     {
         $context = $this->createEventStoreContext($command, $streamId);
         $pbjx->getEventStore()->putEvents($streamId, $events, null, $context);
+    }
+
+    /**
+     * 90% of the time this works 100% of the time.  When events for common
+     * node operations match the convention of "blah-suffix" you can use
+     * this method to save some typing.  It's always optional.
+     *
+     * @param Command $command
+     * @param string  $suffix
+     *
+     * @return Event
+     */
+    protected function createEventFromCommand(Command $command, string $suffix): Event
+    {
+        /** @var NodeRef $nodeRef */
+        $nodeRef = $command->get('node_ref') ?: NodeRef::fromNode($command->get('node'));
+        $curie = $command::schema()->getCurie();
+        $eventCurie = "{$curie->getVendor()}:{$curie->getPackage()}:event:{$nodeRef->getLabel()}-{$suffix}";
+
+        /** @var Event $class */
+        $class = MessageResolver::resolveCurie(SchemaCurie::fromString($eventCurie));
+        return $class::create();
     }
 }

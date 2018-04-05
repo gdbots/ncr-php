@@ -83,7 +83,12 @@ abstract class AbstractPublishNodeHandler extends AbstractNodeCommandHandler
      *
      * @return NodeScheduled
      */
-    abstract protected function createNodeScheduled(PublishNode $command, Pbjx $pbjx): NodeScheduled;
+    protected function createNodeScheduled(PublishNode $command, Pbjx $pbjx): NodeScheduled
+    {
+        /** @var NodeScheduled $event */
+        $event = $this->createEventFromCommand($command, 'scheduled');
+        return $event;
+    }
 
     /**
      * @param PublishNode $command
@@ -91,5 +96,10 @@ abstract class AbstractPublishNodeHandler extends AbstractNodeCommandHandler
      *
      * @return NodePublished
      */
-    abstract protected function createNodePublished(PublishNode $command, Pbjx $pbjx): NodePublished;
+    protected function createNodePublished(PublishNode $command, Pbjx $pbjx): NodePublished
+    {
+        /** @var NodePublished $event */
+        $event = $this->createEventFromCommand($command, 'published');
+        return $event;
+    }
 }

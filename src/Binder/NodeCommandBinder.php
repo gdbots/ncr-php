@@ -5,15 +5,12 @@ namespace Gdbots\Ncr\Binder;
 
 use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Ncr\Exception\OptimisticCheckFailed;
+use Gdbots\Ncr\PbjxHelperTrait;
 use Gdbots\Pbj\Assertion;
-use Gdbots\Pbj\MessageResolver;
-use Gdbots\Pbj\SchemaCurie;
 use Gdbots\Pbjx\DependencyInjection\PbjxBinder;
 use Gdbots\Pbjx\Event\PbjxEvent;
 use Gdbots\Pbjx\EventSubscriber;
 use Gdbots\Pbjx\Exception\RequestHandlingFailed;
-use Gdbots\Pbjx\Pbjx;
-use Gdbots\Schemas\Ncr\Mixin\GetNodeRequest\GetNodeRequest;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Pbjx\Enum\Code;
@@ -21,19 +18,7 @@ use Gdbots\Schemas\Pbjx\Mixin\Command\Command;
 
 class NodeCommandBinder implements EventSubscriber, PbjxBinder
 {
-    /**
-     * @param PbjxEvent $pbjxEvent
-     */
-    public function bindUpdateNode(PbjxEvent $pbjxEvent): void
-    {
-        /** @var Command $command */
-        $command = $pbjxEvent->getMessage();
-
-        $node = $this->getNodeForCommand($command, $pbjxEvent::getPbjx());
-        $command
-            ->set('old_node', $node)
-            ->set('expected_etag', $node->get('etag'));
-    }
+    use PbjxHelperTrait;
 
     /**
      * @param PbjxEvent $pbjxEvent
@@ -42,9 +27,9 @@ class NodeCommandBinder implements EventSubscriber, PbjxBinder
     {
         /** @var Command $command */
         $command = $pbjxEvent->getMessage();
-
         Assertion::true($command->has('new_slug'), 'Field "new_slug" is required.', 'new_slug');
-        $node = $this->getNodeForCommand($command, $pbjxEvent::getPbjx());
+
+        $node = $this->getNode($pbjxEvent);
         $command
             ->set('node_status', $node->get('status'))
             ->set('old_slug', $node->get('slug'))
@@ -52,21 +37,35 @@ class NodeCommandBinder implements EventSubscriber, PbjxBinder
     }
 
     /**
-     * @param Command $command
-     * @param Pbjx    $pbjx
+     * @param PbjxEvent $pbjxEvent
+     */
+    public function bindUpdateNode(PbjxEvent $pbjxEvent): void
+    {
+        $node = $this->getNode($pbjxEvent);
+        $pbjxEvent->getMessage()
+            ->set('old_node', $node)
+            ->set('expected_etag', $node->get('etag'));
+    }
+
+    /**
+     * @param PbjxEvent $pbjxEvent
      *
      * @return Node
      *
      * @throws \Throwable
      */
-    protected function getNodeForCommand(Command $command, Pbjx $pbjx): Node
+    protected function getNode(PbjxEvent $pbjxEvent): Node
     {
+        /** @var Command $command */
+        $command = $pbjxEvent->getMessage();
         Assertion::true($command->has('node_ref'), 'Field "node_ref" is required.', 'node_ref');
+
         /** @var NodeRef $nodeRef */
         $nodeRef = $command->get('node_ref');
+        $pbjx = $pbjxEvent::getPbjx();
 
         try {
-            $request = $this->createGetNodeRequest($command, $pbjx)
+            $request = $this->createGetNodeRequest($command, $nodeRef, $pbjx)
                 ->set('consistent_read', true)
                 ->set('node_ref', $nodeRef)
                 ->set('qname', $nodeRef->getQName()->toString());
@@ -82,35 +81,14 @@ class NodeCommandBinder implements EventSubscriber, PbjxBinder
             throw $e;
         }
 
-        if ($command->has('expected_etag') && $command->get('expected_etag') !== $response->get('node')->get('etag')) {
+        $expectedEtag = $command->get('expected_etag');
+        if (null !== $expectedEtag && $expectedEtag !== $response->get('node')->get('etag')) {
             throw new OptimisticCheckFailed(
-                sprintf('NodeRef [%s] did not have expected etag [%s].', $nodeRef, $command->get('expected_etag'))
+                sprintf('NodeRef [%s] did not have expected etag [%s].', $nodeRef, $expectedEtag)
             );
         }
 
         return $response->get('node')->freeze();
-    }
-
-    /**
-     * @param Command $command
-     * @param Pbjx    $pbjx
-     *
-     * @return GetNodeRequest
-     */
-    protected function createGetNodeRequest(Command $command, Pbjx $pbjx): GetNodeRequest
-    {
-        /** @var NodeRef $nodeRef */
-        $nodeRef = $command->get('node_ref');
-        $curie = $command::schema()->getCurie();
-
-        /** @var GetNodeRequest $class */
-        $class = MessageResolver::resolveCurie(SchemaCurie::fromString(
-            "{$curie->getVendor()}:{$curie->getPackage()}:request:get-{$nodeRef->getLabel()}-request"
-        ));
-
-        /** @var GetNodeRequest $request */
-        $request = $class::schema()->createMessage();
-        return $request;
     }
 
     /**
@@ -119,8 +97,8 @@ class NodeCommandBinder implements EventSubscriber, PbjxBinder
     public static function getSubscribedEvents()
     {
         return [
-            'gdbots:ncr:mixin:update-node.bind' => 'bindUpdateNode',
             'gdbots:ncr:mixin:rename-node.bind' => 'bindRenameNode',
+            'gdbots:ncr:mixin:update-node.bind' => 'bindUpdateNode',
         ];
     }
 }

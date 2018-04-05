@@ -54,5 +54,10 @@ abstract class AbstractCreateNodeHandler extends AbstractNodeCommandHandler
      *
      * @return NodeCreated
      */
-    abstract protected function createNodeCreated(CreateNode $command, Pbjx $pbjx): NodeCreated;
+    protected function createNodeCreated(CreateNode $command, Pbjx $pbjx): NodeCreated
+    {
+        /** @var NodeCreated $event */
+        $event = $this->createEventFromCommand($command, 'created');
+        return $event;
+    }
 }
