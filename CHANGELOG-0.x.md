@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.1
+* Adjust inflection in `AbstractSearchNodesRequestHandler` for _ies_ scenarios.
+
+
 ## v0.3.0
 * Add conventional resolution for messages in abstract handlers (only override in concrete handler if needed).
 * Add `UniqueNodeValidator` which ensures node ids and slugs are not duplicated.

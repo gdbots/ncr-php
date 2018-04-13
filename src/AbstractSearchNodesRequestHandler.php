@@ -80,14 +80,13 @@ abstract class AbstractSearchNodesRequestHandler extends AbstractRequestHandler
     {
         $curie = $request::schema()->getCurie();
         $vendor = $curie->getVendor();
-        // convert search-articles-request to "article"
-        $label = str_replace(['search-', 's-request'], '', $curie->getMessage());
+        // converts search-articles-request to "article"
+        // converts search-categories-request to "category"
+        $label = str_replace(['search-', 'ies-request', 's-request'], ['', 'y', ''], $curie->getMessage());
 
         // todo: use an inflector here for better default qname factory
         if ('people' === $label) {
             $label = 'person';
-        } elseif ('categories' === $label) {
-            $label = 'category';
         }
 
         return [SchemaQName::fromString("{$vendor}:{$label}")];

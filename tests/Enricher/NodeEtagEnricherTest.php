@@ -6,10 +6,10 @@ namespace Gdbots\Tests\Ncr\Enricher;
 use Acme\Schemas\Iam\Event\UserCreatedV1;
 use Acme\Schemas\Iam\Event\UserUpdatedV1;
 use Acme\Schemas\Iam\Node\UserV1;
-use Acme\Schemas\Iam\UserId;
 use Gdbots\Ncr\Enricher\NodeEtagEnricher;
 use Gdbots\Pbj\WellKnown\Microtime;
 use Gdbots\Pbjx\Event\PbjxEvent;
+use Gdbots\Schemas\Iam\UserId;
 use PHPUnit\Framework\TestCase;
 
 final class NodeEtagEnricherTest extends TestCase
