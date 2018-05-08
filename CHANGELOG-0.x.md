@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.2
+* Adjust inflection in `AbstractSearchNodesRequestHandler` for people.
+
+
 ## v0.3.1
 * Adjust inflection in `AbstractSearchNodesRequestHandler` for _ies_ scenarios.
 

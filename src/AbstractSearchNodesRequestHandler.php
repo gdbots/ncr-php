@@ -85,7 +85,7 @@ abstract class AbstractSearchNodesRequestHandler extends AbstractRequestHandler
         $label = str_replace(['search-', 'ies-request', 's-request'], ['', 'y', ''], $curie->getMessage());
 
         // todo: use an inflector here for better default qname factory
-        if ('people' === $label) {
+        if ('people-request' === $label) {
             $label = 'person';
         }
 
