@@ -200,6 +200,10 @@ TEXT;
                 $this->nodes[$nodeRef] = clone $node;
             }
 
+            if ($node::schema()->getQName() !== $qname) {
+                continue;
+            }
+
             $receiver($this->nodes[$nodeRef]);
         }
     }
@@ -210,6 +214,10 @@ TEXT;
     public function pipeNodeRefs(SchemaQName $qname, callable $receiver, array $context = []): void
     {
         foreach ($this->nodes as $nodeRef => $node) {
+            if ($node::schema()->getQName() !== $qname) {
+                continue;
+            }
+
             $receiver(NodeRef::fromString($nodeRef));
         }
     }
