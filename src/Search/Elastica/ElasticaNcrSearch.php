@@ -32,20 +32,20 @@ class ElasticaNcrSearch implements NcrSearch
     protected $logger;
 
     /** @var IndexManager */
-    private $indexManager;
+    protected $indexManager;
 
     /** @var DocumentMarshaler */
-    private $marshaler;
+    protected $marshaler;
 
     /** @var QueryFactory */
-    private $queryFactory;
+    protected $queryFactory;
 
     /**
      * Used to limit the amount of time a query can take.
      *
      * @var string
      */
-    private $timeout;
+    protected $timeout;
 
     /**
      * @param ClientManager   $clientManager
@@ -253,7 +253,7 @@ TEXT;
         $page = $request->get('page');
         $perPage = $request->get('count');
         $offset = ($page - 1) * $perPage;
-        $offset = NumberUtils::bound($offset, 0, 1000);
+        $offset = NumberUtils::bound($offset, 0, 10000);
         $options = [
             Search::OPTION_TIMEOUT                   => $this->timeout,
             Search::OPTION_FROM                      => $offset,
@@ -303,7 +303,7 @@ TEXT;
 
         $response
             ->set('total', $results->getTotalHits())
-            ->set('has_more', ($offset + $perPage) < $results->getTotalHits() && $offset < 1000)
+            ->set('has_more', ($offset + $perPage) < $results->getTotalHits() && $offset < 10000)
             ->set('time_taken', (int)$results->getTotalTime())
             ->set('max_score', (float)$results->getMaxScore())
             ->addToList('nodes', $nodes);

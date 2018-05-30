@@ -16,7 +16,7 @@ use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
 class NodeMapper
 {
     /** @var MappingFactory */
-    private $mappingFactory;
+    protected $mappingFactory;
 
     /**
      * The mappers are constructed with "new $class" in the

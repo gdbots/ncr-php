@@ -76,7 +76,7 @@ class QueryFactory
      * @param SearchNodesRequest $request
      * @param ParsedQuery        $parsedQuery
      */
-    private function applyStatus(SearchNodesRequest $request, ParsedQuery $parsedQuery): void
+    protected function applyStatus(SearchNodesRequest $request, ParsedQuery $parsedQuery): void
     {
         if (!$request->has('status')) {
             return;
@@ -94,7 +94,7 @@ class QueryFactory
      * @param SearchNodesRequest $request
      * @param ParsedQuery        $parsedQuery
      */
-    private function applyDateFilters(SearchNodesRequest $request, ParsedQuery $parsedQuery): void
+    protected function applyDateFilters(SearchNodesRequest $request, ParsedQuery $parsedQuery): void
     {
         $required = BoolOperator::REQUIRED();
 
