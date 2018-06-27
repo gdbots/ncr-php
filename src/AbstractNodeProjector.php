@@ -168,7 +168,7 @@ abstract class AbstractNodeProjector implements PbjxProjector
              * eventual solution is that bots will be like users but will perform
              * operations through pbjx endpoints only, not via the web clients.
              */
-            $lockedByRef = NodeRef::fromString("{$nodeRef->getVendor()}:bot:system");
+            $lockedByRef = NodeRef::fromString("{$nodeRef->getVendor()}:user:e3949dc0-4261-4731-beb0-d32e723de939");
         }
 
         $node->set('is_locked', true)->set('locked_by_ref', $lockedByRef);

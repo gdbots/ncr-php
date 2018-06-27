@@ -50,10 +50,6 @@ abstract class AbstractLockNodeHandler extends AbstractNodeCommandHandler
         $pbjx->copyContext($command, $event);
         $event->set('node_ref', $nodeRef);
 
-        if ($node->has('slug')) {
-            $event->set('slug', $node->get('slug'));
-        }
-
         $this->bindFromNode($event, $node, $pbjx);
         $this->putEvents($command, $pbjx, $this->createStreamId($nodeRef, $command, $event), [$event]);
     }

@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.5
+* Fix bug in `AbstractLockNodeHandler` which attempts to set slug field which doesn't exist.
+
+
 ## v0.3.4
 * Add qname filter on `pipeNodes` and `pipeNodeRefs` in `InMemoryNcr`.
 
