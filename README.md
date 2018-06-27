@@ -19,7 +19,7 @@ This library doesn't provide you with a graph database implementation.  It's con
 # NodeRef
 A NodeRef is a qualified identifier to a node/vertex.  It is less verbose than a `MessageRef` as it is implied that node labels must be unique within a given vendor namespace and therefore can be represented in a more compact manner.
 
-> __NodeRef Format:__ vendor:label:id
+> __NodeRef Format:__ vendor:label:id  
 > The __"vendor:label"__ portion is a `SchemaQName`
 
 __Examples:__
