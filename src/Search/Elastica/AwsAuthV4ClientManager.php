@@ -42,6 +42,7 @@ class AwsAuthV4ClientManager extends ClientManager
         $config['transport'] = 'AwsAuthV4';
         $config['aws_access_key_id'] = $this->credentials->getAccessKeyId();
         $config['aws_secret_access_key'] = $this->credentials->getSecretKey();
+        $config['aws_session_token'] = $this->credentials->getSecurityToken();
         $config['aws_region'] = $this->region;
         return $config;
     }

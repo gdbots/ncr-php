@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.6
+* Add `$config['aws_session_token'] = $this->credentials->getSecurityToken();` in `Gdbots\Ncr\Search\Elastica\AwsAuthV4ClientManager` so signatures work in AWS ECS.
+
+
 ## v0.3.5
 * Fix bug in `AbstractLockNodeHandler` which attempts to set slug field which doesn't exist.
 
