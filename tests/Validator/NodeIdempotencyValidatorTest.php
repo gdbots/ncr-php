@@ -78,7 +78,7 @@ class InMemoryCache implements CacheItemPoolInterface {
         $this->storage[$item->getKey()] = $item;
     }
 
-    public function getItem($key) {}
+    public function getItem($key){}
     public function saveDeferred(CacheItemInterface $item) {}
     public function commit() {}
     public function hasItem($key) {}
@@ -110,10 +110,6 @@ class NodeIdempotencyValidatorTest extends TestCase
         $node = FormV1::create();
         $command = CreateFormV1::create();
 
-        // store some random items on cache based from the node
-        $this->storeCacheItem("{$node::schema()->getQName()}:random-title");
-        $this->storeCacheItem("{$node::schema()->getQName()}:some-slug");
-
         $node->set('title', 'title 1');
         $node->set('slug', 'title-1');
         $command->set('node', $node);
@@ -134,8 +130,7 @@ class NodeIdempotencyValidatorTest extends TestCase
     {
         $node = FormV1::create();
 
-        // store expected item on cache
-        $this->storeCacheItem("{$node::schema()->getQName()}:existing-title");
+        $this->storeCacheItem("acme_form.existing_title.php");
 
         $command = CreateFormV1::create();
         $node->set('title', 'Existing Title');
@@ -153,8 +148,8 @@ class NodeIdempotencyValidatorTest extends TestCase
     public function testValidateCreateNodeOnExistingSlug(): void
     {
         $node = FormV1::create();
-        // store expected item on cache
-        $this->storeCacheItem("{$node::schema()->getQName()}:existing-slug");
+
+        $this->storeCacheItem("acme_form.existing_slug.php");
 
         $command = CreateFormV1::create();
         $node->set('slug', 'existing-slug');
@@ -168,7 +163,9 @@ class NodeIdempotencyValidatorTest extends TestCase
 
 
     protected function storeCacheItem ($key) {
+        // just do inline
         $cacheItem = new InMemoryCacheItem($key, true);
         $this->cache->save($cacheItem);
     }
+
 }

@@ -37,24 +37,16 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
 
         /** @var CacheItemInterface[] $cacheItems */
         $cacheItems = [];
-
         /** @var Message $node */
         $node = $command->get('node');
-        $qname = $node::schema()->getQName();
 
-        $title = SlugUtils::create($node->get('title'));
         $keys = [
             // acme:article:some-title
-            "{$qname}:{$title}" => true,
-        ];
-        $propertyNames = [
-            // acme:article:some-title
-            "{$qname}:{$title}" => 'title',
+            $this->getCacheKey($node, 'title') => 'title',
         ];
 
         if ($node->has('slug')) {
-            $keys["{$qname}:{$node->get('slug')}"] = true;
-            $propertyNames["{$qname}:{$node->get('slug')}"] = 'slug';
+            $keys[$this->getCacheKey($node, 'slug')] = 'slug';
         }
 
         $cacheItems = $this->cache->getItems(array_keys($keys));
@@ -64,31 +56,46 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
 
         // now, check for these keys in cache
         foreach ($keys as $cacheKey => $value) {
-            if (!isset($cacheItems[$cacheKey])) {
-                continue;
-            }
-
             $cacheItem = $cacheItems[$cacheKey];
             if (!$cacheItem->isHit()) {
-                // save item on cache storage
-                // $this->cache->save($cacheItem->set(true));
                 continue;
             }
 
-            $propertyName = $propertyNames[$cacheKey];
             throw new NodeAlreadyExists(
                 sprintf(
                     'The [%s] with [%s] [%s] already exists so [%s] cannot continue.',
                     $node::schema()->getCurie()->getMessage(),
-                    $propertyName,
-                    $node->get($propertyName),
+                    $value,
+                    $node->get($value),
                     $command->generateMessageRef()
                 )
             );
         }
     }
 
+    /**
+     * @param PbjxEvent $pbjxEvent
+     */
+    public function onCreateNodeAfterHandler(PbjxEvent $pbjxEvent): void
+    {
 
+    }
+
+    /**
+     * @param {Message} $node the node to get the key from
+     * @param {String} $propertyName the name of the node's property to get the value from and will be used as part of the key
+     * @param array   $context
+     * @return string
+     */
+    protected function getCacheKey(Message $node, string $propertyName, array $context = []): string
+    {
+        $value = $node->get($propertyName);
+        return str_replace('-', '_', sprintf(
+            '%s.%s.php',
+            str_replace(':', '_', $node::schema()->getQName()),
+            (!SlugUtils::isValid($value) ? SlugUtils::create($value) : $value)
+        ));
+    }
 
 
     /**
@@ -98,6 +105,7 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
     {
         return [
             'gdbots:ncr:mixin:create-node.validate' => 'validateCreateNode',
+            'gdbots:ncr:mixin:create-node.after_handle' => 'onCreateNodeAfterHandler',
         ];
     }
 }

@@ -13,7 +13,8 @@
     "phpunit/phpunit": "^6.4",
     "aws/aws-sdk-php": "^3.45",
     "gdbots/acme-schemas": "^1.1",
-    "ruflin/elastica": "^5.3"
+    "ruflin/elastica": "^5.3",
+    "symfony/cache": "^4.1"
   },
   "autoload": {
     "psr-4": {
