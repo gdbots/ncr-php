@@ -113,14 +113,9 @@ class IndexManager
             if (!$index->exists()) {
                 $settings['analysis'] = [
                     'analyzer'   => $mapper->getCustomAnalyzers(),
-                    'normalizer' => [
-                        'pbj_keyword' => [
-                            'type'        => 'custom',
-                            'char_filter' => [],
-                            'filter'      => ['lowercase', 'asciifolding'],
-                        ],
-                    ],
+                    'normalizer' => $mapper->getCustomNormalizers(),
                 ];
+
                 $index->create($settings);
             }
         } catch (\Throwable $e) {

@@ -92,6 +92,24 @@ class NodeMapper
     }
 
     /**
+     * @return array
+     */
+    public function getCustomNormalizers(): array
+    {
+        if (method_exists(MappingFactory::class, 'getCustomNormalizers')) {
+            return MappingFactory::getCustomNormalizers();
+        }
+
+        return [
+            'pbj_keyword' => [
+                'type'        => 'custom',
+                'char_filter' => [],
+                'filter'      => ['lowercase', 'asciifolding'],
+            ],
+        ];
+    }
+
+    /**
      * @param Document $document
      * @param Indexed  $node
      */
