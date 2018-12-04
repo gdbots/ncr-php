@@ -29,7 +29,6 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
     public function __construct(CacheItemPoolInterface $cache, array $ttl = [])
     {
         $this->cache = $cache;
-        // defaults
         $ttl += ['default' => 60];
         $this->ttl = $ttl;
     }
@@ -52,23 +51,18 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
             return;
         }
 
-        $cacheKeys = $this->getCacheKeys($node);
-
         /** @var CacheItemInterface[] $cacheItems */
-        $cacheItems = $this->cache->getItems(array_keys($cacheKeys));
+        $cacheItems = $this->cache->getItems($this->getIdempotencyKeys($node));
 
         foreach ($cacheItems as $cacheItem) {
             if (!$cacheItem->isHit()) {
                 continue;
             }
 
-            $field = $cacheKeys[$cacheItem->getKey()];
             throw new NodeAlreadyExists(
                 sprintf(
-                    'The [%s] with %s [%s] already exists so [%s] cannot continue.',
+                    'A similar [%s] was just created moments ago so [%s] cannot continue.',
                     $node::schema()->getCurie()->getMessage(),
-                    $field,
-                    $node->get($field),
                     $command->generateMessageRef()
                 )
             );
@@ -94,16 +88,40 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
             return;
         }
 
-        $cacheKeys = $this->getCacheKeys($node);
-
         /** @var CacheItemInterface[] $cacheItems */
-        $cacheItems = $this->cache->getItems(array_keys($cacheKeys));
+        $cacheItems = $this->cache->getItems($this->getIdempotencyKeys($node));
 
         foreach ($cacheItems as $cacheItem) {
-            $field = $cacheKeys[$cacheItem->getKey()];
-            $cacheItem->set($field)->expiresAfter($this->getCacheTtl($node));
+            $cacheItem->set(true)->expiresAfter($this->getCacheTtl($node));
             $this->cache->saveDeferred($cacheItem);
         }
+    }
+
+    /**
+     * Derives the keys to use for the idempotency check from the node itself.
+     *
+     * @param Node $node
+     *
+     * @return array
+     */
+    public function getIdempotencyKeys(Node $node): array
+    {
+        $qname = $node::schema()->getQName();
+        $keys = [];
+
+        if ($node->has('title')) {
+            $keys[$this->getCacheKey($qname, SlugUtils::create($node->get('title')))] = true;
+        }
+
+        if ($node->has('slug')) {
+            $keys[$this->getCacheKey($qname, $node->get('slug'))] = true;
+        }
+
+        if ($node instanceof User && $node->has('email')) {
+            $keys[$this->getCacheKey($qname, $node->get('email'))] = true;
+        }
+
+        return array_keys($keys);
     }
 
     /**
@@ -121,41 +139,10 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
     }
 
     /**
-     * Derive the cache keys to use for the idempotency check
-     * from the node itself.
-     *
-     * @param Node $node
-     *
-     * @return array
-     */
-    protected function getCacheKeys(Node $node): array
-    {
-        $qname = $node::schema()->getQName();
-        $cacheKeys = [];
-
-        if ($node->has('title')) {
-            $cacheKeys[$this->getCacheKey($qname, SlugUtils::create($node->get('title')))] = 'title';
-        }
-
-        if ($node->has('slug')) {
-            $cacheKeys[$this->getCacheKey($qname, $node->get('slug'))] = 'slug';
-        }
-
-        if ($node instanceof User && $node->has('email')) {
-            $cacheKeys[$this->getCacheKey($qname, $node->get('email'))] = 'email';
-        }
-
-        return $cacheKeys;
-    }
-
-    /**
      * Returns the cache key to use for the provided NodeRef.
      * This must be compliant with psr6 "Key" definition.
      *
      * @link http://www.php-fig.org/psr/psr-6/#definitions
-     *
-     * The ".php" suffix here is used because the cache item
-     * will be stored as serialized php.
      *
      * @param SchemaQName $qname
      * @param string      $key
@@ -166,7 +153,7 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
     {
         // niv (node imdempotency validator) prefix is to avoid collision
         return str_replace('-', '_', sprintf(
-            'niv.%s.%s.%s.php',
+            'niv.%s.%s.%s',
             $qname->getVendor(),
             $qname->getMessage(),
             md5($key)

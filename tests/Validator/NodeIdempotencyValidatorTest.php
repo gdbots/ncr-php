@@ -3,14 +3,14 @@ declare(strict_types=1);
 
 namespace Gdbots\Tests\Ncr\Repository;
 
-use Acme\Schemas\Forms\Node\FormV1;
 use Acme\Schemas\Forms\Command\CreateFormV1;
-use Psr\Cache\CacheItemPoolInterface;
+use Acme\Schemas\Forms\Node\FormV1;
 use Gdbots\Ncr\Validator\NodeIdempotencyValidator;
-use Gdbots\Pbjx\Pbjx;
 use Gdbots\Pbjx\Event\PbjxEvent;
+use Gdbots\Pbjx\Pbjx;
 use Gdbots\Pbjx\RegisteringServiceLocator;
 use PHPUnit\Framework\TestCase;
+use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 class NodeIdempotencyValidatorTest extends TestCase
@@ -32,77 +32,35 @@ class NodeIdempotencyValidatorTest extends TestCase
         PbjxEvent::setPbjx($this->pbjx);
     }
 
-    public function testValidateCreateNodeOnNoTitleAndSlug(): void
+    public function testValidateCreateNode(): void
     {
         $validator = new NodeIdempotencyValidator($this->cache);
 
-        $expectedCacheKey = 'acme_form.some_title.php';
-        $expectedValue = 'title';
-        $this->cache->saveDeferred($this->cache->getItem($expectedCacheKey)->set($expectedValue));
-
-        $node = FormV1::create();
-        $command = CreateFormV1::create();
-        $command->set('node', $node);
+        $node = FormV1::create()
+            ->set('title', 'A Title')
+            ->set('slug', 'slug');
+        $command = CreateFormV1::create()->set('node', $node);
         $pbjxEvent = new PbjxEvent($command);
 
         $validator->validateCreateNode($pbjxEvent);
 
-        $this->assertTrue(true);
-    }
-
-    public function testValidateCreateNodeOnNonExistingTitle(): void
-    {
-        $validator = new NodeIdempotencyValidator($this->cache);
-
-        $expectedCacheKey = 'acme_form.some_existing_title.php';
-        $expectedValue = 'title';
-        $this->cache->saveDeferred($this->cache->getItem($expectedCacheKey)->set($expectedValue));
-
-        $node = FormV1::create();
-        $command = CreateFormV1::create();
-        $node->set('title', 'Unique Title');
-        $command->set('node', $node);
-        $pbjxEvent = new PbjxEvent($command);
-
-        $validator->validateCreateNode($pbjxEvent);
-
-        $this->assertTrue(true);
-    }
-
-    public function testValidateCreateNodeOnNonExistingSlug(): void
-    {
-        $validator = new NodeIdempotencyValidator($this->cache);
-
-        $expectedCacheKey = 'acme_form.some_existing_slug.php';
-        $expectedValue = 'slug';
-        $this->cache->saveDeferred($this->cache->getItem($expectedCacheKey)->set($expectedValue));
-
-        $node = FormV1::create();
-        $command = CreateFormV1::create();
-        $node->set('slug', 'unique-slug');
-        $command->set('node', $node);
-        $pbjxEvent = new PbjxEvent($command);
-
-        $validator->validateCreateNode($pbjxEvent);
-
-        $this->assertTrue(true);
+        $this->assertTrue(true, 'no exception should be thrown without existing cache entry');
     }
 
     /**
      * @expectedException \Gdbots\Ncr\Exception\NodeAlreadyExists
      */
-    public function testValidateCreateNodeOnExistingTitle(): void
+    public function testValidateCreateNodeWithExistingTitle(): void
     {
         $validator = new NodeIdempotencyValidator($this->cache);
 
-        $expectedCacheKey = 'acme_form.some_existing_title.php';
-        $expectedValue = 'title';
-        $this->cache->saveDeferred($this->cache->getItem($expectedCacheKey)->set($expectedValue));
+        $node = FormV1::create()->set('title', 'Existing Title');
 
-        $node = FormV1::create();
-        $command = CreateFormV1::create();
-        $node->set('title', 'Some Existing Title');
-        $command->set('node', $node);
+        foreach ($validator->getIdempotencyKeys($node) as $cacheKey) {
+            $this->cache->save($this->cache->getItem($cacheKey)->set(true));
+        }
+
+        $command = CreateFormV1::create()->set('node', $node);
         $pbjxEvent = new PbjxEvent($command);
 
         $validator->validateCreateNode($pbjxEvent);
@@ -111,108 +69,38 @@ class NodeIdempotencyValidatorTest extends TestCase
     /**
      * @expectedException \Gdbots\Ncr\Exception\NodeAlreadyExists
      */
-    public function testValidateCreateNodeOnExistingSlug(): void
+    public function testValidateCreateNodeWithExistingSlug(): void
     {
         $validator = new NodeIdempotencyValidator($this->cache);
 
-        $expectedCacheKey = 'acme_form.some_existing_slug.php';
-        $expectedValue = 'slug';
-        $this->cache->saveDeferred($this->cache->getItem($expectedCacheKey)->set($expectedValue));
+        $node = FormV1::create()->set('slug', 'existing-slug');
 
-        $node = FormV1::create();
-        $command = CreateFormV1::create();
-        $node->set('slug', 'some-existing-slug');
-        $command->set('node', $node);
+        foreach ($validator->getIdempotencyKeys($node) as $cacheKey) {
+            $this->cache->save($this->cache->getItem($cacheKey)->set(true));
+        }
+
+        $command = CreateFormV1::create()->set('node', $node);
         $pbjxEvent = new PbjxEvent($command);
 
         $validator->validateCreateNode($pbjxEvent);
     }
 
-    public function testCreateNodeAfterHandlerOnNoTitleAndSlug(): void
+    public function testOnCreateNodeAfterHandle(): void
     {
         $validator = new NodeIdempotencyValidator($this->cache);
 
-        $node = FormV1::create();
-        $command = CreateFormV1::create();
-        $command->set('node', $node);
+        $node = FormV1::create()
+            ->set('title', 'A Title')
+            ->set('slug', 'slug');
+        $command = CreateFormV1::create()->set('node', $node);
         $pbjxEvent = new PbjxEvent($command);
 
-        $validator->onCreateNodeAfterHandler($pbjxEvent);
+        $validator->onCreateNodeAfterHandle($pbjxEvent);
 
-        $this->assertTrue(true);
-    }
-
-    public function testCreateNodeAfterHandlerOnSetTitleAndSlug(): void
-    {
-        $validator = new NodeIdempotencyValidator($this->cache);
-
-        $node = FormV1::create();
-        $command = CreateFormV1::create();
-        $node->set('title', 'unique-title');
-        $node->set('slug', 'unique-slug');
-        $command->set('node', $node);
-        $pbjxEvent = new PbjxEvent($command);
-
-        $validator->onCreateNodeAfterHandler($pbjxEvent);
-
-        $expectedCaches = [
-            'acme_form.unique_title.php' => 'title',
-            'acme_form.unique_slug.php' => 'slug',
-        ];
-        // assert that cache items are in the cache
-        foreach (array_keys($expectedCaches) as $cacheKey) {
-            $this->assertTrue($this->cache->getItem($cacheKey)->isHit());
+        foreach ($validator->getIdempotencyKeys($node) as $cacheKey) {
+            $cacheItem = $this->cache->getItem($cacheKey);
+            $this->assertTrue($cacheItem->isHit());
+            $this->assertTrue($cacheItem->get());
         }
     }
-
-    public function testCreateNodeAfterHandlerOnExpiredTTL(): void
-    {
-        // set a ttl of 1 sec
-        $validator = new NodeIdempotencyValidator($this->cache, 1);
-
-        $node = FormV1::create();
-        $command = CreateFormV1::create();
-        $node->set('title', 'unique-title');
-        $node->set('slug', 'unique-slug');
-        $command->set('node', $node);
-        $pbjxEvent = new PbjxEvent($command);
-        $validator->onCreateNodeAfterHandler($pbjxEvent);
-
-        sleep(1);
-
-        $expectedCaches = [
-            'acme_form.unique_title.php' => 'title',
-            'acme_form.unique_slug.php' => 'slug',
-        ];
-        // assert that cache items are not found in the cache
-        foreach (array_keys($expectedCaches) as $cacheKey) {
-            $this->assertFalse($this->cache->getItem($cacheKey)->isHit());
-        }
-    }
-
-    public function testCreateNodeAfterHandlerOnNonExpiredTTL(): void
-    {
-        // set a ttl of 2 secs
-        $validator = new NodeIdempotencyValidator($this->cache, 2);
-
-        $node = FormV1::create();
-        $command = CreateFormV1::create();
-        $node->set('title', 'unique-title');
-        $node->set('slug', 'unique-slug');
-        $command->set('node', $node);
-        $pbjxEvent = new PbjxEvent($command);
-        $validator->onCreateNodeAfterHandler($pbjxEvent);
-
-        sleep(1);
-
-        $expectedCaches = [
-            'acme_form.unique_title.php' => 'title',
-            'acme_form.unique_slug.php' => 'slug',
-        ];
-        // assert that cache items are still found in the cache
-        foreach (array_keys($expectedCaches) as $cacheKey) {
-            $this->assertTrue($this->cache->getItem($cacheKey)->isHit());
-        }
-    }
-
 }

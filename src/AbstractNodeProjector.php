@@ -443,6 +443,12 @@ abstract class AbstractNodeProjector implements PbjxProjector
 
         $command = $this->createExpireNode($node, $event, $pbjx)->set('node_ref', $nodeRef);
         $pbjx->copyContext($event, $command);
+
+        if ($expiresAt->getTimestamp() <= time()) {
+            $pbjx->send($command);
+            return;
+        }
+
         $pbjx->sendAt($command, $expiresAt->getTimestamp(), "{$nodeRef}.expire");
     }
 
