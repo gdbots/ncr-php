@@ -84,11 +84,33 @@ class NodeMapper
     }
 
     /**
+     * @link http://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-custom-analyzer.html
+     *
      * @return array
      */
     public function getCustomAnalyzers(): array
     {
         return MappingFactory::getCustomAnalyzers();
+    }
+
+    /**
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-normalizers.html
+     *
+     * @return array
+     */
+    public function getCustomNormalizers(): array
+    {
+        if (method_exists(MappingFactory::class, 'getCustomNormalizers')) {
+            return MappingFactory::getCustomNormalizers();
+        }
+
+        return [
+            'pbj_keyword' => [
+                'type'        => 'custom',
+                'char_filter' => [],
+                'filter'      => ['lowercase', 'asciifolding'],
+            ],
+        ];
     }
 
     /**
