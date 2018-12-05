@@ -84,6 +84,8 @@ class NodeMapper
     }
 
     /**
+     * @link http://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-custom-analyzer.html
+     *
      * @return array
      */
     public function getCustomAnalyzers(): array
@@ -92,6 +94,8 @@ class NodeMapper
     }
 
     /**
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-normalizers.html
+     *
      * @return array
      */
     public function getCustomNormalizers(): array
