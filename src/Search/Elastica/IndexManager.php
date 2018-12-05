@@ -115,6 +115,7 @@ class IndexManager
                     'analyzer'   => $mapper->getCustomAnalyzers(),
                     'normalizer' => $mapper->getCustomNormalizers(),
                 ];
+
                 $index->create($settings);
             }
         } catch (\Throwable $e) {
