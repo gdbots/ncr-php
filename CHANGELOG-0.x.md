@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.9
+* Add `NcrPreloader` for preloading nodes. Typically used to enrich envelopes on HTTP endpoints or populated initial state in a client side javascript application.
+
+
 ## v0.3.8
 * In `AbstractNodeProjector` run `$pbjx->send($command);` immediately if the `expires_at` is in the past.
 * Add `NodeIdempotencyValidator` that ensures nodes are not duplicated even if events are delayed in processing. This is done using a `Psr\Cache\CacheItemPoolInterface` provider.
