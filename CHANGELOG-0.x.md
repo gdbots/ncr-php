@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.10
+* Add `NcrPreloader::getNodeRefs` and `NcrPreloader::addEmbeddedNodeRefs` to simplify preloading many paths at once.
+
+
 ## v0.3.9
 * Add `NcrPreloader` for preloading nodes. Typically used to enrich envelopes on HTTP endpoints or populated initial state in a client side javascript application.
 

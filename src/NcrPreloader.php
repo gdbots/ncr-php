@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
+use Gdbots\Pbj\Message;
+use Gdbots\Pbj\MessageRef;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\NodeRef;
@@ -86,6 +88,14 @@ final class NcrPreloader
     }
 
     /**
+     * @return NodeRef[]
+     */
+    public function getNodeRefs(): array
+    {
+        return array_values($this->nodeRefs);
+    }
+
+    /**
      * @param NodeRef $nodeRef
      */
     public function addNodeRef(NodeRef $nodeRef): void
@@ -105,6 +115,44 @@ final class NcrPreloader
         foreach ($nodeRefs as $nodeRef) {
             $this->addNodeRef($nodeRef);
         }
+    }
+
+    /**
+     * Finds NodeRefs in the provided messages based on the paths provided.  The paths
+     * is an array of ['field_name' => 'qname'] which will be used to create the
+     * NodeRefs if the field is populated on any of the messages.
+     *
+     * @param Message[] $messages Array of messages to extract NodeRefs message.
+     * @param array     $paths    An associative array of ['field_name' => 'qname'], i.e. ['user_id', 'acme:user']
+     */
+    public function addEmbeddedNodeRefs(array $messages, array $paths): void
+    {
+        $nodeRefs = [];
+
+        foreach ($messages as $message) {
+            foreach ($paths as $fieldName => $qname) {
+                if (!$message->has($fieldName)) {
+                    continue;
+                }
+
+                $values = $message->get($fieldName);
+                if (!is_array($values)) {
+                    $values = [$values];
+                }
+
+                foreach ($values as $value) {
+                    if ($value instanceof NodeRef) {
+                        $nodeRefs[] = $value;
+                    } elseif ($value instanceof MessageRef) {
+                        $nodeRefs[] = NodeRef::fromMessageRef($value);
+                    } else {
+                        $nodeRefs[] = NodeRef::fromString("{$qname}:{$value}");
+                    }
+                }
+            }
+        }
+
+        $this->addNodeRefs($nodeRefs);
     }
 
     /**
