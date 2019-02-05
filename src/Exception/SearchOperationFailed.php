@@ -10,9 +10,9 @@ final class SearchOperationFailed extends \RuntimeException implements GdbotsNcr
     /**
      * @param string     $message
      * @param int        $code
-     * @param \Exception $previous
+     * @param \Throwable $previous
      */
-    public function __construct(string $message = '', int $code = Code::INTERNAL, ?\Exception $previous = null)
+    public function __construct(string $message = '', int $code = Code::INTERNAL, ?\Throwable $previous = null)
     {
         parent::__construct($message, $code, $previous);
     }

@@ -15,6 +15,9 @@ use Psr\Cache\CacheItemPoolInterface;
 
 class Psr6Ncr implements Ncr
 {
+    private const NODE_NOT_FOUND = 'nnf';
+    private const NODE_NOT_FOUND_TTL = 300;
+
     /** @var Ncr */
     private $next;
 
@@ -65,7 +68,14 @@ class Psr6Ncr implements Ncr
             $cacheKey = $this->getCacheKey($nodeRef, $context);
             $cacheItem = $this->cache->getItem($cacheKey);
             if ($cacheItem->isHit()) {
-                return true;
+                $node = $cacheItem->get();
+                if ($node instanceof Node) {
+                    return true;
+                }
+
+                if (self::NODE_NOT_FOUND === $node) {
+                    return false;
+                }
             }
         }
 
@@ -84,14 +94,32 @@ class Psr6Ncr implements Ncr
             $cacheItem = $this->cache->getItem($cacheKey);
             if ($cacheItem->isHit()) {
                 $node = $cacheItem->get();
-                // if it's not a Node, it's a corrupt key
                 if ($node instanceof Node) {
                     return $node;
+                }
+
+                if (self::NODE_NOT_FOUND === $node) {
+                    throw NodeNotFound::forNodeRef($nodeRef);
                 }
             }
         }
 
-        $node = $this->next->getNode($nodeRef, $consistent, $context);
+        try {
+            $node = $this->next->getNode($nodeRef, $consistent, $context);
+        } catch (NodeNotFound $nf) {
+            if ($this->readThrough) {
+                if (null === $cacheItem) {
+                    $cacheItem = $this->cache->getItem($cacheKey);
+                }
+
+                $cacheItem->set(self::NODE_NOT_FOUND)->expiresAfter(self::NODE_NOT_FOUND_TTL);
+                $this->cache->saveDeferred($cacheItem);
+            }
+
+            throw $nf;
+        } catch (\Throwable $e) {
+            throw $e;
+        }
 
         if ($this->readThrough) {
             if (null === $cacheItem) {
@@ -153,9 +181,13 @@ class Psr6Ncr implements Ncr
                 }
 
                 $cachedNode = $cacheItem->get();
-                // if it's not a Node, it's a corrupt key
                 if ($cachedNode instanceof Node) {
                     $cachedNodes[$nodeRef->toString()] = $cachedNode;
+                    unset($nodeRefs[$idx]);
+                    continue;
+                }
+
+                if (self::NODE_NOT_FOUND === $cachedNode) {
                     unset($nodeRefs[$idx]);
                 }
             }

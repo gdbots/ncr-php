@@ -34,6 +34,17 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
     }
 
     /**
+     * @return array
+     */
+    public static function getSubscribedEvents()
+    {
+        return [
+            'gdbots:ncr:mixin:create-node.validate'     => 'validateCreateNode',
+            'gdbots:ncr:mixin:create-node.after_handle' => 'onCreateNodeAfterHandle',
+        ];
+    }
+
+    /**
      * @param PbjxEvent $pbjxEvent
      *
      * @throws NodeAlreadyExists
@@ -168,16 +179,5 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
     protected function getCacheTtl(Node $node): int
     {
         return $this->ttl[$node::schema()->getQName()->toString()] ?? $this->ttl['default'];
-    }
-
-    /**
-     * @return array
-     */
-    public static function getSubscribedEvents()
-    {
-        return [
-            'gdbots:ncr:mixin:create-node.validate'     => 'validateCreateNode',
-            'gdbots:ncr:mixin:create-node.after_handle' => 'onCreateNodeAfterHandle',
-        ];
     }
 }

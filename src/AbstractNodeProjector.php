@@ -43,14 +43,19 @@ abstract class AbstractNodeProjector implements PbjxProjector
     /** @var bool */
     protected $useSoftDelete = true;
 
+    /** @var bool */
+    protected $indexOnReplay = false;
+
     /**
      * @param Ncr       $ncr
      * @param NcrSearch $ncrSearch
+     * @param bool      $indexOnReplay
      */
-    public function __construct(Ncr $ncr, NcrSearch $ncrSearch)
+    public function __construct(Ncr $ncr, NcrSearch $ncrSearch, bool $indexOnReplay = false)
     {
         $this->ncr = $ncr;
         $this->ncrSearch = $ncrSearch;
+        $this->indexOnReplay = $indexOnReplay;
     }
 
     /**
@@ -62,13 +67,10 @@ abstract class AbstractNodeProjector implements PbjxProjector
         /** @var Node $node */
         $node = $event->get('node');
         $this->ncr->putNode($node, null, $this->createNcrContext($event));
+        $this->indexNode($node, $event, $pbjx);
 
         if ($event->isReplay()) {
             return;
-        }
-
-        if ($node instanceof Indexed) {
-            $this->ncrSearch->indexNodes([$node], $this->createNcrSearchContext($event));
         }
 
         if ($node instanceof Expirable) {
@@ -330,13 +332,10 @@ abstract class AbstractNodeProjector implements PbjxProjector
         $newNode = $event->get('new_node');
         $expectedEtag = $event->isReplay() ? null : $event->get('old_etag');
         $this->ncr->putNode($newNode, $expectedEtag, $context);
+        $this->indexNode($newNode, $event, $pbjx);
 
         if ($event->isReplay()) {
             return;
-        }
-
-        if ($newNode instanceof Indexed) {
-            $this->ncrSearch->indexNodes([$newNode], $this->createNcrSearchContext($event));
         }
 
         if ($newNode instanceof Expirable) {
@@ -395,16 +394,25 @@ abstract class AbstractNodeProjector implements PbjxProjector
             ->set('etag', $node->generateEtag(['etag', 'updated_at']));
 
         $this->ncr->putNode($node, $expectedEtag, $this->createNcrContext($event));
+        $this->indexNode($node, $event, $pbjx);
+    }
 
-        if ($event->isReplay()) {
-            // on replay we don't want to reindex, we generally do that
-            // as a separate task, in batches, using console ncr:reindex-nodes
+    /**
+     * @param Node  $node
+     * @param Event $event
+     * @param Pbjx  $pbjx
+     */
+    protected function indexNode(Node $node, Event $event, Pbjx $pbjx): void
+    {
+        if (!$node instanceof Indexed) {
             return;
         }
 
-        if ($node instanceof Indexed) {
-            $this->ncrSearch->indexNodes([$node], $this->createNcrSearchContext($event));
+        if ($event->isReplay() && !$this->indexOnReplay) {
+            return;
         }
+
+        $this->ncrSearch->indexNodes([$node], $this->createNcrSearchContext($event));
     }
 
     /**

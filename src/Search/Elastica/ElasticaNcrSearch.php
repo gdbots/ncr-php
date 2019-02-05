@@ -304,7 +304,7 @@ TEXT;
         $response
             ->set('total', $results->getTotalHits())
             ->set('has_more', ($offset + $perPage) < $results->getTotalHits() && $offset < 10000)
-            ->set('time_taken', (int)$results->getTotalTime())
+            ->set('time_taken', (int)($results->getResponse()->getQueryTime() * 1000))
             ->set('max_score', (float)$results->getMaxScore())
             ->addToList('nodes', $nodes);
     }

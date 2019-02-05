@@ -14,20 +14,20 @@ final class NodeNotFound extends \RuntimeException implements GdbotsNcrException
 
     /**
      * @param string     $message
-     * @param \Exception $previous
+     * @param \Throwable $previous
      */
-    public function __construct(string $message = '', ?\Exception $previous = null)
+    public function __construct(string $message = '', ?\Throwable $previous = null)
     {
         parent::__construct($message, Code::NOT_FOUND, $previous);
     }
 
     /**
      * @param NodeRef    $nodeRef
-     * @param \Exception $previous
+     * @param \Throwable $previous
      *
      * @return NodeNotFound
      */
-    public static function forNodeRef(NodeRef $nodeRef, ?\Exception $previous = null): self
+    public static function forNodeRef(NodeRef $nodeRef, ?\Throwable $previous = null): self
     {
         $e = new self("The node ({$nodeRef->toString()}) could not be found.", $previous);
         $e->nodeRef = $nodeRef;
@@ -37,11 +37,11 @@ final class NodeNotFound extends \RuntimeException implements GdbotsNcrException
     /**
      * @param string     $index
      * @param string     $value
-     * @param \Exception $previous
+     * @param \Throwable $previous
      *
      * @return NodeNotFound
      */
-    public static function forIndex(string $index, string $value, ?\Exception $previous = null): self
+    public static function forIndex(string $index, string $value, ?\Throwable $previous = null): self
     {
         return new self("The node could not be found by ({$index}:{$value}).", $previous);
     }

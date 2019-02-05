@@ -2,6 +2,12 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.11
+* Add caching to `Psr6Ncr` for when `NodeNotFound` exceptions occur. This ensures the underlying Ncr isn't hammered when nodes don't exist.
+* Add caching for secondary lookups on `slug` to `NcrRequestInterceptor`.
+* Add `bool $indexOnReplay = false` argument to `AbstractNodeProjector` to make it possible to enable indexing real-time in backup environments.
+
+
 ## v0.3.10
 * Add `NcrPreloader::getNodeRefs` and `NcrPreloader::addEmbeddedNodeRefs` to simplify preloading many paths at once.
 
