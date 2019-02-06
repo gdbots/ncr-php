@@ -192,7 +192,7 @@ final class NcrRequestInterceptor implements EventSubscriber
     private function getSlugCacheKey(SchemaQName $qname, string $slug): string
     {
         return str_replace('-', '_', sprintf(
-            'stnr.%s.%s',
+            'stnr.%s.%s.%s',
             $qname->getVendor(),
             $qname->getMessage(),
             md5($slug)

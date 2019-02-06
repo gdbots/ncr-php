@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.12
+* Fix bug in `NcrRequestInterceptor` that was missing the last `%s` in a sprintf.  d'oh!
+
+
 ## v0.3.11
 * Add caching to `Psr6Ncr` for when `NodeNotFound` exceptions occur. This ensures the underlying Ncr isn't hammered when nodes don't exist.
 * Add caching for secondary lookups on `slug` to `NcrRequestInterceptor`.
