@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.13
+* Add optional namespace argument to all `NcrPreloader` methods.  Now preloading can be isolated to namespaces which makes dealing with partial page caching and rendering of preloaded nodes less duplicative in the final output.
+
+
 ## v0.3.12
 * Fix bug in `NcrRequestInterceptor` that was missing the last `%s` in a sprintf.  d'oh!
 

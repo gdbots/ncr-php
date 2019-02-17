@@ -24,13 +24,20 @@ use Gdbots\Schemas\Ncr\NodeRef;
  */
 final class NcrPreloader
 {
+    const DEFAULT_NAMESPACE = 'default';
+
     /** @var NcrLazyLoader */
     private $lazyLoader;
 
     /** @var NcrCache */
     private $ncrCache;
 
-    /** @var NodeRef[] */
+    /**
+     * Array of node refs keyed within a namespace.
+     * e.g. ['default' => ['acme:article:123' => NodeRef]]
+     *
+     * @var array
+     */
     private $nodeRefs = [];
 
     /**
@@ -45,14 +52,16 @@ final class NcrPreloader
 
     /**
      * @param callable $filter - A function with signature "func(Node $node, NodeRef $nodeRef): bool"
+     * @param string   $namespace
      *
      * @return Node[]
      */
-    public function getNodes(?callable $filter = null): array
+    public function getNodes(?callable $filter = null, string $namespace = self::DEFAULT_NAMESPACE): array
     {
         $nodes = [];
+        $nodeRefs = $this->nodeRefs[$namespace] ?? [];
 
-        foreach ($this->nodeRefs as $key => $nodeRef) {
+        foreach ($nodeRefs as $key => $nodeRef) {
             try {
                 $node = $this->ncrCache->getNode($nodeRef);
                 if (null === $filter || $filter($node, $nodeRef)) {
@@ -67,53 +76,68 @@ final class NcrPreloader
     }
 
     /**
+     * @param string $namespace
+     *
      * @return Node[]
      */
-    public function getPublishedNodes(): array
+    public function getPublishedNodes(string $namespace = self::DEFAULT_NAMESPACE): array
     {
         $published = NodeStatus::PUBLISHED();
         return $this->getNodes(function (Node $node) use ($published) {
             return $published->equals($node->get('status'));
-        });
+        }, $namespace);
     }
 
     /**
      * @param NodeRef $nodeRef
+     * @param string  $namespace
      *
      * @return bool
      */
-    public function hasNodeRef(NodeRef $nodeRef): bool
+    public function hasNodeRef(NodeRef $nodeRef, string $namespace = self::DEFAULT_NAMESPACE): bool
     {
-        return isset($this->nodeRefs[$nodeRef->toString()]);
+        if (!isset($this->nodeRefs[$namespace])) {
+            return false;
+        }
+
+        return isset($nodeRefs[$namespace][$nodeRef->toString()]);
     }
 
     /**
+     * @param string $namespace
+     *
      * @return NodeRef[]
      */
-    public function getNodeRefs(): array
+    public function getNodeRefs(string $namespace = self::DEFAULT_NAMESPACE): array
     {
-        return array_values($this->nodeRefs);
+        return array_values($this->nodeRefs[$namespace] ?? []);
     }
 
     /**
      * @param NodeRef $nodeRef
+     * @param string  $namespace
      */
-    public function addNodeRef(NodeRef $nodeRef): void
+    public function addNodeRef(NodeRef $nodeRef, string $namespace = self::DEFAULT_NAMESPACE): void
     {
         if (!$this->ncrCache->hasNode($nodeRef)) {
             $this->lazyLoader->addNodeRefs([$nodeRef]);
         }
 
-        $this->nodeRefs[$nodeRef->toString()] = $nodeRef;
+        if (!isset($this->nodeRefs[$namespace])) {
+            $this->nodeRefs[$namespace] = [];
+        }
+
+        $this->nodeRefs[$namespace][$nodeRef->toString()] = $nodeRef;
     }
 
     /**
      * @param NodeRef[] $nodeRefs
+     * @param string    $namespace
      */
-    public function addNodeRefs(array $nodeRefs): void
+    public function addNodeRefs(array $nodeRefs, string $namespace = self::DEFAULT_NAMESPACE): void
     {
         foreach ($nodeRefs as $nodeRef) {
-            $this->addNodeRef($nodeRef);
+            $this->addNodeRef($nodeRef, $namespace);
         }
     }
 
@@ -124,8 +148,9 @@ final class NcrPreloader
      *
      * @param Message[] $messages Array of messages to extract NodeRefs message.
      * @param array     $paths    An associative array of ['field_name' => 'qname'], i.e. ['user_id', 'acme:user']
+     * @param string    $namespace
      */
-    public function addEmbeddedNodeRefs(array $messages, array $paths): void
+    public function addEmbeddedNodeRefs(array $messages, array $paths, string $namespace = self::DEFAULT_NAMESPACE): void
     {
         $nodeRefs = [];
 
@@ -152,22 +177,34 @@ final class NcrPreloader
             }
         }
 
-        $this->addNodeRefs($nodeRefs);
+        $this->addNodeRefs($nodeRefs, $namespace);
     }
 
     /**
      * @param NodeRef $nodeRef
+     * @param string  $namespace
      */
-    public function removeNodeRef(NodeRef $nodeRef): void
+    public function removeNodeRef(NodeRef $nodeRef, string $namespace = self::DEFAULT_NAMESPACE): void
     {
-        unset($this->nodeRefs[$nodeRef->toString()]);
+        if (!isset($this->nodeRefs[$namespace])) {
+            return;
+        }
+
+        unset($this->nodeRefs[$namespace][$nodeRef->toString()]);
     }
 
     /**
      * Clears the preloaded node refs.
+     *
+     * @param string $namespace
      */
-    public function clear(): void
+    public function clear(?string $namespace = self::DEFAULT_NAMESPACE): void
     {
-        $this->nodeRefs = [];
+        if (null === $namespace) {
+            $this->nodeRefs = [];
+            return;
+        }
+
+        unset($this->nodeRefs[$namespace]);
     }
 }
