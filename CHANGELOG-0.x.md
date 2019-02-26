@@ -2,6 +2,11 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.14
+* Add `NcrCache::derefNodes` which can deference fields a node has which are refernces to other nodes.
+* Modify `NcrLazyLoader::addEmbeddedNodeRefs` and `NcrPreloader::addEmbeddedNodeRefs` so they accept an associative array of paths or just a simple array.
+
+
 ## v0.3.13
 * Add optional namespace argument to all `NcrPreloader` methods.  Now preloading can be isolated to namespaces which makes dealing with partial page caching and rendering of preloaded nodes less duplicative in the final output.
 

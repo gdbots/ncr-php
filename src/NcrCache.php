@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Gdbots\Ncr;
 
 use Gdbots\Ncr\Exception\NodeNotFound;
+use Gdbots\Pbj\MessageRef;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\NodeRef;
 
@@ -132,6 +133,77 @@ final class NcrCache
     {
         unset($this->nodes[$nodeRef->toString()]);
         $this->lazyLoader->removeNodeRefs([$nodeRef]);
+    }
+
+    /**
+     * Dereferences any nodes in the given node that are referenced
+     * within the provided fields. e.g. derefNodes(article, ['category_refs', 'image_ref'])
+     * would return the category and image nodes associated with the article.
+     *
+     * @param Node   $node   The node containing the references.
+     * @param array  $fields Array of field names containing references you want to dereference to nodes.
+     * @param string $return The field name to return from those nodes, or null to get the entire node.
+     *
+     * @return array
+     */
+    public function derefNodes(Node $node, array $fields, ?string $return = null): array
+    {
+        $nodeRefs = [];
+        foreach ($fields as $field) {
+            if (!$node->has($field)) {
+                continue;
+            }
+
+            $values = $node->get($field);
+            if (empty($values)) {
+                continue;
+            }
+
+            if (!is_array($values)) {
+                $values = [$values];
+            }
+
+            foreach ($values as $value) {
+                if ($value instanceof NodeRef) {
+                    $nodeRefs[$value->toString()] = $value;
+                } elseif ($value instanceof MessageRef) {
+                    $nodeRef = NodeRef::fromMessageRef($value);
+                    $nodeRefs[$nodeRef->toString()] = $nodeRef;
+                } elseif ($value instanceof Node) {
+                    $nodeRef = NodeRef::fromNode($value);
+                    $nodeRefs[$nodeRef->toString()] = $nodeRef;
+                    $this->addNode($value);
+                } else {
+                    $nodeRef = NodeRef::fromString((string)$value);
+                    $nodeRefs[$nodeRef->toString()] = $nodeRef;
+                }
+            }
+        }
+
+        $derefs = [];
+
+        if (null === $return) {
+            foreach ($nodeRefs as $nodeRef) {
+                try {
+                    $derefs[] = $this->getNode($nodeRef);
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+            }
+        } else {
+            foreach ($nodeRefs as $nodeRef) {
+                try {
+                    $node = $this->getNode($nodeRef);
+                    if ($node->has($return)) {
+                        $derefs[] = $node->get($return);
+                    }
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+            }
+        }
+
+        return $derefs;
     }
 
     /**

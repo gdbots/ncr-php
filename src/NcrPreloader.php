@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
+use Gdbots\Common\Util\ArrayUtils;
 use Gdbots\Pbj\Message;
 use Gdbots\Pbj\MessageRef;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
@@ -143,16 +144,21 @@ final class NcrPreloader
 
     /**
      * Finds NodeRefs in the provided messages based on the paths provided.  The paths
-     * is an array of ['field_name' => 'qname'] which will be used to create the
-     * NodeRefs if the field is populated on any of the messages.
+     * is an array of ['field_name' => 'qname'] or ['field1', 'field2'] which will be used
+     * to create the NodeRefs if the field is populated on any of the messages.
      *
      * @param Message[] $messages Array of messages to extract NodeRefs message.
      * @param array     $paths    An associative array of ['field_name' => 'qname'], i.e. ['user_id', 'acme:user']
+     *                            or an array of field names ['user_ref', 'category_ref']
      * @param string    $namespace
      */
     public function addEmbeddedNodeRefs(array $messages, array $paths, string $namespace = self::DEFAULT_NAMESPACE): void
     {
         $nodeRefs = [];
+
+        if (!ArrayUtils::isAssoc($paths)) {
+            $paths = array_flip($paths);
+        }
 
         foreach ($messages as $message) {
             foreach ($paths as $fieldName => $qname) {
@@ -170,6 +176,8 @@ final class NcrPreloader
                         $nodeRefs[] = $value;
                     } elseif ($value instanceof MessageRef) {
                         $nodeRefs[] = NodeRef::fromMessageRef($value);
+                    } elseif ($value instanceof Node) {
+                        $nodeRefs[] = NodeRef::fromNode($value);
                     } else {
                         $nodeRefs[] = NodeRef::fromString("{$qname}:{$value}");
                     }
