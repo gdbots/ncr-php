@@ -250,7 +250,7 @@ TEXT;
             }
         }
 
-        $page = $request->get('page');
+        $page = $request->has('cursor') ? 1 : $request->get('page');
         $perPage = $request->get('count');
         $offset = ($page - 1) * $perPage;
         $offset = NumberUtils::bound($offset, 0, 10000);

@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.15
+* When `SearchNodesRequest` in `ElasticaNcrSearch` has `cursor` then always use page 1.
+
+
 ## v0.3.14
 * Add `NcrCache::derefNodes` which can deference fields a node has which are refernces to other nodes.
 * Modify `NcrLazyLoader::addEmbeddedNodeRefs` and `NcrPreloader::addEmbeddedNodeRefs` so they accept an associative array of paths or just a simple array.
