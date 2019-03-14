@@ -43,7 +43,7 @@ abstract class AbstractRenameNodeHandler extends AbstractNodeCommandHandler
             ->set('node_ref', $nodeRef)
             ->set('new_slug', $command->get('new_slug'))
             ->set('old_slug', $node->get('slug'))
-            ->set('node_status', $node->get('node_status'));
+            ->set('node_status', $node->get('status'));
 
         $this->bindFromNode($event, $node, $pbjx);
         $this->putEvents($command, $pbjx, $this->createStreamId($nodeRef, $command, $event), [$event]);
