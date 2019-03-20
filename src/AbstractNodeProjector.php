@@ -391,7 +391,12 @@ abstract class AbstractNodeProjector implements PbjxProjector
             ->set('updated_at', $event->get('occurred_at'))
             ->set('updater_ref', $event->get('ctx_user_ref'))
             ->set('last_event_ref', $event->generateMessageRef())
-            ->set('etag', $node->generateEtag(['etag', 'updated_at']));
+            ->set('etag', $node->generateEtag([
+                'etag',
+                'updated_at',
+                'updater_ref',
+                'last_event_ref',
+            ]));
 
         $this->ncr->putNode($node, $expectedEtag, $this->createNcrContext($event));
         $this->indexNode($node, $event, $pbjx);
