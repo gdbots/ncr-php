@@ -62,7 +62,7 @@ final class NodeEtagEnricherTest extends TestCase
         $this->assertSame($expected, $actual, 'Enriched etag on old_node should match.');
 
         $actual = $event->get('new_node')->get('etag');
-        $expected = '0a204e077f96909aae4c7934b1e67c69';
+        $expected = 'bf0d94c3beb24a3c151d323ac88ab2ef';
         $this->assertSame($expected, $actual, 'Enriched etag on new_node updated should match.');
 
         $actual = $event->get('old_etag');
