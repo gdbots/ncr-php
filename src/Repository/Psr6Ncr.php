@@ -16,7 +16,7 @@ use Psr\Cache\CacheItemPoolInterface;
 class Psr6Ncr implements Ncr
 {
     private const NODE_NOT_FOUND = 'nnf';
-    private const NODE_NOT_FOUND_TTL = 300;
+    private const NODE_NOT_FOUND_TTL = 600;
 
     /** @var Ncr */
     private $next;
@@ -156,18 +156,18 @@ class Psr6Ncr implements Ncr
         /** @var CacheItemInterface[] $cacheItems */
         $cacheItems = [];
 
-        if (!$consistent || $this->readThrough) {
-            foreach ($nodeRefs as $nodeRef) {
-                $cacheKeys[$nodeRef->toString()] = $this->getCacheKey($nodeRef, $context);
-            }
+        foreach ($nodeRefs as $nodeRef) {
+            $cacheKeys[$nodeRef->toString()] = $this->getCacheKey($nodeRef, $context);
         }
 
-        if (!$consistent) {
+        if (!$consistent || $this->readThrough) {
             $cacheItems = $this->cache->getItems($cacheKeys);
             if ($cacheItems instanceof \Traversable) {
                 $cacheItems = iterator_to_array($cacheItems);
             }
+        }
 
+        if (!$consistent) {
             /** @var NodeRef[] $nodeRefs */
             foreach ($nodeRefs as $idx => $nodeRef) {
                 $cacheKey = $cacheKeys[$nodeRef->toString()];
@@ -193,42 +193,29 @@ class Psr6Ncr implements Ncr
             }
         }
 
-        $nodes = empty($nodeRefs) ? [] : $this->next->getNodes($nodeRefs, $consistent, $context);
+        if (empty($nodeRefs)) {
+            return $cachedNodes;
+        }
 
-        if ($this->readThrough && !empty($nodes)) {
-            if ($consistent) {
-                // all items must be cached and no diff check is needed
-                $cacheItems = $this->cache->getItems($cacheKeys);
-                if ($cacheItems instanceof \Traversable) {
-                    $cacheItems = iterator_to_array($cacheItems);
+        $nodes = $this->next->getNodes($nodeRefs, $consistent, $context);
+
+        if ($this->readThrough) {
+            foreach ($nodeRefs as $nodeRef) {
+                $nodeRefStr = $nodeRef->toString();
+                $cacheKey = $cacheKeys[$nodeRefStr];
+                if (!isset($cacheItems[$cacheKey])) {
+                    continue;
                 }
 
-                foreach ($cacheKeys as $nodeRef => $cacheKey) {
-                    if (!isset($cacheItems[$cacheKey]) || !isset($nodes[$nodeRef])) {
-                        continue;
-                    }
-
-                    $this->beforeSaveCacheItem($cacheItems[$cacheKey], $nodes[$nodeRef]);
-                    $this->cache->saveDeferred($cacheItems[$cacheKey]->set($nodes[$nodeRef]));
+                $cacheItem = $cacheItems[$cacheKey];
+                if (!isset($nodes[$nodeRefStr])) {
+                    $cacheItem->set(self::NODE_NOT_FOUND)->expiresAfter(self::NODE_NOT_FOUND_TTL);
+                    $this->cache->saveDeferred($cacheItem);
+                    continue;
                 }
-            } else {
-                // psr6 really needs a method to just create a cache item without incurring a lookup
-                $missingCacheKeys = array_values(array_diff($cacheKeys, array_keys($cacheItems)));
-                $missingCacheItems = $this->cache->getItems($missingCacheKeys);
-                if ($missingCacheItems instanceof \Traversable) {
-                    $missingCacheItems = iterator_to_array($missingCacheItems);
-                }
-                $cacheItems += $missingCacheItems;
 
-                foreach ($nodes as $nodeRef => $node) {
-                    $cacheKey = $cacheKeys[$nodeRef];
-                    if (!isset($cacheItems[$cacheKey])) {
-                        continue;
-                    }
-
-                    $this->beforeSaveCacheItem($cacheItems[$cacheKey], $node);
-                    $this->cache->saveDeferred($cacheItems[$cacheKey]->set($node));
-                }
+                $this->beforeSaveCacheItem($cacheItem, $nodes[$nodeRefStr]);
+                $this->cache->saveDeferred($cacheItem->set($nodes[$nodeRefStr]));
             }
         }
 
