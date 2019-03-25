@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.19
+* Allow for more speed in `DynamoDbNcr::pipe*` methods by removing filters when running against the entire set.
+
+
 ## v0.3.18
 * Add caching to `Psr6Ncr::getNodes` when nodes are not found.
 * Remove final from `ElasticaNcrSearch` methods so they can be extended.

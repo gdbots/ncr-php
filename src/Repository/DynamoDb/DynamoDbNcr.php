@@ -476,13 +476,22 @@ final class DynamoDbNcr implements Ncr
      */
     private function doPipeNodes(SchemaQName $qname, callable $receiver, array $context): void
     {
-        $tableName = $this->tableManager->getNodeTableName($qname, $context);
+        static $alreadyPiped = [];
+
+        $tableName = $context['table_name'] ?? $this->tableManager->getNodeTableName($qname, $context);
         $skipErrors = filter_var($context['skip_errors'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $reindexing = filter_var($context['reindexing'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        $limit = NumberUtils::bound($context['limit'] ?? 100, 1, 500);
+        $reindexAll = filter_var($context['reindex_all'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $limit = NumberUtils::bound($context['limit'] ?? 100, 1, 2000);
         $totalSegments = NumberUtils::bound($context['total_segments'] ?? 16, 1, 64);
-        $poolDelay = NumberUtils::bound($context['pool_delay'] ?? 500, 100, 10000);
+        $poolDelay = NumberUtils::bound($context['pool_delay'] ?? 500, 10, 10000);
 
+        if ($reindexing && isset($alreadyPiped[$tableName])) {
+            // multiple qnames can be in the same table.
+            return;
+        }
+
+        $alreadyPiped[$tableName] = true;
         $params = [
             'ExpressionAttributeNames'  => [
                 '#node_ref' => NodeTable::HASH_KEY_NAME,
@@ -492,12 +501,7 @@ final class DynamoDbNcr implements Ncr
             ],
         ];
 
-        $filterExpressions = ['begins_with(#node_ref, :v_qname)'];
-
-        if ($reindexing) {
-            $params['ExpressionAttributeNames']['#indexed'] = NodeTable::INDEXED_KEY_NAME;
-            $filterExpressions[] = 'attribute_exists(#indexed)';
-        }
+        $filterExpressions = $reindexAll ? [] : ['begins_with(#node_ref, :v_qname)'];
 
         foreach (['s16', 's32', 's64', 's128', 's256'] as $shard) {
             if (isset($context[$shard])) {
@@ -520,7 +524,12 @@ final class DynamoDbNcr implements Ncr
         $params['TableName'] = $tableName;
         $params['Limit'] = $limit;
         $params['TotalSegments'] = $totalSegments;
-        $params['FilterExpression'] = implode(' AND ', $filterExpressions);
+        if (!empty($filterExpressions)) {
+            $params['FilterExpression'] = implode(' AND ', $filterExpressions);
+        } else {
+            unset($params['ExpressionAttributeNames']);
+            unset($params['ExpressionAttributeValues']);
+        }
 
         $pending = [];
         $iter2seg = ['prev' => [], 'next' => []];
