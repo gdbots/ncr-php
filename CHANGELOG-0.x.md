@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.20
+* Add `BeforePutNodeEvent` to be triggered before `Ncr::putNode` is called in `AbstractNodeProjector`.
+
+
 ## v0.3.19
 * Allow for more speed in `DynamoDbNcr::pipe*` methods by removing filters when running against the entire set.
 
