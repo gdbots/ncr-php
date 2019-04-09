@@ -30,7 +30,7 @@ final class NodeEtagEnricherTest extends TestCase
 
         (new NodeEtagEnricher())->enrichNodeCreated($pbjxEvent);
         $actual = $event->get('node')->get('etag');
-        $expected = 'c1aa9b320ff5c06ec635298a26674317';
+        $expected = '2f690830572e0ffb7119d2f4ce5a9cab';
 
         $this->assertSame($expected, $actual, 'Enriched etag on node should match.');
     }

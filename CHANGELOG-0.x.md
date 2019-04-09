@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.16
+* When a node is updated in `AbstractUpdateNodeHandler` and its new status is deleted, restore the default status.
+
+
 ## v0.3.15
 * When `SearchNodesRequest` in `ElasticaNcrSearch` has `cursor` then always use page 1.
 

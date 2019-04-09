@@ -5,6 +5,7 @@ namespace Gdbots\Ncr;
 
 use Gdbots\Ncr\Exception\InvalidArgumentException;
 use Gdbots\Pbjx\Pbjx;
+use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\Mixin\NodeUpdated\NodeUpdated;
 use Gdbots\Schemas\Ncr\Mixin\UpdateNode\UpdateNode;
@@ -78,6 +79,11 @@ abstract class AbstractUpdateNodeHandler extends AbstractNodeCommandHandler
             $newNode
                 ->set('is_locked', $oldNode->get('is_locked'))
                 ->set('locked_by_ref', $oldNode->get('locked_by_ref'));
+        }
+
+        // if a node is being updated and it's deleted, restore the default status
+        if (NodeStatus::DELETED()->equals($newNode->get('status'))) {
+            $newNode->clear('status');
         }
 
         $event
