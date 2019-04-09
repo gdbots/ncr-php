@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
+use Gdbots\Ncr\Event\BeforePutNodeEvent;
 use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Pbj\MessageResolver;
 use Gdbots\Pbj\SchemaCurie;
@@ -390,8 +391,17 @@ abstract class AbstractNodeProjector implements PbjxProjector
         $node
             ->set('updated_at', $event->get('occurred_at'))
             ->set('updater_ref', $event->get('ctx_user_ref'))
-            ->set('last_event_ref', $event->generateMessageRef())
-            ->set('etag', $node->generateEtag(['etag', 'updated_at']));
+            ->set('last_event_ref', $event->generateMessageRef());
+
+        $pbjxEvent = new BeforePutNodeEvent($node, $event);
+        $pbjx->trigger($node, 'before_put_node', $pbjxEvent, false);
+
+        $node->set('etag', $node->generateEtag([
+            'etag',
+            'updated_at',
+            'updater_ref',
+            'last_event_ref',
+        ]));
 
         $this->ncr->putNode($node, $expectedEtag, $this->createNcrContext($event));
         $this->indexNode($node, $event, $pbjx);

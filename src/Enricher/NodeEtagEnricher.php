@@ -43,7 +43,12 @@ final class NodeEtagEnricher implements EventSubscriber, PbjxEnricher
             /** @var Node $newNode */
             $newNode = $event->get('new_node');
             if (!$newNode->isFrozen()) {
-                $newNode->set('etag', $newNode->generateEtag(['etag', 'updated_at']));
+                $newNode->set('etag', $newNode->generateEtag([
+                    'etag',
+                    'updated_at',
+                    'updater_ref',
+                    'last_event_ref',
+                ]));
             }
 
             $event->set('new_etag', $newNode->get('etag'));

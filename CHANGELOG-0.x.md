@@ -2,8 +2,25 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.20
+* Add `BeforePutNodeEvent` to be triggered before `Ncr::putNode` is called in `AbstractNodeProjector`.
+
+
+## v0.3.19
+* Allow for more speed in `DynamoDbNcr::pipe*` methods by removing filters when running against the entire set.
+
+
+## v0.3.18
+* Add caching to `Psr6Ncr::getNodes` when nodes are not found.
+* Remove final from `ElasticaNcrSearch` methods so they can be extended.
+
+
+## v0.3.17
+* Ignore `['etag', 'updated_at', 'updater_ref', 'last_event_ref']` when generating etag in `NodeEtagEnricher` and `AbstractNodeProjector`.
+
+
 ## v0.3.16
-* When a node is updated in `AbstractUpdateNodeHandler` and its new status is deleted, restore the default status.
+* Fix bug in `AbstractRenameNodeHandler` which attempts to use `node_status` instead of `status` when setting `node_status` field on `NodeRenamed` event.
 
 
 ## v0.3.15

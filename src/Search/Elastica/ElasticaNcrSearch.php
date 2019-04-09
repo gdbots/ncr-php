@@ -69,7 +69,7 @@ class ElasticaNcrSearch implements NcrSearch
     /**
      * {@inheritdoc}
      */
-    final public function createStorage(SchemaQName $qname, array $context = []): void
+    public function createStorage(SchemaQName $qname, array $context = []): void
     {
         $client = $this->getClientForWrite($context);
         $index = $this->indexManager->createIndex($client, $qname, $context);
@@ -79,7 +79,7 @@ class ElasticaNcrSearch implements NcrSearch
     /**
      * {@inheritdoc}
      */
-    final public function describeStorage(SchemaQName $qname, array $context = []): string
+    public function describeStorage(SchemaQName $qname, array $context = []): string
     {
         $client = $this->getClientForWrite($context);
         $index = new Index($client, $this->indexManager->getIndexName($qname, $context));
@@ -105,7 +105,7 @@ TEXT;
     /**
      * {@inheritdoc}
      */
-    final public function indexNodes(array $nodes, array $context = []): void
+    public function indexNodes(array $nodes, array $context = []): void
     {
         if (empty($nodes)) {
             return;
@@ -174,7 +174,7 @@ TEXT;
     /**
      * {@inheritdoc}
      */
-    final public function deleteNodes(array $nodeRefs, array $context = []): void
+    public function deleteNodes(array $nodeRefs, array $context = []): void
     {
         if (empty($nodeRefs)) {
             return;
@@ -237,7 +237,7 @@ TEXT;
     /**
      * {@inheritdoc}
      */
-    final public function searchNodes(SearchNodesRequest $request, ParsedQuery $parsedQuery, SearchNodesResponse $response, array $qnames = [], array $context = []): void
+    public function searchNodes(SearchNodesRequest $request, ParsedQuery $parsedQuery, SearchNodesResponse $response, array $qnames = [], array $context = []): void
     {
         $search = new Search($this->getClientForRead($context));
 
