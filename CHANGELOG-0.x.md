@@ -2,7 +2,11 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
-## v0.3.21 
+## v0.3.22
+* Ensure all things generating an etag are ignoring the same fields.
+
+
+## v0.3.21
 * When a node is updated in `AbstractUpdateNodeHandler` and its new status is deleted, restore the default status.
 
 

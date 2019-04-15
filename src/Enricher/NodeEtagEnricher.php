@@ -10,6 +10,13 @@ use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 
 final class NodeEtagEnricher implements EventSubscriber, PbjxEnricher
 {
+    const IGNORED_FIELDS = [
+        'etag',
+        'updated_at',
+        'updater_ref',
+        'last_event_ref',
+    ];
+
     /**
      * @param PbjxEvent $pbjxEvent
      */
@@ -26,7 +33,7 @@ final class NodeEtagEnricher implements EventSubscriber, PbjxEnricher
             return;
         }
 
-        $node->set('etag', $node->generateEtag(['etag', 'updated_at']));
+        $node->set('etag', $node->generateEtag(self::IGNORED_FIELDS));
     }
 
     /**
@@ -43,12 +50,7 @@ final class NodeEtagEnricher implements EventSubscriber, PbjxEnricher
             /** @var Node $newNode */
             $newNode = $event->get('new_node');
             if (!$newNode->isFrozen()) {
-                $newNode->set('etag', $newNode->generateEtag([
-                    'etag',
-                    'updated_at',
-                    'updater_ref',
-                    'last_event_ref',
-                ]));
+                $newNode->set('etag', $newNode->generateEtag(self::IGNORED_FIELDS));
             }
 
             $event->set('new_etag', $newNode->get('etag'));

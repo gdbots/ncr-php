@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
+use Gdbots\Ncr\Enricher\NodeEtagEnricher;
 use Gdbots\Ncr\Event\BeforePutNodeEvent;
 use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Pbj\MessageResolver;
@@ -396,12 +397,7 @@ abstract class AbstractNodeProjector implements PbjxProjector
         $pbjxEvent = new BeforePutNodeEvent($node, $event);
         $pbjx->trigger($node, 'before_put_node', $pbjxEvent, false);
 
-        $node->set('etag', $node->generateEtag([
-            'etag',
-            'updated_at',
-            'updater_ref',
-            'last_event_ref',
-        ]));
+        $node->set('etag', $node->generateEtag(NodeEtagEnricher::IGNORED_FIELDS));
 
         $this->ncr->putNode($node, $expectedEtag, $this->createNcrContext($event));
         $this->indexNode($node, $event, $pbjx);
@@ -449,7 +445,7 @@ abstract class AbstractNodeProjector implements PbjxProjector
      */
     protected function createExpireNodeJob(Expirable $node, Event $event, Pbjx $pbjx): void
     {
-        if (!$node->has('expires_at')) {
+        if (!$node->has('expires_at') || NodeStatus::EXPIRED()->equals($node->get('status'))) {
             return;
         }
 
