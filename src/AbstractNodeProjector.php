@@ -332,7 +332,7 @@ abstract class AbstractNodeProjector implements PbjxProjector
 
         /** @var Node $newNode */
         $newNode = $event->get('new_node');
-        $expectedEtag = $event->isReplay() ? null : $event->get('old_etag');
+        $expectedEtag = null; // $event->isReplay() ? null : $event->get('old_etag');
         $this->ncr->putNode($newNode, $expectedEtag, $context);
         $this->indexNode($newNode, $event, $pbjx);
 

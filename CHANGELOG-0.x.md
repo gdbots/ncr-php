@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.23
+* Don't use expected etag in `AbstractNodeProjector::handleNodeUpdated` because it's possible the event's data is stale by the time the event runs.
+
+
 ## v0.3.22
 * Ensure all things generating an etag are ignoring the same fields.
 
