@@ -109,6 +109,24 @@ class IndexManager
         $settings = $this->filterIndexSettings($this->indexes[$type['index_name'] ?? 'default'], $qname, $context);
         unset($settings['fq_index_name']);
 
+        /* delete existing index before re-indexing if requested */
+        if (isset($context['destroy']) && $context['destroy']) {
+            try {
+                $index->delete();
+            } catch (\Throwable $e) {
+                throw new SearchOperationFailed(
+                    sprintf(
+                        '%s while deleting index [%s] for qname [%s].',
+                        ClassUtils::getShortName($e),
+                        $index->getName(),
+                        $qname
+                    ),
+                    Code::INTERNAL,
+                    $e
+                );
+            }
+        }
+
         try {
             if (!$index->exists()) {
                 $settings['analysis'] = [
