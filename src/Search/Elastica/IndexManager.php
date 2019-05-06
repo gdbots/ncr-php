@@ -99,6 +99,7 @@ class IndexManager
         static $created = [];
 
         $indexName = $this->getIndexName($qname, $context);
+
         if (isset($created[$indexName])) {
             return $created[$indexName];
         }
@@ -109,7 +110,7 @@ class IndexManager
         $settings = $this->filterIndexSettings($this->indexes[$type['index_name'] ?? 'default'], $qname, $context);
         unset($settings['fq_index_name']);
 
-        /* delete existing index before re-indexing if requested */
+        /* delete existing index before creating if requested */
         if (isset($context['destroy']) && $context['destroy']) {
             try {
                 $index->delete();
