@@ -99,6 +99,7 @@ class IndexManager
         static $created = [];
 
         $indexName = $this->getIndexName($qname, $context);
+
         if (isset($created[$indexName])) {
             return $created[$indexName];
         }
@@ -108,6 +109,23 @@ class IndexManager
         $mapper = $this->getNodeMapper($qname);
         $settings = $this->filterIndexSettings($this->indexes[$type['index_name'] ?? 'default'], $qname, $context);
         unset($settings['fq_index_name']);
+
+        if (true === ($context['destroy'] ?? false)) {
+            try {
+                $index->delete();
+            } catch (\Throwable $e) {
+                throw new SearchOperationFailed(
+                    sprintf(
+                        '%s while deleting index [%s] for qname [%s].',
+                        ClassUtils::getShortName($e),
+                        $index->getName(),
+                        $qname
+                    ),
+                    Code::INTERNAL,
+                    $e
+                );
+            }
+        }
 
         try {
             if (!$index->exists()) {

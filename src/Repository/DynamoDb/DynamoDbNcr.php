@@ -448,7 +448,7 @@ final class DynamoDbNcr implements Ncr
             $nextCursor = null;
         }
 
-        return new IndexQueryResult($query, $nodeRefs, $nextCursor);
+        return new IndexQueryResult($query, array_slice($nodeRefs, 0, $query->getCount()), $nextCursor);
     }
 
     /**

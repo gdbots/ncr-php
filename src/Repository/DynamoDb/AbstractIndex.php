@@ -58,7 +58,7 @@ abstract class AbstractIndex implements GlobalSecondaryIndex
         $params = [
             'IndexName'                 => $this->getName(),
             'ScanIndexForward'          => $query->sortAsc(),
-            'Limit'                     => $query->getCount(),
+            //'Limit'                     => $query->getCount(),
             'ExpressionAttributeNames'  => [
                 '#hash'     => $this->getHashKeyName(),
                 '#node_ref' => NodeTable::HASH_KEY_NAME,
