@@ -7,6 +7,7 @@ use Acme\Schemas\Iam\Event\UserCreatedV1;
 use Acme\Schemas\Iam\Event\UserUpdatedV1;
 use Acme\Schemas\Iam\Node\UserV1;
 use Gdbots\Ncr\Enricher\NodeEtagEnricher;
+use Gdbots\Pbj\MessageRef;
 use Gdbots\Pbj\WellKnown\Microtime;
 use Gdbots\Pbjx\Event\PbjxEvent;
 use Gdbots\Schemas\Iam\UserId;
@@ -37,9 +38,11 @@ final class NodeEtagEnricherTest extends TestCase
 
     public function testEnrichNodeUpdated(): void
     {
+        $lastEventRef = MessageRef::fromString('vendor:package:category:event:cab103f0-6d83-4729-9828-1e6bb60537a0');
         $oldNode = UserV1::create()
             ->set('_id', UserId::fromString('bab103f0-6d83-4729-9828-1e6bb60537a0'))
             ->set('created_at', Microtime::fromString('1518675519085709'))
+            ->clear('last_event_ref')
             ->set('etag', 'c1aa9b320ff5c06ec635298a26674317')
             ->set('email', 'homer@simpson.com')
             ->set('first_name', 'Homer')
@@ -47,7 +50,7 @@ final class NodeEtagEnricherTest extends TestCase
             ->freeze();
 
         $newNode = clone $oldNode;
-        $newNode->set('is_blocked', true);
+        $newNode->set('is_blocked', true)->set('last_event_ref', $lastEventRef);
 
         $event = UserUpdatedV1::create()
             ->set('node_ref', $oldNode->get('_id')->toNodeRef())
@@ -72,5 +75,7 @@ final class NodeEtagEnricherTest extends TestCase
         $actual = $event->get('new_etag');
         $expected = $newNode->get('etag');
         $this->assertSame($expected, $actual, 'Enriched new_etag should match.');
+
+        echo $event;
     }
 }

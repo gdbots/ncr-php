@@ -110,8 +110,7 @@ class IndexManager
         $settings = $this->filterIndexSettings($this->indexes[$type['index_name'] ?? 'default'], $qname, $context);
         unset($settings['fq_index_name']);
 
-        /* delete existing index before creating if requested */
-        if (isset($context['destroy']) && $context['destroy']) {
+        if (true === ($context['destroy'] ?? false)) {
             try {
                 $index->delete();
             } catch (\Throwable $e) {
