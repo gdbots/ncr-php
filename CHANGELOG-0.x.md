@@ -2,6 +2,11 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.24
+* Add destroy option to `Gdbots\Ncr\Search\Elastica\IndexManager::createIndex` to delete index before creating it.
+* Do not use Limit parameter in `Gdbots\Ncr\Repository\DynamoDb\AbstractIndex::createQuery` as it applies that limit before filtering is applied it does not limit the resultset count.
+
+
 ## v0.3.23
 * Don't use expected etag in `AbstractNodeProjector::handleNodeUpdated` because it's possible the event's data is stale by the time the event runs.
 
