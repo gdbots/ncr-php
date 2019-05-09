@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.25
+* Remove use of `Limit` in `DynamoDbNcr::doPipeNodes` so fewer queries are made to scan the table.
+
+
 ## v0.3.24
 * Add destroy option to `Gdbots\Ncr\Search\Elastica\IndexManager::createIndex` to delete index before creating it.
 * Do not use Limit parameter in `Gdbots\Ncr\Repository\DynamoDb\AbstractIndex::createQuery` as it applies that limit before filtering is applied it does not limit the resultset count.

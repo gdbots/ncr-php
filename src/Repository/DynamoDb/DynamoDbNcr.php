@@ -482,7 +482,6 @@ final class DynamoDbNcr implements Ncr
         $skipErrors = filter_var($context['skip_errors'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $reindexing = filter_var($context['reindexing'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $reindexAll = filter_var($context['reindex_all'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        $limit = NumberUtils::bound($context['limit'] ?? 100, 1, 2000);
         $totalSegments = NumberUtils::bound($context['total_segments'] ?? 16, 1, 64);
         $poolDelay = NumberUtils::bound($context['pool_delay'] ?? 500, 10, 10000);
 
@@ -522,7 +521,6 @@ final class DynamoDbNcr implements Ncr
         }
 
         $params['TableName'] = $tableName;
-        $params['Limit'] = $limit;
         $params['TotalSegments'] = $totalSegments;
         if (!empty($filterExpressions)) {
             $params['FilterExpression'] = implode(' AND ', $filterExpressions);
