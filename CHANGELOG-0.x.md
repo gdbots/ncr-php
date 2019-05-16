@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 0.x versions.
 
 
+## v0.3.26
+* In `ElasticaNcrSearch` set `$document->setRefresh(true);` when the search context has `$options['consistent_write'] === true`.
+
+
 ## v0.3.25
 * Remove use of `Limit` in `DynamoDbNcr::doPipeNodes` so fewer queries are made to scan the table.
 

@@ -113,6 +113,7 @@ TEXT;
 
         $client = $this->getClientForWrite($context);
         $documents = [];
+        $refresh = (bool)($options['consistent_write'] ?? false);
 
         foreach ($nodes as $node) {
             /** @var Schema $schema */
@@ -129,7 +130,8 @@ TEXT;
                     ->setId($node->get('_id')->toString())
                     ->remove('_id')// the "_id" field must not exist in the source as well
                     ->setType($typeName)
-                    ->setIndex($indexName);
+                    ->setIndex($indexName)
+                    ->setRefresh($refresh);
                 $this->indexManager->getNodeMapper($qname)->beforeIndex($document, $node);
                 $documents[] = $document;
             } catch (\Throwable $e) {
@@ -182,6 +184,7 @@ TEXT;
 
         $client = $this->getClientForWrite($context);
         $documents = [];
+        $refresh = (bool)($options['consistent_write'] ?? false);
 
         /** @var NodeRef $nodeRef */
         foreach ($nodeRefs as $nodeRef) {
@@ -195,7 +198,8 @@ TEXT;
                 $documents[] = (new Document())
                     ->setId((string)$nodeRef->getId())
                     ->setType($typeName)
-                    ->setIndex($indexName);
+                    ->setIndex($indexName)
+                    ->setRefresh($refresh);
             } catch (\Throwable $e) {
                 $message = sprintf(
                     '%s while adding node [{node_ref}] to batch delete request ' .
