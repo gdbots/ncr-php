@@ -169,6 +169,7 @@ final class NcrLazyLoader
         try {
             $request = $this->getNodeBatchRequest;
             $this->getNodeBatchRequest = null;
+            $request->set('ctx_causator_ref', $request->generateMessageRef());
             $this->pbjx->request($request);
         } catch (\Throwable $e) {
             $this->logger->error(
