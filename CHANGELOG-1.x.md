@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 1.x versions.
 
 
+## v1.0.4
+* Use a consistent read in `AbstractGetNodeHistoryRequestHandler`.
+
+
 ## v1.0.3
 * Ensure `NcrLazyLoader::flush` can bypass permission check.
  

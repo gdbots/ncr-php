@@ -31,7 +31,7 @@ abstract class AbstractGetNodeHistoryRequestHandler extends AbstractRequestHandl
                 $request->get('since'),
                 $request->get('count'),
                 $request->get('forward'),
-                false,
+                true,
                 $context
             );
         } else {
