@@ -58,8 +58,8 @@ final class NcrRequestInterceptor implements EventSubscriber
         return [
             'gdbots:ncr:mixin:get-node-request.enrich'              => 'enrichGetNodeRequest',
             'gdbots:ncr:mixin:get-node-batch-request.before_handle' => 'onGetNodeBatchRequestBeforeHandle',
-            'gdbots:ncr:mixin:get-node-response.created'            => 'onGetNodeReponseCreated',
-            'gdbots:ncr:mixin:get-node-batch-response.created'      => 'onGetNodeBatchReponseCreated',
+            'gdbots:ncr:mixin:get-node-response.created'            => 'onGetNodeResponseCreated',
+            'gdbots:ncr:mixin:get-node-batch-response.created'      => 'onGetNodeBatchResponseCreated',
         ];
     }
 
@@ -128,7 +128,7 @@ final class NcrRequestInterceptor implements EventSubscriber
     /**
      * @param ResponseCreatedEvent $pbjxEvent
      */
-    public function onGetNodeReponseCreated(ResponseCreatedEvent $pbjxEvent): void
+    public function onGetNodeResponseCreated(ResponseCreatedEvent $pbjxEvent): void
     {
         $response = $pbjxEvent->getResponse();
         if (!$response->has('node')) {
@@ -165,7 +165,7 @@ final class NcrRequestInterceptor implements EventSubscriber
     /**
      * @param ResponseCreatedEvent $pbjxEvent
      */
-    public function onGetNodeBatchReponseCreated(ResponseCreatedEvent $pbjxEvent): void
+    public function onGetNodeBatchResponseCreated(ResponseCreatedEvent $pbjxEvent): void
     {
         $response = $pbjxEvent->getResponse();
         if ($response->has('nodes')) {
@@ -176,7 +176,11 @@ final class NcrRequestInterceptor implements EventSubscriber
         if (isset($this->pickup[$requestId])) {
             /** @var NodeRef $nodeRef */
             foreach ($this->pickup[$requestId] as $nodeRef) {
-                $response->addToMap('nodes', $nodeRef->toString(), $this->ncrCache->getNode($nodeRef));
+                try {
+                    $response->addToMap('nodes', $nodeRef->toString(), $this->ncrCache->getNode($nodeRef));
+                } catch (\Throwable $e) {
+                    $response->addToSet('missing_node_refs', [$nodeRef]);
+                }
             }
 
             unset($this->pickup[$requestId]);

@@ -50,6 +50,9 @@ final class NcrCache
      */
     private $maxItems = 1000;
 
+    /** @var bool */
+    private $disablePruning = false;
+
     /**
      * @param NcrLazyLoader $lazyLoader
      * @param int           $maxItems
@@ -81,7 +84,9 @@ final class NcrCache
     {
         if (!$this->hasNode($nodeRef)) {
             if ($this->lazyLoader->hasNodeRef($nodeRef)) {
+                $this->disablePruning = true;
                 $this->lazyLoader->flush();
+                $this->disablePruning = false;
                 if (!$this->hasNode($nodeRef)) {
                     throw NodeNotFound::forNodeRef($nodeRef);
                 }
@@ -219,6 +224,10 @@ final class NcrCache
      */
     private function pruneNodeCache(): void
     {
+        if ($this->disablePruning) {
+            return;
+        }
+
         if ($this->maxItems > 0 && count($this->nodes) > $this->maxItems) {
             $this->nodes = array_slice($this->nodes, (int)($this->maxItems * 0.2), null, true);
         }

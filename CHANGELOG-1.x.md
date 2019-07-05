@@ -2,6 +2,11 @@
 This changelog references the relevant changes done in 1.x versions.
 
 
+## v1.0.6
+* Don't throw exceptions in `NcrRequestInterceptor` when nodes can't be fetched from `NcrCache`.
+* Disable cache pruning in `NcrCache` when lazy loader is flushing.
+
+
 ## v1.0.5
 * Don't throw exceptions in `MemoizingNcr` when nodes can't be fetched from `NcrCache` since they can be pruned which is normal.
 * Increase default max items in `NcrCache` from 500 to 1000.
