@@ -48,13 +48,13 @@ final class NcrCache
      *
      * @var int
      */
-    private $maxItems = 500;
+    private $maxItems = 1000;
 
     /**
      * @param NcrLazyLoader $lazyLoader
      * @param int           $maxItems
      */
-    public function __construct(NcrLazyLoader $lazyLoader, int $maxItems = 500)
+    public function __construct(NcrLazyLoader $lazyLoader, int $maxItems = 1000)
     {
         $this->lazyLoader = $lazyLoader;
         $this->maxItems = $maxItems;

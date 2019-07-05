@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
+use Gdbots\Common\Util\SlugUtils;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 use Gdbots\Schemas\Ncr\Mixin\NodePublished\NodePublished;
@@ -24,11 +25,22 @@ abstract class AbstractPublishNodeHandler extends AbstractNodeCommandHandler
     protected $ncr;
 
     /**
-     * @param Ncr $ncr
+     * If the node has a slug and it contains a date and a time zone
+     * has been set then we'll automatically update the slug to
+     * contain the date it was published.
+     *
+     * @var \DateTimeZone
      */
-    public function __construct(Ncr $ncr)
+    protected $localTimeZone;
+
+    /**
+     * @param Ncr    $ncr
+     * @param string $localTimeZone
+     */
+    public function __construct(Ncr $ncr, ?string $localTimeZone = null)
     {
         $this->ncr = $ncr;
+        $this->localTimeZone = null !== $localTimeZone ? new \DateTimeZone($localTimeZone) : null;
     }
 
     /**
@@ -70,7 +82,15 @@ abstract class AbstractPublishNodeHandler extends AbstractNodeCommandHandler
         $event->set('node_ref', $nodeRef);
 
         if ($node->has('slug')) {
-            $event->set('slug', $node->get('slug'));
+            $slug = $node->get('slug');
+            if (null !== $this->localTimeZone && SlugUtils::containsDate($slug)) {
+                $date = $publishAt instanceof \DateTimeImmutable
+                    ? \DateTime::createFromImmutable($publishAt)
+                    : clone $publishAt;
+                $date->setTimezone($this->localTimeZone);
+                $slug = SlugUtils::addDate($slug, $date);
+            }
+            $event->set('slug', $slug);
         }
 
         $this->bindFromNode($event, $node, $pbjx);

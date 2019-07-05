@@ -76,7 +76,10 @@ final class MemoizingNcr implements Ncr
     public function getNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): Node
     {
         if (!$consistent && $this->cache->hasNode($nodeRef)) {
-            return $this->cache->getNode($nodeRef);
+            try {
+                return $this->cache->getNode($nodeRef);
+            } catch (\Throwable $e) {
+            }
         }
 
         $node = $this->next->getNode($nodeRef, $consistent, $context);
@@ -103,8 +106,11 @@ final class MemoizingNcr implements Ncr
             /** @var NodeRef[] $nodeRefs */
             foreach ($nodeRefs as $idx => $nodeRef) {
                 if ($this->cache->hasNode($nodeRef)) {
-                    $cachedNodes[$nodeRef->toString()] = $this->cache->getNode($nodeRef);
-                    unset($nodeRefs[$idx]);
+                    try {
+                        $cachedNodes[$nodeRef->toString()] = $this->cache->getNode($nodeRef);
+                        unset($nodeRefs[$idx]);
+                    } catch (\Throwable $e) {
+                    }
                 }
             }
         }

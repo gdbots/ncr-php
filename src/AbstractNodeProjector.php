@@ -236,6 +236,11 @@ abstract class AbstractNodeProjector implements PbjxProjector
         $node = $this->ncr->getNode($event->get('node_ref'), true, $this->createNcrContext($event));
         $node->set('status', NodeStatus::PUBLISHED())
             ->set('published_at', $event->get('published_at'));
+
+        if ($event->has('slug')) {
+            $node->set('slug', $event->get('slug'));
+        }
+
         $this->updateAndIndexNode($node, $event, $pbjx);
     }
 
@@ -263,6 +268,11 @@ abstract class AbstractNodeProjector implements PbjxProjector
         /** @var \DateTime $publishAt */
         $publishAt = $event->get('publish_at');
         $node->set('status', NodeStatus::SCHEDULED())->set('published_at', $publishAt);
+
+        if ($event->has('slug')) {
+            $node->set('slug', $event->get('slug'));
+        }
+
         $this->updateAndIndexNode($node, $event, $pbjx);
 
         if ($event->isReplay()) {

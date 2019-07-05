@@ -2,6 +2,13 @@
 This changelog references the relevant changes done in 1.x versions.
 
 
+## v1.0.5
+* Don't throw exceptions in `MemoizingNcr` when nodes can't be fetched from `NcrCache` since they can be pruned which is normal.
+* Increase default max items in `NcrCache` from 500 to 1000.
+* In `AbstractPublishNodeHandler` create a new, current dated slug if local time is supplied and the item already has a dated slug.
+* In `AbstractNodeProjector` when nodes are scheduled or published and the slug exists on the event, set that value on the node.
+
+
 ## v1.0.4
 * Use a consistent read in `AbstractGetNodeHistoryRequestHandler`.
 
