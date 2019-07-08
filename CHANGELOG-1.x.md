@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 1.x versions.
 
 
+## v1.0.7
+* Cancel any publish jobs when a node is published in `AbstractNodeProjector`.
+
+
 ## v1.0.6
 * Don't throw exceptions in `NcrRequestInterceptor` when nodes can't be fetched from `NcrCache`.
 * Disable cache pruning in `NcrCache` when lazy loader is flushing.
