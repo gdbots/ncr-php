@@ -103,6 +103,8 @@ class QueryFactory
             ['query' => 'created_before', 'field' => 'created_at', 'operator' => ComparisonOperator::LT()],
             ['query' => 'updated_after', 'field' => 'updated_at', 'operator' => ComparisonOperator::GT()],
             ['query' => 'updated_before', 'field' => 'updated_at', 'operator' => ComparisonOperator::LT()],
+            ['query' => 'published_after', 'field' => 'published_at', 'operator' => ComparisonOperator::GT()],
+            ['query' => 'published_before', 'field' => 'published_at', 'operator' => ComparisonOperator::LT()],
         ];
 
         foreach ($dateFilters as $f) {
