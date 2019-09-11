@@ -5,6 +5,7 @@ namespace Gdbots\Ncr\Search\Elastica;
 
 use Elastica\Query;
 use Elastica\Query\AbstractQuery;
+use Gdbots\Common\Util\DateUtils;
 use Gdbots\Pbj\WellKnown\Microtime;
 use Gdbots\QueryParser\Builder\ElasticaQueryBuilder;
 use Gdbots\QueryParser\Enum\BoolOperator;
@@ -70,6 +71,32 @@ class QueryFactory
 
         $statuses = array_map('strval', $request->get('statuses'));
         $query->addFilter(new Query\Terms('status', $statuses));
+    }
+
+    /**
+     * Add any dates as filters directly to the elastica search query.
+     * This is different from applyDateFilters because ISO dates are not supported
+     * by the query parser.
+     *
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-terms-query.html
+     *
+     * @param SearchNodesRequest $request
+     * @param Query\BoolQuery    $query
+     */
+    protected function filterDates(SearchNodesRequest $request, Query\BoolQuery $query): void
+    {
+        $dateFilters = [
+            ['query' => 'published_after', 'field' => 'published_at', 'operator' => ComparisonOperator::GT],
+            ['query' => 'published_before', 'field' => 'published_at', 'operator' => ComparisonOperator::LT],
+        ];
+
+        foreach ($dateFilters as $f) {
+            if ($request->has($f['query'])) {
+                $query->addFilter(new Query\Range($f['field'], [
+                    $f['operator'] => $request->get($f['query'])->format(DateUtils::ISO8601_ZULU),
+                ]));
+            }
+        }
     }
 
     /**

@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 1.x versions.
 
 
+## v1.0.8
+* Add filterDates method to `QueryFactory` for advanced search options published before & after
+
+
 ## v1.0.7
 * Cancel any publish jobs when a node is published in `AbstractNodeProjector`.
 
