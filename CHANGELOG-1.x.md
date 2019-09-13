@@ -1,8 +1,13 @@
 # CHANGELOG for 1.x
 This changelog references the relevant changes done in 1.x versions.
 
+
+## v1.0.9
+* Add method filterDates in `QueryFactory` for elastica search query.
+
+
 ## v1.0.8
-* Added filters for published_after and published_before in `QueryFactory`.
+* Add filters for published_after and published_before in `QueryFactory`.
 
 
 ## v1.0.7
