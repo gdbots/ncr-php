@@ -52,6 +52,7 @@ class QueryFactory
         $query = $builder->getBoolQuery();
 
         $this->filterStatuses($request, $query);
+        $this->filterDates($request, $query);
         return $query;
     }
 
