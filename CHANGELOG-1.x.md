@@ -3,7 +3,7 @@ This changelog references the relevant changes done in 1.x versions.
 
 
 ## v1.0.10
-* Fix advanced search for published after and before in `QueryFactory`.
+* remove the newly added dateFilters for `published_after` and `published_before` search criteria  in `QueryFactory`.
 
 
 ## v1.0.9
