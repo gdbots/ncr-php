@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 1.x versions.
 
 
+## v1.0.10
+* Fix advanced search for published after and before in `QueryFactory`.
+
+
 ## v1.0.9
 * Add method filterDates in `QueryFactory` for elastica search query.
 
