@@ -481,7 +481,7 @@ abstract class AbstractNodeProjector implements PbjxProjector
      */
     protected function createExpireNodeJob(Expirable $node, Event $event, Pbjx $pbjx): void
     {
-        if (!$node->has('expires_at') || NodeStatus::EXPIRED()->equals($node->get('status'))) {
+        if (!$node->has('expires_at')) {
             return;
         }
 
