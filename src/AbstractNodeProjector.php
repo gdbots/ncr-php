@@ -493,7 +493,11 @@ abstract class AbstractNodeProjector implements PbjxProjector
 
         $command = $this->createExpireNode($node, $event, $pbjx)->set('node_ref', $nodeRef);
         $timestamp = $expiresAt->getTimestamp();
+
         if ($timestamp <= time()) {
+            if (NodeStatus::EXPIRED()->equals($node->get('status'))) {
+                return;
+            }
             $timestamp = strtotime('+5 seconds');
         }
 
