@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 1.x versions.
 
 
+## v1.0.11
+* Fix rescheduling expires_at is ignored if status is already expired
+
+
 ## v1.0.10
 * remove the newly added dateFilters for `published_after` and `published_before` search criteria  in `QueryFactory`.
 
