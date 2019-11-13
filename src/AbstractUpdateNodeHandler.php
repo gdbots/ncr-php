@@ -86,6 +86,10 @@ abstract class AbstractUpdateNodeHandler extends AbstractNodeCommandHandler
             $newNode->clear('status');
         }
 
+        if ($command->has('paths')) {
+            $event->addToSet('paths', $command->get('paths'));
+        }
+
         $event
             ->set('node_ref', $nodeRef)
             ->set('old_node', $oldNode)
