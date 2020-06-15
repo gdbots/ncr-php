@@ -20,7 +20,7 @@ class InMemoryNcrTest extends TestCase
     /** @var InMemoryNcr */
     protected $ncr;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->ncr = new InMemoryNcr();
     }

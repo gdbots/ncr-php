@@ -17,7 +17,7 @@ class IndexQueryFilterProcessorTest extends TestCase
     /** @var IndexQueryFilterProcessor */
     protected $processor;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->processor = new IndexQueryFilterProcessor();
     }

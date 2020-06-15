@@ -24,7 +24,7 @@ class NodeIdempotencyValidatorTest extends TestCase
     /** @var CacheItemPoolInterface */
     protected $cache;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->locator = new RegisteringServiceLocator();
         $this->pbjx = $this->locator->getPbjx();

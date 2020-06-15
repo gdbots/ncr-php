@@ -36,7 +36,7 @@ class MemoizingNcrTest extends TestCase
     /** @var MemoizingNcr */
     protected $ncr;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->locator = new RegisteringServiceLocator();
         $this->pbjx = new SimplePbjx($this->locator);

@@ -26,7 +26,7 @@ class NcrCacheTest extends TestCase
     /** @var NcrCache */
     protected $ncrCache;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->locator = new RegisteringServiceLocator();
         $this->pbjx = new SimplePbjx($this->locator);
