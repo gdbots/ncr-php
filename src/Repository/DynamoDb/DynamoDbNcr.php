@@ -18,6 +18,8 @@ use Gdbots\Ncr\IndexQueryResult;
 use Gdbots\Ncr\Ncr;
 use Gdbots\Pbj\Marshaler\DynamoDb\ItemMarshaler;
 use Gdbots\Pbj\SchemaQName;
+use Gdbots\Pbj\Util\ClassUtil;
+use Gdbots\Pbj\Util\NumberUtil;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Pbjx\Enum\Code;
@@ -45,12 +47,6 @@ final class DynamoDbNcr implements Ncr
     /** @var IndexQueryFilterProcessor */
     private $filterProcessor;
 
-    /**
-     * @param DynamoDbClient  $client
-     * @param TableManager    $tableManager
-     * @param array           $config
-     * @param LoggerInterface $logger
-     */
     public function __construct(
         DynamoDbClient $client,
         TableManager $tableManager,
@@ -59,12 +55,12 @@ final class DynamoDbNcr implements Ncr
     ) {
         // defaults
         $config += [
-            'batch_size' => 100,
-            'pool_size'  => 25,
+            'batch_size'  => 100,
+            'concurrency' => 25,
         ];
 
-        $config['batch_size'] = NumberUtils::bound($config['batch_size'], 2, 100);
-        $config['pool_size'] = NumberUtils::bound($config['pool_size'], 1, 50);
+        $config['batch_size'] = NumberUtil::bound($config['batch_size'], 2, 100);
+        $config['concurrency'] = NumberUtil::bound($config['concurrency'], 1, 50);
 
         $this->client = $client;
         $this->tableManager = $tableManager;
@@ -221,10 +217,10 @@ final class DynamoDbNcr implements Ncr
 
         $batch = (new BatchGetItemRequest($this->client))
             ->batchSize($this->config['batch_size'])
-            ->poolSize($this->config['pool_size'])
+            ->concurrency($this->config['concurrency'])
             ->consistentRead($consistent)
             ->onError(function (AwsException $e) use ($context) {
-                $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
+                $errorName = $e->getAwsErrorCode() ?: ClassUtil::getShortName($e);
                 $this->logger->error(
                     sprintf('%s while processing BatchGetItemRequest.', $errorName),
                     ['exception' => $e, 'context' => $context]

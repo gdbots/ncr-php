@@ -7,17 +7,14 @@ use Gdbots\Ncr\IndexQuery;
 use Gdbots\Ncr\IndexQueryResult;
 use Gdbots\Ncr\Ncr;
 use Gdbots\Ncr\NcrCache;
+use Gdbots\Pbj\Message;
 use Gdbots\Pbj\SchemaQName;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
-use Gdbots\Schemas\Ncr\NodeRef;
+use Gdbots\Pbj\WellKnown\NodeRef;
 
 final class MemoizingNcr implements Ncr
 {
-    /** @var Ncr */
-    private $next;
-
-    /** @var NcrCache */
-    private $cache;
+    private Ncr $next;
+    private NcrCache $cache;
 
     /**
      * If true, the NcrCache will be updated when a cache miss occurs.
@@ -28,13 +25,8 @@ final class MemoizingNcr implements Ncr
      *
      * @var bool
      */
-    private $readThrough = false;
+    private bool $readThrough = false;
 
-    /**
-     * @param Ncr      $next
-     * @param NcrCache $cache
-     * @param bool     $readThrough
-     */
     public function __construct(Ncr $next, NcrCache $cache, bool $readThrough = false)
     {
         $this->next = $next;
@@ -42,25 +34,16 @@ final class MemoizingNcr implements Ncr
         $this->readThrough = $readThrough;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function createStorage(SchemaQName $qname, array $context = []): void
     {
         $this->next->createStorage($qname, $context);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function describeStorage(SchemaQName $qname, array $context = []): string
     {
         return $this->next->describeStorage($qname, $context);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function hasNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): bool
     {
         if (!$consistent && $this->cache->hasNode($nodeRef)) {
@@ -70,10 +53,7 @@ final class MemoizingNcr implements Ncr
         return $this->next->hasNode($nodeRef, $consistent, $context);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): Node
+    public function getNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): Message
     {
         if (!$consistent && $this->cache->hasNode($nodeRef)) {
             try {
@@ -91,9 +71,6 @@ final class MemoizingNcr implements Ncr
         return $node;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getNodes(array $nodeRefs, bool $consistent = false, array $context = []): array
     {
         if (empty($nodeRefs)) {
@@ -128,45 +105,30 @@ final class MemoizingNcr implements Ncr
         return $nodes;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function putNode(Node $node, ?string $expectedEtag = null, array $context = []): void
+    public function putNode(Message $node, ?string $expectedEtag = null, array $context = []): void
     {
         $this->next->putNode($node, $expectedEtag, $context);
         $this->cache->addNode($node);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function deleteNode(NodeRef $nodeRef, array $context = []): void
     {
         $this->next->deleteNode($nodeRef, $context);
         $this->cache->removeNode($nodeRef);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function findNodeRefs(IndexQuery $query, array $context = []): IndexQueryResult
     {
         return $this->next->findNodeRefs($query, $context);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function pipeNodes(SchemaQName $qname, callable $receiver, array $context = []): void
+    public function pipeNodes(SchemaQName $qname, array $context = []): \Generator
     {
-        $this->next->pipeNodes($qname, $receiver, $context);
+        return $this->next->pipeNodes($qname, $context);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function pipeNodeRefs(SchemaQName $qname, callable $receiver, array $context = []): void
+    public function pipeNodeRefs(SchemaQName $qname, array $context = []): \Generator
     {
-        $this->next->pipeNodeRefs($qname, $receiver, $context);
+        return $this->next->pipeNodeRefs($qname, $context);
     }
 }

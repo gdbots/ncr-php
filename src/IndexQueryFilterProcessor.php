@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Gdbots\Ncr;
 
 use Gdbots\Ncr\Enum\IndexQueryFilterOperator;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
+use Gdbots\Pbj\Message;
 
 /**
  * Provides in memory processing of IndexQueryFilter objects
@@ -27,7 +27,7 @@ class IndexQueryFilterProcessor
             return $items;
         }
 
-        return array_filter($items, function ($item) use ($filters) {
+        return array_values(array_filter($items, function ($item) use ($filters) {
             foreach ($filters as $filter) {
                 $value = $this->extractValue($item, $filter->getField());
                 if (!$this->valueMatchesFilter($value, $filter)) {
@@ -38,21 +38,22 @@ class IndexQueryFilterProcessor
             }
 
             return true;
-        });
+        }));
     }
 
     /**
      * Extract the value from the item for the given field.
-     * The field name is from @see IndexQueryFilter::getField
      *
-     * @param mixed  $item
+     * @param mixed $item
      * @param string $field
      *
      * @return mixed
+     *
+     * @see IndexQueryFilter::getField
      */
     protected function extractValue($item, string $field)
     {
-        if ($item instanceof Node && $item->has($field)) {
+        if ($item instanceof Message && $item->has($field)) {
             return $item->get($field);
         }
 

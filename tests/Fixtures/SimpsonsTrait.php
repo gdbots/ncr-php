@@ -7,14 +7,14 @@ use Gdbots\Ncr\Enum\IndexQueryFilterOperator;
 use Gdbots\Ncr\IndexQueryFilter;
 use Gdbots\Ncr\Repository\DynamoDb\NodeTable;
 use Gdbots\Pbj\Marshaler\DynamoDb\ItemMarshaler;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
-use Gdbots\Schemas\Ncr\NodeRef;
+use Gdbots\Pbj\Message;
+use Gdbots\Pbj\WellKnown\NodeRef;
 
 // methods to create a small ncr of simpson characters for unit testing
 trait SimpsonsTrait
 {
     /**
-     * @return Node[]
+     * @return Message[]
      */
     protected function getSimpsonsAsNodes(): array
     {
@@ -35,9 +35,6 @@ trait SimpsonsTrait
         return $nodes;
     }
 
-    /**
-     * @return array
-     */
     protected function getSimpsonsAsDynamoDbItems(): array
     {
         $items = [];
@@ -54,9 +51,6 @@ trait SimpsonsTrait
         return $items;
     }
 
-    /**
-     * @return array
-     */
     public function getSimpsonsIndexQueryFilterTests(): array
     {
         return [

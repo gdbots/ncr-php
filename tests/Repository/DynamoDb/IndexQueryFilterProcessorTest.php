@@ -6,7 +6,8 @@ namespace Gdbots\Tests\Ncr\Repository\DynamoDb;
 use Gdbots\Ncr\IndexQueryFilter;
 use Gdbots\Ncr\Repository\DynamoDb\IndexQueryFilterProcessor;
 use Gdbots\Ncr\Repository\DynamoDb\NodeTable;
-use Gdbots\Schemas\Ncr\NodeRef;
+use Gdbots\Pbj\Message;
+use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Tests\Ncr\Fixtures\SimpsonsTrait;
 use PHPUnit\Framework\TestCase;
 
@@ -14,8 +15,7 @@ class IndexQueryFilterProcessorTest extends TestCase
 {
     use SimpsonsTrait;
 
-    /** @var IndexQueryFilterProcessor */
-    protected $processor;
+    protected IndexQueryFilterProcessor $processor;
 
     public function setUp(): void
     {
@@ -42,11 +42,6 @@ class IndexQueryFilterProcessorTest extends TestCase
      */
     protected function getNodeRefs(array $items): array
     {
-        $nodeRefs = [];
-        foreach ($items as $item) {
-            $nodeRefs[] = NodeRef::fromString($item[NodeTable::HASH_KEY_NAME]['S']);
-        }
-
-        return $nodeRefs;
+        return array_map(fn(array $item) => NodeRef::fromString($item[NodeTable::HASH_KEY_NAME]['S']), $items);
     }
 }

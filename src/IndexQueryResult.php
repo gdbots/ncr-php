@@ -3,27 +3,22 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
-use Gdbots\Common\ToArray;
-use Gdbots\Schemas\Ncr\NodeRef;
 
-final class IndexQueryResult implements ToArray, \JsonSerializable, \IteratorAggregate, \Countable
+use Gdbots\Pbj\WellKnown\NodeRef;
+
+final class IndexQueryResult implements \JsonSerializable, \IteratorAggregate, \Countable
 {
-    /** @var IndexQuery */
-    private $query;
+    private IndexQuery $query;
 
     /** @var NodeRef[] */
-    private $nodeRefs;
-
-    /** @var bool */
-    private $hasMore = false;
-
-    /** @var string */
-    private $nextCursor;
+    private array $nodeRefs;
+    private bool $hasMore;
+    private ?string $nextCursor = null;
 
     /**
-     * @param IndexQuery  $query
-     * @param NodeRef[]   $nodeRefs
-     * @param string|null $nextCursor
+     * @param IndexQuery $query
+     * @param NodeRef[]  $nodeRefs
+     * @param string     $nextCursor
      */
     public function __construct(IndexQuery $query, array $nodeRefs = [], ?string $nextCursor = null)
     {
@@ -41,26 +36,17 @@ final class IndexQueryResult implements ToArray, \JsonSerializable, \IteratorAgg
         return $this->nodeRefs;
     }
 
-    /**
-     * @return bool
-     */
     public function hasMore(): bool
     {
         return $this->hasMore;
     }
 
-    /**
-     * @return string|null
-     */
     public function getNextCursor(): ?string
     {
         return $this->nextCursor;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function toArray()
+    public function toArray(): array
     {
         return [
             'query'       => $this->query,
@@ -70,25 +56,16 @@ final class IndexQueryResult implements ToArray, \JsonSerializable, \IteratorAgg
         ];
     }
 
-    /**
-     * @return array
-     */
     public function jsonSerialize()
     {
         return $this->toArray();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getIterator()
     {
         return new \ArrayIterator($this->nodeRefs);
     }
 
-    /**
-     * @return int
-     */
     public function count()
     {
         return count($this->nodeRefs);

@@ -3,27 +3,21 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
-use Gdbots\Common\ToArray;
-use Gdbots\Common\Util\NumberUtils;
 use Gdbots\Pbj\SchemaQName;
+use Gdbots\Pbj\Util\NumberUtil;
 
-final class IndexQuery implements ToArray, \JsonSerializable
+final class IndexQuery implements \JsonSerializable
 {
-    /** @var SchemaQName */
-    private $qname;
-
-    /** @var string */
-    private $alias;
-
-    /** @var string */
-    private $value;
+    private SchemaQName $qname;
+    private string $alias;
+    private string $value;
 
     /**
      * The number of NodeRefs to fetch in this query.
      *
      * @var int
      */
-    private $count = 25;
+    private int $count = 25;
 
     /**
      * When paging/scrolling through results, use this value to
@@ -32,7 +26,7 @@ final class IndexQuery implements ToArray, \JsonSerializable
      *
      * @var string
      */
-    private $cursor;
+    private ?string $cursor = null;
 
     /**
      * When true, the index (if it supports it), will be sorted
@@ -41,7 +35,7 @@ final class IndexQuery implements ToArray, \JsonSerializable
      *
      * @var bool
      */
-    private $sortAsc = true;
+    private bool $sortAsc = true;
 
     /**
      * An array of filters to use when running this query.
@@ -51,7 +45,7 @@ final class IndexQuery implements ToArray, \JsonSerializable
      *
      * @var IndexQueryFilter[]
      */
-    private $filters;
+    private array $filters;
 
     /**
      * An array of fields referenced which are extracted from
@@ -59,14 +53,16 @@ final class IndexQuery implements ToArray, \JsonSerializable
      *
      * @var string[]
      */
-    private $fields = [];
+    private array $fields = [];
 
     /**
+     * IndexQuery constructor.
+     *
      * @param SchemaQName        $qname
      * @param string             $alias
      * @param string             $value
      * @param int                $count
-     * @param string|null        $cursor
+     * @param string             $cursor
      * @param bool               $sortAsc
      * @param IndexQueryFilter[] $filters
      */
@@ -82,7 +78,7 @@ final class IndexQuery implements ToArray, \JsonSerializable
         $this->qname = $qname;
         $this->alias = $alias;
         $this->value = $value;
-        $this->count = NumberUtils::bound($count, 1, 500);
+        $this->count = NumberUtil::bound($count, 1, 500);
         $this->cursor = $cursor;
         $this->sortAsc = $sortAsc;
         $this->filters = $filters;
@@ -92,65 +88,41 @@ final class IndexQuery implements ToArray, \JsonSerializable
         }
     }
 
-    /**
-     * @return SchemaQName
-     */
     public function getQName(): SchemaQName
     {
         return $this->qname;
     }
 
-    /**
-     * @return string
-     */
     public function getAlias(): string
     {
         return $this->alias;
     }
 
-    /**
-     * @return string
-     */
     public function getValue(): string
     {
         return $this->value;
     }
 
-    /**
-     * @return int
-     */
     public function getCount(): int
     {
         return $this->count;
     }
 
-    /**
-     * @return bool
-     */
     public function hasCursor(): bool
     {
         return null !== $this->cursor;
     }
 
-    /**
-     * @return string
-     */
     public function getCursor(): ?string
     {
         return $this->cursor;
     }
 
-    /**
-     * @return bool
-     */
     public function sortAsc(): bool
     {
         return $this->sortAsc;
     }
 
-    /**
-     * @return bool
-     */
     public function hasFilters(): bool
     {
         return empty($this->filters);
@@ -164,31 +136,16 @@ final class IndexQuery implements ToArray, \JsonSerializable
         return $this->filters;
     }
 
-    /**
-     * @return string[]
-     */
     public function getFieldsUsed(): array
     {
         return array_keys($this->fields);
     }
 
-    /**
-     * Return true if the provided field is used in a filter.
-     *
-     * @param string $field
-     *
-     * @return bool
-     */
     public function hasFilterForField(string $field): bool
     {
         return isset($this->fields[$field]);
     }
 
-    /**
-     * @param string $field
-     *
-     * @return array
-     */
     public function getFiltersForField(string $field): array
     {
         $filters = [];
@@ -201,10 +158,7 @@ final class IndexQuery implements ToArray, \JsonSerializable
         return $filters;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function toArray()
+    public function toArray(): array
     {
         return [
             'qname'    => $this->qname->toString(),
@@ -217,9 +171,6 @@ final class IndexQuery implements ToArray, \JsonSerializable
         ];
     }
 
-    /**
-     * @return array
-     */
     public function jsonSerialize()
     {
         return $this->toArray();

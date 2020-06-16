@@ -5,8 +5,8 @@ namespace Gdbots\Tests\Ncr;
 
 use Gdbots\Ncr\IndexQueryFilter;
 use Gdbots\Ncr\IndexQueryFilterProcessor;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
-use Gdbots\Schemas\Ncr\NodeRef;
+use Gdbots\Pbj\Message;
+use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Tests\Ncr\Fixtures\SimpsonsTrait;
 use PHPUnit\Framework\TestCase;
 
@@ -14,8 +14,7 @@ class IndexQueryFilterProcessorTest extends TestCase
 {
     use SimpsonsTrait;
 
-    /** @var IndexQueryFilterProcessor */
-    protected $processor;
+    protected IndexQueryFilterProcessor $processor;
 
     public function setUp(): void
     {
@@ -36,17 +35,12 @@ class IndexQueryFilterProcessorTest extends TestCase
     }
 
     /**
-     * @param Node[] $nodes
+     * @param Message[] $nodes
      *
      * @return NodeRef[]
      */
     protected function getNodeRefs(array $nodes): array
     {
-        $nodeRefs = [];
-        foreach ($nodes as $node) {
-            $nodeRefs[] = NodeRef::fromNode($node);
-        }
-
-        return $nodeRefs;
+        return array_map(fn (Message $node) => $node->generateNodeRef(), $nodes);
     }
 }

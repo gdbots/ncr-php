@@ -6,52 +6,34 @@ namespace Gdbots\Ncr\Repository\DynamoDb;
 use Gdbots\Ncr\Enum\IndexQueryFilterOperator;
 use Gdbots\Ncr\Exception\IndexQueryNotSupported;
 use Gdbots\Ncr\IndexQuery;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
+use Gdbots\Pbj\Message;
 
 abstract class AbstractIndex implements GlobalSecondaryIndex
 {
-    /**
-     * {@inheritdoc}
-     */
     public function getName(): string
     {
         return "{$this->getAlias()}_index";
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getRangeKeyName(): ?string
     {
         return null;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getFilterableAttributes(): array
     {
         return [];
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getProjection(): array
     {
         return [];
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function beforePutItem(array &$item, Node $node): void
+    public function beforePutItem(array &$item, Message $node): void
     {
     }
 
-    /**
-     * {@inheritdoc}
-     */
     final public function createQuery(IndexQuery $query): array
     {
         $filterables = $this->getFilterableAttributes();
@@ -139,12 +121,6 @@ abstract class AbstractIndex implements GlobalSecondaryIndex
         return $params;
     }
 
-    /**
-     * @param string $attributeType
-     * @param mixed  $value
-     *
-     * @return mixed
-     */
     private function marshalValue(string $attributeType, $value)
     {
         switch ($attributeType) {
@@ -156,17 +132,9 @@ abstract class AbstractIndex implements GlobalSecondaryIndex
         }
     }
 
-    /**
-     * @param IndexQueryFilterOperator $operator
-     *
-     * @return string
-     */
     private function getDynamoDbOperator(IndexQueryFilterOperator $operator): string
     {
         switch ($operator->getValue()) {
-            case IndexQueryFilterOperator::EQUAL_TO:
-                return '=';
-
             case IndexQueryFilterOperator::NOT_EQUAL_TO:
                 return '<>';
 
@@ -182,6 +150,7 @@ abstract class AbstractIndex implements GlobalSecondaryIndex
             case IndexQueryFilterOperator::LESS_THAN_OR_EQUAL_TO:
                 return '<=';
 
+            case IndexQueryFilterOperator::EQUAL_TO:
             default:
                 return '=';
         }

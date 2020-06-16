@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr\Repository;
 
-use Gdbots\Common\Util\NumberUtils;
 use Gdbots\Ncr\Enum\IndexQueryFilterOperator;
 use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Ncr\Exception\OptimisticCheckFailed;
@@ -12,37 +11,35 @@ use Gdbots\Ncr\IndexQueryFilter;
 use Gdbots\Ncr\IndexQueryFilterProcessor;
 use Gdbots\Ncr\IndexQueryResult;
 use Gdbots\Ncr\Ncr;
+use Gdbots\Pbj\Message;
 use Gdbots\Pbj\SchemaQName;
 use Gdbots\Pbj\Serializer\PhpArraySerializer;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
-use Gdbots\Schemas\Ncr\NodeRef;
+use Gdbots\Pbj\Util\NumberUtil;
+use Gdbots\Pbj\WellKnown\NodeRef;
 
 /**
  * NCR which runs entirely in memory, typically used for unit tests.
  */
 final class InMemoryNcr implements Ncr
 {
-    /** @var PhpArraySerializer */
-    private $serializer;
-
-    /** @var IndexQueryFilterProcessor */
-    private $filterProcessor;
+    private ?PhpArraySerializer $serializer = null;
+    private ?IndexQueryFilterProcessor $filterProcessor = null;
 
     /**
      * Array of nodes keyed by their NodeRef.
      *
-     * @var Node[]
+     * @var Message[]
      */
-    private $nodes = [];
+    private array $nodes = [];
 
     /**
-     * @param Node[]|array $nodes
+     * @param Message[]|array $nodes
      */
     public function __construct(array $nodes = [])
     {
         foreach ($nodes as $node) {
             try {
-                if (!$node instanceof Node) {
+                if (!$node instanceof Message) {
                     $node = $this->createNodeFromArray($node);
                 }
 
@@ -53,16 +50,10 @@ final class InMemoryNcr implements Ncr
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function createStorage(SchemaQName $qname, array $context = []): void
     {
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function describeStorage(SchemaQName $qname, array $context = []): string
     {
         $count = count($this->nodes);
@@ -77,18 +68,12 @@ NodeRefs:
 TEXT;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function hasNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): bool
     {
         return isset($this->nodes[$nodeRef->toString()]);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): Node
+    public function getNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): Message
     {
         if (!$this->hasNode($nodeRef)) {
             throw NodeNotFound::forNodeRef($nodeRef);
@@ -102,15 +87,11 @@ TEXT;
         return $node;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getNodes(array $nodeRefs, bool $consistent = false, array $context = []): array
     {
         $keys = array_map('strval', $nodeRefs);
         $nodes = array_intersect_key($this->nodes, array_flip($keys));
 
-        /** @var Node[] $nodes */
         foreach ($nodes as $nodeRef => $node) {
             if ($node->isFrozen()) {
                 $nodes[$nodeRef] = $this->nodes[$nodeRef] = clone $node;
@@ -120,10 +101,7 @@ TEXT;
         return $nodes;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function putNode(Node $node, ?string $expectedEtag = null, array $context = []): void
+    public function putNode(Message $node, ?string $expectedEtag = null, array $context = []): void
     {
         $nodeRef = NodeRef::fromNode($node);
 
@@ -144,17 +122,11 @@ TEXT;
         $this->nodes[$nodeRef->toString()] = $node->freeze();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function deleteNode(NodeRef $nodeRef, array $context = []): void
     {
         unset($this->nodes[$nodeRef->toString()]);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function findNodeRefs(IndexQuery $query, array $context = []): IndexQueryResult
     {
         if (null === $this->filterProcessor) {
@@ -182,7 +154,7 @@ TEXT;
             krsort($nodeRefs);
         }
 
-        $offset = NumberUtils::bound($query->getCursor(), 0, $count);
+        $offset = NumberUtil::bound((int)$query->getCursor(), 0, $count);
         $nodeRefs = array_slice(array_values($nodeRefs), $offset, $query->getCount());
         $nextCursor = $offset + $query->getCount();
         $nextCursor = $nextCursor >= $count ? null : (string)$nextCursor;
@@ -190,10 +162,7 @@ TEXT;
         return new IndexQueryResult($query, $nodeRefs, $nextCursor);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function pipeNodes(SchemaQName $qname, callable $receiver, array $context = []): void
+    public function pipeNodes(SchemaQName $qname, array $context = []): \Generator
     {
         foreach ($this->nodes as $nodeRef => $node) {
             if ($node->isFrozen()) {
@@ -204,37 +173,27 @@ TEXT;
                 continue;
             }
 
-            $receiver($this->nodes[$nodeRef]);
+            yield $this->nodes[$nodeRef];
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function pipeNodeRefs(SchemaQName $qname, callable $receiver, array $context = []): void
+    public function pipeNodeRefs(SchemaQName $qname, array $context = []): \Generator
     {
         foreach ($this->nodes as $nodeRef => $node) {
             if ($node::schema()->getQName() !== $qname) {
                 continue;
             }
 
-            $receiver(NodeRef::fromString($nodeRef));
+            yield NodeRef::fromString($nodeRef);
         }
     }
 
-    /**
-     * @param array $data
-     *
-     * @return Node
-     */
-    private function createNodeFromArray(array $data = []): Node
+    private function createNodeFromArray(array $data = []): Message
     {
         if (null === $this->serializer) {
             $this->serializer = new PhpArraySerializer();
         }
 
-        /** @var Node $node */
-        $node = $this->serializer->deserialize($data);
-        return $node;
+        return $this->serializer->deserialize($data);
     }
 }

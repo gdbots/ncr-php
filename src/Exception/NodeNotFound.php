@@ -3,30 +3,18 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr\Exception;
 
-use Gdbots\Pbj\Exception\HasEndUserMessage;
-use Gdbots\Schemas\Ncr\NodeRef;
+use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 
-final class NodeNotFound extends \RuntimeException implements GdbotsNcrException, HasEndUserMessage
+final class NodeNotFound extends \RuntimeException implements GdbotsNcrException
 {
-    /** @var NodeRef */
-    protected $nodeRef;
+    private ?NodeRef $nodeRef = null;
 
-    /**
-     * @param string     $message
-     * @param \Throwable $previous
-     */
     public function __construct(string $message = '', ?\Throwable $previous = null)
     {
         parent::__construct($message, Code::NOT_FOUND, $previous);
     }
 
-    /**
-     * @param NodeRef    $nodeRef
-     * @param \Throwable $previous
-     *
-     * @return NodeNotFound
-     */
     public static function forNodeRef(NodeRef $nodeRef, ?\Throwable $previous = null): self
     {
         $e = new self("The node ({$nodeRef->toString()}) could not be found.", $previous);
@@ -34,46 +22,17 @@ final class NodeNotFound extends \RuntimeException implements GdbotsNcrException
         return $e;
     }
 
-    /**
-     * @param string     $index
-     * @param string     $value
-     * @param \Throwable $previous
-     *
-     * @return NodeNotFound
-     */
     public static function forIndex(string $index, string $value, ?\Throwable $previous = null): self
     {
         return new self("The node could not be found by ({$index}:{$value}).", $previous);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getEndUserMessage()
-    {
-        return $this->getMessage();
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getEndUserHelpLink()
-    {
-        return null;
-    }
-
-    /**
-     * @return bool
-     */
     public function hasNodeRef(): bool
     {
         return null !== $this->nodeRef;
     }
 
-    /**
-     * @return NodeRef
-     */
-    public function getNodeRef(): NodeRef
+    public function getNodeRef(): ?NodeRef
     {
         return $this->nodeRef;
     }

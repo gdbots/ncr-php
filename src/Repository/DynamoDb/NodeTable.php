@@ -5,11 +5,12 @@ namespace Gdbots\Ncr\Repository\DynamoDb;
 
 use Aws\DynamoDb\DynamoDbClient;
 use Aws\DynamoDb\Exception\DynamoDbException;
-use Gdbots\Common\Util\ClassUtils;
 use Gdbots\Ncr\Exception\RepositoryOperationFailed;
-use Gdbots\Pbjx\Util\ShardUtils;
-use Gdbots\Schemas\Ncr\Mixin\Indexed\Indexed;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
+use Gdbots\Pbj\Message;
+use Gdbots\Pbj\Util\ClassUtil;
+use Gdbots\Pbjx\Util\ShardUtil;
+use Gdbots\Schemas\Ncr\Mixin\Indexed\IndexedV1Mixin;
+use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 
 /**
@@ -29,7 +30,7 @@ class NodeTable
     const INDEXED_KEY_NAME = '__indexed';
 
     /** @var GlobalSecondaryIndex[] */
-    private $gsi;
+    private ?array $gsi = null;
 
     /**
      * The tables are constructed with "new $class" in the
@@ -68,12 +69,11 @@ class NodeTable
 
             $indexName = $gsi->getName();
             $indexes[$indexName] = [
-                'IndexName'             => $indexName,
-                'KeySchema'             => [
+                'IndexName'  => $indexName,
+                'KeySchema'  => [
                     ['AttributeName' => $gsi->getHashKeyName(), 'KeyType' => 'HASH'],
                 ],
-                'Projection'            => $gsi->getProjection() ?: ['ProjectionType' => 'KEYS_ONLY'],
-                'ProvisionedThroughput' => $this->getDefaultProvisionedThroughput(),
+                'Projection' => $gsi->getProjection() ?: ['ProjectionType' => 'KEYS_ONLY'],
             ];
 
             if ($gsi->getRangeKeyName()) {
@@ -97,7 +97,7 @@ class NodeTable
                     'StreamEnabled'  => true,
                     'StreamViewType' => 'NEW_AND_OLD_IMAGES',
                 ],
-                'ProvisionedThroughput'  => $this->getDefaultProvisionedThroughput(),
+                'BillingMode'            => 'PAY_PER_REQUEST',
             ]);
 
             $client->waitUntil('TableExists', ['TableName' => $tableName]);
@@ -105,7 +105,7 @@ class NodeTable
             throw new RepositoryOperationFailed(
                 sprintf(
                     '%s::Unable to create table [%s] in region [%s].',
-                    ClassUtils::getShortName($this),
+                    ClassUtil::getShortName($this),
                     $tableName,
                     $client->getRegion()
                 ),
@@ -134,7 +134,7 @@ class NodeTable
             throw new RepositoryOperationFailed(
                 sprintf(
                     '%s::Unable to describe table [%s] in region [%s].',
-                    ClassUtils::getShortName($this),
+                    ClassUtil::getShortName($this),
                     $tableName,
                     $client->getRegion()
                 ),
@@ -147,11 +147,11 @@ class NodeTable
     /**
      * Returns true if this NodeTable has the given index.
      *
-     * @see GlobalSecondaryIndex::getAlias()
-     *
      * @param string $alias
      *
      * @return bool
+     *
+     * @see GlobalSecondaryIndex::getAlias()
      */
     final public function hasIndex(string $alias): bool
     {
@@ -164,7 +164,7 @@ class NodeTable
      *
      * @param string $alias
      *
-     * @return GlobalSecondaryIndex|null
+     * @return GlobalSecondaryIndex
      */
     final public function getIndex(string $alias): ?GlobalSecondaryIndex
     {
@@ -175,14 +175,14 @@ class NodeTable
     /**
      * Calls all of the indexes on this table "beforePutItem" methods.
      *
-     * @param array $item
-     * @param Node  $node
+     * @param array   $item
+     * @param Message $node
      */
-    final public function beforePutItem(array &$item, Node $node): void
+    final public function beforePutItem(array &$item, Message $node): void
     {
         $this->loadIndexes();
         $this->addShardAttributes($item, $node);
-        if ($node instanceof Indexed) {
+        if ($node::schema()->hasMixin(IndexedV1Mixin::SCHEMA_CURIE)) {
             $item[NodeTable::INDEXED_KEY_NAME] = ['BOOL' => true];
         }
 
@@ -198,10 +198,10 @@ class NodeTable
      * Typically used to create a composite index, shards for distributed
      * parallel scans (not generally for GSI).
      *
-     * @param array $item
-     * @param Node  $node
+     * @param array   $item
+     * @param Message $node
      */
-    protected function doBeforePutItem(array &$item, Node $node): void
+    protected function doBeforePutItem(array &$item, Message $node): void
     {
         // override to customize
     }
@@ -214,13 +214,13 @@ class NodeTable
      * For example, parallel scan 16 separate processes with "__s16"
      * having a value of 0-15.
      *
-     * @param array $item
-     * @param Node  $node
+     * @param array   $item
+     * @param Message $node
      */
-    protected function addShardAttributes(array &$item, Node $node): void
+    protected function addShardAttributes(array &$item, Message $node): void
     {
         foreach ([16, 32, 64, 128, 256] as $shard) {
-            $item["__s{$shard}"] = ['N' => (string)ShardUtils::determineShard($item['_id']['S'], $shard)];
+            $item["__s{$shard}"] = ['N' => (string)ShardUtil::determineShard($item[NodeV1Mixin::_ID_FIELD]['S'], $shard)];
         }
     }
 
@@ -232,16 +232,6 @@ class NodeTable
         return [
             new SlugIndex(),
         ];
-    }
-
-    /**
-     * When creating tables and GSI this provisioning will be used.
-     *
-     * @return array
-     */
-    protected function getDefaultProvisionedThroughput(): array
-    {
-        return ['ReadCapacityUnits' => 2, 'WriteCapacityUnits' => 2];
     }
 
     /**

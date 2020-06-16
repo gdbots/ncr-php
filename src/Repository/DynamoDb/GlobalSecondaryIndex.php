@@ -4,13 +4,12 @@ declare(strict_types=1);
 namespace Gdbots\Ncr\Repository\DynamoDb;
 
 use Gdbots\Ncr\IndexQuery;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
+use Gdbots\Pbj\Message;
 
 interface GlobalSecondaryIndex
 {
     /**
      * Returns the alias of the index that can be used when executing an IndexQuery.
-     * @see IndexQuery
      *
      * This should be a friendly name, all lowercase, no special characters
      * and NOT be platform/provider specific.
@@ -18,6 +17,8 @@ interface GlobalSecondaryIndex
      * For example, "slug", "email", "publish_date".
      *
      * @return string
+     *
+     * @see IndexQuery
      */
     public function getAlias(): string;
 
@@ -40,7 +41,7 @@ interface GlobalSecondaryIndex
      * Returns the AttributeName for the KeySchema KeyType "RANGE".
      * This is optional.
      *
-     * @return string|null
+     * @return string
      */
     public function getRangeKeyName(): ?string;
 
@@ -48,14 +49,14 @@ interface GlobalSecondaryIndex
      * Returns attributes used in the KeySchema for a GSI as they must also be defined
      * when creating the table.
      *
-     * @link http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_CreateTable.html#DDB-CreateTable-request-AttributeDefinitions
+     * @link https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_CreateTable.html#DDB-CreateTable-request-AttributeDefinitions
      *
      * @return array
      */
     public function getKeyAttributes(): array;
 
     /**
-     * Returns attributes that can be used in @see IndexQueryFilter.  The name of the
+     * Returns attributes that can be used in the IndexQueryFilter. The name of the
      * field used in the IndexQueryFilter corresponds to the "alias_name".
      *
      * Expected format:
@@ -64,6 +65,8 @@ interface GlobalSecondaryIndex
      *  ]
      *
      * @return array
+     *
+     * @see IndexQueryFilter
      */
     public function getFilterableAttributes(): array;
 
@@ -71,7 +74,7 @@ interface GlobalSecondaryIndex
      * Return the configuration for the GSI projection.
      *
      * For details on the format of the parameters:
-     * @link http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Projection.html
+     * @link https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Projection.html
      *
      * @return array
      */
@@ -84,10 +87,10 @@ interface GlobalSecondaryIndex
      *
      * For example, not setting the index attribute if the node is not of a certain status.
      *
-     * @param array $item
-     * @param Node  $node
+     * @param array   $item
+     * @param Message $node
      */
-    public function beforePutItem(array &$item, Node $node): void;
+    public function beforePutItem(array &$item, Message $node): void;
 
     /**
      * Converts the IndexQuery into the parameters needed to perform a DynamoDb query.
