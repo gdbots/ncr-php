@@ -17,7 +17,7 @@ final class IndexQuery implements \JsonSerializable
      *
      * @var int
      */
-    private int $count = 25;
+    private int $count;
 
     /**
      * When paging/scrolling through results, use this value to
@@ -26,7 +26,7 @@ final class IndexQuery implements \JsonSerializable
      *
      * @var string
      */
-    private ?string $cursor = null;
+    private ?string $cursor;
 
     /**
      * When true, the index (if it supports it), will be sorted
@@ -35,7 +35,7 @@ final class IndexQuery implements \JsonSerializable
      *
      * @var bool
      */
-    private bool $sortAsc = true;
+    private bool $sortAsc;
 
     /**
      * An array of filters to use when running this query.

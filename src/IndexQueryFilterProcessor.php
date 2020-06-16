@@ -41,16 +41,6 @@ class IndexQueryFilterProcessor
         }));
     }
 
-    /**
-     * Extract the value from the item for the given field.
-     *
-     * @param mixed $item
-     * @param string $field
-     *
-     * @return mixed
-     *
-     * @see IndexQueryFilter::getField
-     */
     protected function extractValue($item, string $field)
     {
         if ($item instanceof Message && $item->has($field)) {
@@ -60,14 +50,6 @@ class IndexQueryFilterProcessor
         return null;
     }
 
-    /**
-     * Returns true if the provided value matches the filter.
-     *
-     * @param mixed            $value
-     * @param IndexQueryFilter $filter
-     *
-     * @return bool
-     */
     protected function valueMatchesFilter($value, IndexQueryFilter $filter): bool
     {
         switch ($filter->getOperator()) {

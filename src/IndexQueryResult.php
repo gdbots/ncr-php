@@ -13,7 +13,7 @@ final class IndexQueryResult implements \JsonSerializable, \IteratorAggregate, \
     /** @var NodeRef[] */
     private array $nodeRefs;
     private bool $hasMore;
-    private ?string $nextCursor = null;
+    private ?string $nextCursor;
 
     /**
      * @param IndexQuery $query
