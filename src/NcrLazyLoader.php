@@ -3,32 +3,22 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
-use Gdbots\Common\Util\ArrayUtils;
-use Gdbots\Common\Util\ClassUtils;
 use Gdbots\Pbj\Message;
-use Gdbots\Pbj\MessageRef;
+use Gdbots\Pbj\Util\ArrayUtil;
+use Gdbots\Pbj\Util\ClassUtil;
+use Gdbots\Pbj\WellKnown\MessageRef;
+use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Pbjx\Pbjx;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
-use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchRequestV1;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 final class NcrLazyLoader
 {
-    /** @var Pbjx */
-    private $pbjx;
+    private Pbjx $pbjx;
+    private LoggerInterface $logger;
+    private ?GetNodeBatchRequestV1 $getNodeBatchRequest = null;
 
-    /** @var LoggerInterface */
-    private $logger;
-
-    /** @var GetNodeBatchRequestV1 */
-    private $getNodeBatchRequest;
-
-    /**
-     * @param Pbjx            $pbjx
-     * @param LoggerInterface $logger
-     */
     public function __construct(Pbjx $pbjx, ?LoggerInterface $logger = null)
     {
         $this->pbjx = $pbjx;
@@ -48,7 +38,7 @@ final class NcrLazyLoader
             return false;
         }
 
-        return $this->getNodeBatchRequest->isInSet('node_refs', $nodeRef);
+        return $this->getNodeBatchRequest->isInSet(GetNodeBatchRequestV1::NODE_REFS_FIELD, $nodeRef);
     }
 
     /**
@@ -62,7 +52,7 @@ final class NcrLazyLoader
             return [];
         }
 
-        return $this->getNodeBatchRequest->get('node_refs', []);
+        return $this->getNodeBatchRequest->get(GetNodeBatchRequestV1::NODE_REFS_FIELD, []);
     }
 
     /**
@@ -78,7 +68,7 @@ final class NcrLazyLoader
     {
         $nodeRefs = [];
 
-        if (!ArrayUtils::isAssoc($paths)) {
+        if (!ArrayUtil::isAssoc($paths)) {
             $paths = array_flip($paths);
         }
 
@@ -98,8 +88,8 @@ final class NcrLazyLoader
                         $nodeRefs[] = $value;
                     } elseif ($value instanceof MessageRef) {
                         $nodeRefs[] = NodeRef::fromMessageRef($value);
-                    } elseif ($value instanceof Node) {
-                        $nodeRefs[] = NodeRef::fromNode($value);
+                    } elseif ($value instanceof Message) {
+                        $nodeRefs[] = $value->generateNodeRef();
                     } else {
                         $nodeRefs[] = NodeRef::fromString("{$qname}:{$value}");
                     }
@@ -127,7 +117,7 @@ final class NcrLazyLoader
             $this->getNodeBatchRequest = GetNodeBatchRequestV1::create();
         }
 
-        $this->getNodeBatchRequest->addToSet('node_refs', $nodeRefs);
+        $this->getNodeBatchRequest->addToSet(GetNodeBatchRequestV1::NODE_REFS_FIELD, $nodeRefs);
     }
 
     /**
@@ -141,7 +131,7 @@ final class NcrLazyLoader
             return;
         }
 
-        $this->getNodeBatchRequest->removeFromSet('node_refs', $nodeRefs);
+        $this->getNodeBatchRequest->removeFromSet(GetNodeBatchRequestV1::NODE_REFS_FIELD, $nodeRefs);
     }
 
     /**
@@ -154,7 +144,7 @@ final class NcrLazyLoader
 
     /**
      * Processes the deferrered request which should populate the
-     * NcrCache once complete.  At least for any nodes that exist.
+     * NcrCache once complete. At least for any nodes that exist.
      */
     public function flush(): void
     {
@@ -162,18 +152,18 @@ final class NcrLazyLoader
             return;
         }
 
-        if (!$this->getNodeBatchRequest->has('node_refs')) {
+        if (!$this->getNodeBatchRequest->has(GetNodeBatchRequestV1::NODE_REFS_FIELD)) {
             return;
         }
 
         try {
             $request = $this->getNodeBatchRequest;
             $this->getNodeBatchRequest = null;
-            $request->set('ctx_causator_ref', $request->generateMessageRef());
+            $request->set($request::CTX_CAUSATOR_REF_FIELD, $request->generateMessageRef());
             $this->pbjx->request($request);
         } catch (\Throwable $e) {
             $this->logger->error(
-                sprintf('%s::NcrLazyLoader::flush() could not complete.', ClassUtils::getShortName($e)),
+                sprintf('%s::NcrLazyLoader::flush() could not complete.', ClassUtil::getShortName($e)),
                 ['exception' => $e, 'pbj' => $request->toArray()]
             );
         }

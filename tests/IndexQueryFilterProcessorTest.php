@@ -28,7 +28,7 @@ class IndexQueryFilterProcessorTest extends TestCase
      * @param IndexQueryFilter[] $filters
      * @param NodeRef[]          $expected
      */
-    public function testFilters(string $name, array $filters, array $expected)
+    public function testFilters(string $name, array $filters, array $expected): void
     {
         $nodes = $this->processor->filter($this->getSimpsonsAsNodes(), $filters);
         $this->assertEquals($expected, $this->getNodeRefs($nodes), "Test filter [{$name}] failed.");
