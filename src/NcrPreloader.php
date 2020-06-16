@@ -3,12 +3,11 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
-use Gdbots\Common\Util\ArrayUtils;
 use Gdbots\Pbj\Message;
-use Gdbots\Pbj\MessageRef;
+use Gdbots\Pbj\Util\ArrayUtil;
+use Gdbots\Pbj\WellKnown\MessageRef;
+use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
-use Gdbots\Schemas\Ncr\NodeRef;
 
 /**
  * NcrPreloader provides a way to inform the current request
@@ -26,12 +25,8 @@ use Gdbots\Schemas\Ncr\NodeRef;
 final class NcrPreloader
 {
     const DEFAULT_NAMESPACE = 'default';
-
-    /** @var NcrLazyLoader */
-    private $lazyLoader;
-
-    /** @var NcrCache */
-    private $ncrCache;
+    private NcrLazyLoader $lazyLoader;
+    private NcrCache $ncrCache;
 
     /**
      * Array of node refs keyed within a namespace.
@@ -39,12 +34,8 @@ final class NcrPreloader
      *
      * @var array
      */
-    private $nodeRefs = [];
+    private array $nodeRefs = [];
 
-    /**
-     * @param NcrLazyLoader $lazyLoader
-     * @param NcrCache      $ncrCache
-     */
     public function __construct(NcrLazyLoader $lazyLoader, NcrCache $ncrCache)
     {
         $this->lazyLoader = $lazyLoader;
@@ -52,10 +43,10 @@ final class NcrPreloader
     }
 
     /**
-     * @param callable $filter - A function with signature "func(Node $node, NodeRef $nodeRef): bool"
+     * @param callable $filter - A function with signature "func(Message $node, NodeRef $nodeRef): bool"
      * @param string   $namespace
      *
-     * @return Node[]
+     * @return Message[]
      */
     public function getNodes(?callable $filter = null, string $namespace = self::DEFAULT_NAMESPACE): array
     {
@@ -79,22 +70,16 @@ final class NcrPreloader
     /**
      * @param string $namespace
      *
-     * @return Node[]
+     * @return Message[]
      */
     public function getPublishedNodes(string $namespace = self::DEFAULT_NAMESPACE): array
     {
         $published = NodeStatus::PUBLISHED();
-        return $this->getNodes(function (Node $node) use ($published) {
+        return $this->getNodes(function (Message $node) use ($published) {
             return $published->equals($node->get('status'));
         }, $namespace);
     }
 
-    /**
-     * @param NodeRef $nodeRef
-     * @param string  $namespace
-     *
-     * @return bool
-     */
     public function hasNodeRef(NodeRef $nodeRef, string $namespace = self::DEFAULT_NAMESPACE): bool
     {
         if (!isset($this->nodeRefs[$namespace])) {
@@ -114,10 +99,6 @@ final class NcrPreloader
         return array_values($this->nodeRefs[$namespace] ?? []);
     }
 
-    /**
-     * @param NodeRef $nodeRef
-     * @param string  $namespace
-     */
     public function addNodeRef(NodeRef $nodeRef, string $namespace = self::DEFAULT_NAMESPACE): void
     {
         if (!$this->ncrCache->hasNode($nodeRef)) {
@@ -156,7 +137,7 @@ final class NcrPreloader
     {
         $nodeRefs = [];
 
-        if (!ArrayUtils::isAssoc($paths)) {
+        if (!ArrayUtil::isAssoc($paths)) {
             $paths = array_flip($paths);
         }
 
@@ -176,8 +157,8 @@ final class NcrPreloader
                         $nodeRefs[] = $value;
                     } elseif ($value instanceof MessageRef) {
                         $nodeRefs[] = NodeRef::fromMessageRef($value);
-                    } elseif ($value instanceof Node) {
-                        $nodeRefs[] = NodeRef::fromNode($value);
+                    } elseif ($value instanceof Message) {
+                        $nodeRefs[] = $value->generateNodeRef();
                     } else {
                         $nodeRefs[] = NodeRef::fromString("{$qname}:{$value}");
                     }
@@ -188,10 +169,6 @@ final class NcrPreloader
         $this->addNodeRefs($nodeRefs, $namespace);
     }
 
-    /**
-     * @param NodeRef $nodeRef
-     * @param string  $namespace
-     */
     public function removeNodeRef(NodeRef $nodeRef, string $namespace = self::DEFAULT_NAMESPACE): void
     {
         if (!isset($this->nodeRefs[$namespace])) {
