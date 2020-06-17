@@ -25,7 +25,7 @@ final class MemoizingNcr implements Ncr
      *
      * @var bool
      */
-    private bool $readThrough = false;
+    private bool $readThrough;
 
     public function __construct(Ncr $next, NcrCache $cache, bool $readThrough = false)
     {

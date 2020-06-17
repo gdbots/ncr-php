@@ -26,7 +26,7 @@ class Psr6Ncr implements Ncr
      *
      * @var bool
      */
-    private bool $readThrough = true;
+    private bool $readThrough;
 
     public function __construct(Ncr $next, CacheItemPoolInterface $cache, bool $readThrough = true)
     {
