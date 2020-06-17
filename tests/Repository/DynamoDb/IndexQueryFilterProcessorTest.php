@@ -42,6 +42,6 @@ class IndexQueryFilterProcessorTest extends TestCase
      */
     protected function getNodeRefs(array $items): array
     {
-        return array_map(fn(array $item) => NodeRef::fromString($item[NodeTable::HASH_KEY_NAME]['S']), $items);
+        return array_values(array_map(fn(array $item) => NodeRef::fromString($item[NodeTable::HASH_KEY_NAME]['S']), $items));
     }
 }

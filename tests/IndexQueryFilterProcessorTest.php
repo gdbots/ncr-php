@@ -41,6 +41,6 @@ class IndexQueryFilterProcessorTest extends TestCase
      */
     protected function getNodeRefs(array $nodes): array
     {
-        return array_map(fn (Message $node) => $node->generateNodeRef(), $nodes);
+        return array_values(array_map(fn (Message $node) => $node->generateNodeRef(), $nodes));
     }
 }

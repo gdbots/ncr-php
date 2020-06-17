@@ -9,32 +9,21 @@ use Gdbots\Ncr\NcrCache;
 use Gdbots\Ncr\NcrLazyLoader;
 use Gdbots\Ncr\Repository\InMemoryNcr;
 use Gdbots\Ncr\Repository\MemoizingNcr;
+use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Pbjx\RegisteringServiceLocator;
 use Gdbots\Pbjx\SimplePbjx;
-use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchRequestV1;
 use PHPUnit\Framework\TestCase;
 
 class MemoizingNcrTest extends TestCase
 {
-    /** @var RegisteringServiceLocator */
-    protected $locator;
-
-    /** @var Pbjx */
-    protected $pbjx;
-
-    /** @var NcrLazyLoader */
-    protected $ncrLazyLoader;
-
-    /** @var NcrCache */
-    protected $ncrCache;
-
-    /** @var InMemoryNcr */
-    protected $inMemoryNcr;
-
-    /** @var MemoizingNcr */
-    protected $ncr;
+    protected RegisteringServiceLocator $locator;
+    protected Pbjx $pbjx;
+    protected NcrLazyLoader $ncrLazyLoader;
+    protected NcrCache $ncrCache;
+    protected InMemoryNcr $inMemoryNcr;
+    protected MemoizingNcr $ncr;
 
     public function setUp(): void
     {
@@ -46,7 +35,7 @@ class MemoizingNcrTest extends TestCase
         $this->ncr = new MemoizingNcr($this->inMemoryNcr, $this->ncrCache, true);
     }
 
-    public function testGetNode()
+    public function testGetNode(): void
     {
         $node = UserV1::create();
         $nodeRef = NodeRef::fromNode($node);
@@ -59,7 +48,7 @@ class MemoizingNcrTest extends TestCase
         $this->assertTrue($this->ncr->getNode($nodeRef)->equals($node));
     }
 
-    public function testPutNode()
+    public function testPutNode(): void
     {
         $node = UserV1::create();
         $nodeRef = NodeRef::fromNode($node);
@@ -70,7 +59,7 @@ class MemoizingNcrTest extends TestCase
         $this->assertTrue($this->ncr->getNode($nodeRef)->equals($node));
     }
 
-    public function testGetNodes()
+    public function testGetNodes(): void
     {
         $node1 = UserV1::create();
         $node2 = UserV1::create();
@@ -89,7 +78,7 @@ class MemoizingNcrTest extends TestCase
         $this->assertArrayHasKey($nodeRef2->toString(), $nodes);
     }
 
-    public function testGetNodesFromMemoizerOnly()
+    public function testGetNodesFromMemoizerOnly(): void
     {
         $node1 = UserV1::create();
         $node2 = UserV1::create();
@@ -123,7 +112,7 @@ class MemoizingNcrTest extends TestCase
         $this->assertTrue($this->ncrCache->hasNode($nodeRef2));
     }
 
-    public function testDeleteNode()
+    public function testDeleteNode(): void
     {
         $node = UserV1::create();
         $nodeRef = NodeRef::fromNode($node);
@@ -136,7 +125,7 @@ class MemoizingNcrTest extends TestCase
         $this->assertFalse($this->ncr->hasNode($nodeRef));
     }
 
-    public function testLazyLoad()
+    public function testLazyLoad(): void
     {
         $expectedNode = UserV1::create();
         $nodeRef = NodeRef::fromNode($expectedNode);

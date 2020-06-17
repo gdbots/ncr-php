@@ -27,7 +27,7 @@ class IndexQueryFilterProcessor
             return $items;
         }
 
-        return array_values(array_filter($items, function ($item) use ($filters) {
+        return array_filter($items, function ($item) use ($filters) {
             foreach ($filters as $filter) {
                 $value = $this->extractValue($item, $filter->getField());
                 if (!$this->valueMatchesFilter($value, $filter)) {
@@ -38,7 +38,7 @@ class IndexQueryFilterProcessor
             }
 
             return true;
-        }));
+        });
     }
 
     protected function extractValue($item, string $field)
