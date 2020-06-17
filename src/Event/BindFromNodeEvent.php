@@ -5,34 +5,22 @@ namespace Gdbots\Ncr\Event;
 
 use Gdbots\Pbj\Message;
 use Gdbots\Pbjx\Event\PbjxEvent;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
 
 class BindFromNodeEvent extends PbjxEvent
 {
-    /** @var Node */
-    protected $node;
+    protected Message $node;
 
-    /**
-     * @param Message $message
-     * @param Node    $node
-     */
-    public function __construct(Message $message, Node $node)
+    public function __construct(Message $message, Message $node)
     {
         parent::__construct($message);
         $this->node = $node;
     }
 
-    /**
-     * @return Node
-     */
-    public function getNode(): Node
+    public function getNode(): Message
     {
         return $this->node;
     }
 
-    /**
-     * @return bool
-     */
     public function supportsRecursion(): bool
     {
         return false;
