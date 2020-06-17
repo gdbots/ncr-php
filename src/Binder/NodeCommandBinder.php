@@ -5,74 +5,73 @@ namespace Gdbots\Ncr\Binder;
 
 use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Ncr\Exception\OptimisticCheckFailed;
-use Gdbots\Ncr\PbjxHelperTrait;
 use Gdbots\Pbj\Assertion;
+use Gdbots\Pbj\Message;
+use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Pbjx\DependencyInjection\PbjxBinder;
 use Gdbots\Pbjx\Event\PbjxEvent;
 use Gdbots\Pbjx\EventSubscriber;
 use Gdbots\Pbjx\Exception\RequestHandlingFailed;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
-use Gdbots\Schemas\Ncr\NodeRef;
+use Gdbots\Schemas\Ncr\Command\RenameNodeV1;
+use Gdbots\Schemas\Ncr\Command\UpdateNodeV1;
+use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
+use Gdbots\Schemas\Ncr\Mixin\RenameNode\RenameNodeV1Mixin;
+use Gdbots\Schemas\Ncr\Mixin\Sluggable\SluggableV1Mixin;
+use Gdbots\Schemas\Ncr\Mixin\UpdateNode\UpdateNodeV1Mixin;
+use Gdbots\Schemas\Ncr\Request\GetNodeRequestV1;
+use Gdbots\Schemas\Ncr\Request\GetNodeResponseV1;
 use Gdbots\Schemas\Pbjx\Enum\Code;
-use Gdbots\Schemas\Pbjx\Mixin\Command\Command;
 
 class NodeCommandBinder implements EventSubscriber, PbjxBinder
 {
-    use PbjxHelperTrait;
+    public static function getSubscribedEvents()
+    {
+        return [
+            RenameNodeV1::SCHEMA_CURIE . '.bind'      => 'bindRenameNode',
+            UpdateNodeV1::SCHEMA_CURIE . '.bind'      => 'bindUpdateNode',
+            // deprecated mixins, will be removed in 3.x
+            RenameNodeV1Mixin::SCHEMA_CURIE . '.bind' => 'bindRenameNode',
+            UpdateNodeV1Mixin::SCHEMA_CURIE . '.bind' => 'bindUpdateNode',
+        ];
+    }
 
-    /**
-     * @param PbjxEvent $pbjxEvent
-     */
     public function bindRenameNode(PbjxEvent $pbjxEvent): void
     {
-        /** @var Command $command */
         $command = $pbjxEvent->getMessage();
-        Assertion::true($command->has('new_slug'), 'Field "new_slug" is required.', 'new_slug');
+        Assertion::true($command->has(RenameNodeV1::NEW_SLUG_FIELD), 'Field "new_slug" is required.', 'new_slug');
 
         $node = $this->getNode($pbjxEvent);
         $command
-            ->set('node_status', $node->get('status'))
-            ->set('old_slug', $node->get('slug'))
-            ->set('expected_etag', $node->get('etag'));
+            ->set(RenameNodeV1::NODE_STATUS_FIELD, $node->get(NodeV1Mixin::STATUS_FIELD))
+            ->set(RenameNodeV1::OLD_SLUG_FIELD, $node->get(SluggableV1Mixin::SLUG_FIELD))
+            ->set(RenameNodeV1::EXPECTED_ETAG_FIELD, $node->get(NodeV1Mixin::ETAG_FIELD));
     }
 
-    /**
-     * @param PbjxEvent $pbjxEvent
-     */
     public function bindUpdateNode(PbjxEvent $pbjxEvent): void
     {
         $node = $this->getNode($pbjxEvent);
         $pbjxEvent->getMessage()
-            ->set('old_node', $node)
-            ->set('expected_etag', $node->get('etag'));
+            ->set(UpdateNodeV1::OLD_NODE_FIELD, $node)
+            ->set(UpdateNodeV1::EXPECTED_ETAG_FIELD, $node->get(NodeV1Mixin::ETAG_FIELD));
     }
 
-    /**
-     * @param PbjxEvent $pbjxEvent
-     *
-     * @return Node
-     *
-     * @throws \Throwable
-     */
-    protected function getNode(PbjxEvent $pbjxEvent): Node
+    protected function getNode(PbjxEvent $pbjxEvent): Message
     {
-        /** @var Command $command */
         $command = $pbjxEvent->getMessage();
-        Assertion::true($command->has('node_ref'), 'Field "node_ref" is required.', 'node_ref');
+        Assertion::true($command->has(UpdateNodeV1::NODE_REF_FIELD), 'Field "node_ref" is required.', 'node_ref');
 
         /** @var NodeRef $nodeRef */
-        $nodeRef = $command->get('node_ref');
+        $nodeRef = $command->get(UpdateNodeV1::NODE_REF_FIELD);
         $pbjx = $pbjxEvent::getPbjx();
 
         try {
-            $request = $this->createGetNodeRequest($command, $nodeRef, $pbjx)
-                ->set('consistent_read', true)
-                ->set('node_ref', $nodeRef)
-                ->set('qname', $nodeRef->getQName()->toString());
+            $request = GetNodeRequestV1::create()
+                ->set(GetNodeRequestV1::CONSISTENT_READ_FIELD, true)
+                ->set(GetNodeRequestV1::QNAME_FIELD, $nodeRef->getQName()->toString());
 
             $response = $pbjx->copyContext($command, $request)->request($request);
         } catch (RequestHandlingFailed $e) {
-            if (Code::NOT_FOUND === $e->getResponse()->get('error_code')) {
+            if (Code::NOT_FOUND === $e->getCode()) {
                 throw NodeNotFound::forNodeRef($nodeRef, $e);
             }
 
@@ -81,24 +80,14 @@ class NodeCommandBinder implements EventSubscriber, PbjxBinder
             throw $e;
         }
 
-        $expectedEtag = $command->get('expected_etag');
-        if (null !== $expectedEtag && $expectedEtag !== $response->get('node')->get('etag')) {
+        $expectedEtag = $command->get(UpdateNodeV1::EXPECTED_ETAG_FIELD);
+        $actualEtag = $response->get(GetNodeResponseV1::NODE_FIELD)->get(NodeV1Mixin::ETAG_FIELD);
+        if (null !== $expectedEtag && $expectedEtag !== $actualEtag) {
             throw new OptimisticCheckFailed(
                 sprintf('NodeRef [%s] did not have expected etag [%s].', $nodeRef, $expectedEtag)
             );
         }
 
-        return $response->get('node')->freeze();
-    }
-
-    /**
-     * @return array
-     */
-    public static function getSubscribedEvents()
-    {
-        return [
-            'gdbots:ncr:mixin:rename-node.bind' => 'bindRenameNode',
-            'gdbots:ncr:mixin:update-node.bind' => 'bindUpdateNode',
-        ];
+        return $response->get(GetNodeResponseV1::NODE_FIELD)->freeze();
     }
 }
