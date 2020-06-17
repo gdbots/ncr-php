@@ -3,42 +3,53 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr\Enricher;
 
+use Gdbots\Pbj\Message;
 use Gdbots\Pbjx\DependencyInjection\PbjxEnricher;
 use Gdbots\Pbjx\Event\PbjxEvent;
 use Gdbots\Pbjx\EventSubscriber;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
+use Gdbots\Schemas\Ncr\Event\NodeCreatedV1;
+use Gdbots\Schemas\Ncr\Event\NodeUpdatedV1;
+use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
+use Gdbots\Schemas\Ncr\Mixin\NodeCreated\NodeCreatedV1Mixin;
+use Gdbots\Schemas\Ncr\Mixin\NodeUpdated\NodeUpdatedV1Mixin;
 
 final class NodeEtagEnricher implements EventSubscriber, PbjxEnricher
 {
     const IGNORED_FIELDS = [
-        'etag',
-        'updated_at',
-        'updater_ref',
-        'last_event_ref',
+        NodeV1Mixin::ETAG_FIELD,
+        NodeV1Mixin::UPDATED_AT_FIELD,
+        NodeV1Mixin::UPDATER_REF_FIELD,
+        NodeV1Mixin::LAST_EVENT_REF_FIELD,
     ];
 
-    /**
-     * @param PbjxEvent $pbjxEvent
-     */
+    public static function getSubscribedEvents()
+    {
+        return [
+            // run these very late to ensure etag is set last
+            NodeCreatedV1::SCHEMA_CURIE . '.enrich'      => ['enrichNodeCreated', -5000],
+            NodeUpdatedV1::SCHEMA_CURIE . '.enrich'      => ['enrichNodeUpdated', -5000],
+            // deprecated mixins, will be removed in 3.x
+            NodeCreatedV1Mixin::SCHEMA_CURIE . '.enrich' => ['enrichNodeCreated', -5000],
+            NodeUpdatedV1Mixin::SCHEMA_CURIE . '.enrich' => ['enrichNodeUpdated', -5000],
+        ];
+    }
+
     public function enrichNodeCreated(PbjxEvent $pbjxEvent): void
     {
         $event = $pbjxEvent->getMessage();
-        if ($event->isFrozen() || !$event->has('node')) {
+        if ($event->isFrozen() || !$event->has(NodeCreatedV1::NODE_FIELD)) {
             return;
         }
 
-        /** @var Node $node */
-        $node = $event->get('node');
+        /** @var Message $node */
+        $node = $event->get(NodeCreatedV1::NODE_FIELD);
         if ($node->isFrozen()) {
             return;
         }
 
-        $node->set('etag', $node->generateEtag(self::IGNORED_FIELDS));
+        $node->set(NodeV1Mixin::ETAG_FIELD, $node->generateEtag(self::IGNORED_FIELDS));
     }
 
-    /**
-     * @param PbjxEvent $pbjxEvent
-     */
     public function enrichNodeUpdated(PbjxEvent $pbjxEvent): void
     {
         $event = $pbjxEvent->getMessage();
@@ -46,32 +57,20 @@ final class NodeEtagEnricher implements EventSubscriber, PbjxEnricher
             return;
         }
 
-        if ($event->has('new_node')) {
-            /** @var Node $newNode */
-            $newNode = $event->get('new_node');
+        if ($event->has(NodeUpdatedV1::NEW_NODE_FIELD)) {
+            /** @var Message $newNode */
+            $newNode = $event->get(NodeUpdatedV1::NEW_NODE_FIELD);
             if (!$newNode->isFrozen()) {
-                $newNode->set('etag', $newNode->generateEtag(self::IGNORED_FIELDS));
+                $newNode->set(NodeV1Mixin::ETAG_FIELD, $newNode->generateEtag(self::IGNORED_FIELDS));
             }
 
-            $event->set('new_etag', $newNode->get('etag'));
+            $event->set(NodeUpdatedV1::NEW_ETAG_FIELD, $newNode->get(NodeV1Mixin::ETAG_FIELD));
         }
 
-        if ($event->has('old_node')) {
-            /** @var Node $oldNode */
-            $oldNode = $event->get('old_node');
-            $event->set('old_etag', $oldNode->get('etag'));
+        if ($event->has(NodeUpdatedV1::OLD_NODE_FIELD)) {
+            /** @var Message $oldNode */
+            $oldNode = $event->get(NodeUpdatedV1::OLD_NODE_FIELD);
+            $event->set(NodeUpdatedV1::OLD_ETAG_FIELD, $oldNode->get(NodeV1Mixin::ETAG_FIELD));
         }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public static function getSubscribedEvents()
-    {
-        return [
-            // run these very late to ensure etag is set last
-            'gdbots:ncr:mixin:node-created.enrich' => ['enrichNodeCreated', -5000],
-            'gdbots:ncr:mixin:node-updated.enrich' => ['enrichNodeUpdated', -5000],
-        ];
     }
 }

@@ -48,7 +48,6 @@ final class BatchGetItemRequest
      */
     private $errorFunc;
 
-    /** @var array */
     private array $queue;
 
     public function __construct(DynamoDbClient $client)
@@ -61,11 +60,6 @@ final class BatchGetItemRequest
     {
         $this->batchSize = NumberUtil::bound($batchSize, 2, 100);
         return $this;
-    }
-
-    public function poolSize(int $poolSize = 25): self
-    {
-        return $this->concurrency($poolSize);
     }
 
     public function concurrency(int $concurrency = 25): self
