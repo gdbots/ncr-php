@@ -12,7 +12,7 @@ use Gdbots\Pbj\Util\NumberUtil;
 
 /**
  * The BatchGetItemRequest is an object that is capable of efficiently handling
- * batchGetItem requests.  It processes with the fewest requests to DynamoDB
+ * batchGetItem requests. It processes with the fewest requests to DynamoDB
  * as possible and also re-queues any unprocessed items to ensure that all
  * items are fetched.
  */
@@ -150,14 +150,24 @@ final class BatchGetItemRequest
         $this->queue = [];
 
         $commands = [];
+        $ids = [];
+
         foreach ($batches as $batch) {
             $requests = [];
             foreach ($batch as $item) {
+                $id = $item['table'] . current($item['key'])['S'];
+                if (isset($ids[$id])) {
+                    continue;
+                }
+
                 if (!isset($requests[$item['table']])) {
                     $requests[$item['table']] = ['Keys' => [], 'ConsistentRead' => $this->consistentRead];
                 }
+
+                $ids[$id] = true;
                 $requests[$item['table']]['Keys'][] = $item['key'];
             }
+
             $commands[] = $this->client->getCommand('BatchGetItem', ['RequestItems' => $requests]);
         }
 

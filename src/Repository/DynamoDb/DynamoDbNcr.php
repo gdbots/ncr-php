@@ -7,8 +7,6 @@ use Aws\CommandPool;
 use Aws\DynamoDb\DynamoDbClient;
 use Aws\Exception\AwsException;
 use Aws\ResultInterface;
-use Gdbots\Common\Util\ClassUtils;
-use Gdbots\Common\Util\NumberUtils;
 use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Ncr\Exception\OptimisticCheckFailed;
 use Gdbots\Ncr\Exception\RepositoryIndexNotFound;
@@ -17,38 +15,32 @@ use Gdbots\Ncr\IndexQuery;
 use Gdbots\Ncr\IndexQueryResult;
 use Gdbots\Ncr\Ncr;
 use Gdbots\Pbj\Marshaler\DynamoDb\ItemMarshaler;
+use Gdbots\Pbj\Message;
 use Gdbots\Pbj\SchemaQName;
 use Gdbots\Pbj\Util\ClassUtil;
 use Gdbots\Pbj\Util\NumberUtil;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
-use Gdbots\Schemas\Ncr\NodeRef;
+use Gdbots\Pbj\WellKnown\NodeRef;
+use Gdbots\Pbjx\Event\EnrichContextEvent;
+use Gdbots\Pbjx\PbjxEvents;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 use GuzzleHttp\Promise\PromiseInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 
 final class DynamoDbNcr implements Ncr
 {
-    /** @var DynamoDbClient */
-    private $client;
-
-    /** @var TableManager */
-    private $tableManager;
-
-    /** @var array */
-    private $config;
-
-    /** @var LoggerInterface */
-    private $logger;
-
-    /** @var ItemMarshaler */
-    private $marshaler;
-
-    /** @var IndexQueryFilterProcessor */
-    private $filterProcessor;
+    private DynamoDbClient $client;
+    private EventDispatcher $dispatcher;
+    private TableManager $tableManager;
+    private array $config;
+    private LoggerInterface $logger;
+    private ItemMarshaler $marshaler;
+    private ?IndexQueryFilterProcessor $filterProcessor = null;
 
     public function __construct(
         DynamoDbClient $client,
+        EventDispatcher $dispatcher,
         TableManager $tableManager,
         array $config = [],
         ?LoggerInterface $logger = null
@@ -63,35 +55,30 @@ final class DynamoDbNcr implements Ncr
         $config['concurrency'] = NumberUtil::bound($config['concurrency'], 1, 50);
 
         $this->client = $client;
+        $this->dispatcher = $dispatcher;
         $this->tableManager = $tableManager;
         $this->config = $config;
         $this->logger = $logger ?: new NullLogger();
         $this->marshaler = new ItemMarshaler();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function createStorage(SchemaQName $qname, array $context = []): void
     {
+        $context = $this->enrichContext(__FUNCTION__, $context);
         $tableName = $this->tableManager->getNodeTableName($qname, $context);
         $this->tableManager->getNodeTable($qname)->create($this->client, $tableName);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function describeStorage(SchemaQName $qname, array $context = []): string
     {
+        $context = $this->enrichContext(__FUNCTION__, $context);
         $tableName = $this->tableManager->getNodeTableName($qname, $context);
         return $this->tableManager->getNodeTable($qname)->describe($this->client, $tableName);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function hasNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): bool
     {
+        $context = $this->enrichContext(__FUNCTION__, $context);
         $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $context);
 
         try {
@@ -104,7 +91,7 @@ final class DynamoDbNcr implements Ncr
             ]);
         } catch (\Throwable $e) {
             if ($e instanceof AwsException) {
-                $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
+                $errorName = $e->getAwsErrorCode() ?: ClassUtil::getShortName($e);
                 if ('ResourceNotFoundException' === $errorName) {
                     return false;
                 } elseif ('ProvisionedThroughputExceededException' === $errorName) {
@@ -113,7 +100,7 @@ final class DynamoDbNcr implements Ncr
                     $code = Code::UNAVAILABLE;
                 }
             } else {
-                $errorName = ClassUtils::getShortName($e);
+                $errorName = ClassUtil::getShortName($e);
                 $code = Code::INTERNAL;
             }
 
@@ -132,11 +119,9 @@ final class DynamoDbNcr implements Ncr
         return isset($response['Item']);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): Node
+    public function getNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): Message
     {
+        $context = $this->enrichContext(__FUNCTION__, $context);
         $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $context);
 
         try {
@@ -147,7 +132,7 @@ final class DynamoDbNcr implements Ncr
             ]);
         } catch (\Throwable $e) {
             if ($e instanceof AwsException) {
-                $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
+                $errorName = $e->getAwsErrorCode() ?: ClassUtil::getShortName($e);
                 if ('ResourceNotFoundException' === $errorName) {
                     throw NodeNotFound::forNodeRef($nodeRef, $e);
                 } elseif ('ProvisionedThroughputExceededException' === $errorName) {
@@ -156,7 +141,7 @@ final class DynamoDbNcr implements Ncr
                     $code = Code::UNAVAILABLE;
                 }
             } else {
-                $errorName = ClassUtils::getShortName($e);
+                $errorName = ClassUtil::getShortName($e);
                 $code = Code::INTERNAL;
             }
 
@@ -176,8 +161,10 @@ final class DynamoDbNcr implements Ncr
             throw NodeNotFound::forNodeRef($nodeRef);
         }
 
+        $skipValidation = filter_var($context['skip_validation'] ?? !$consistent, FILTER_VALIDATE_BOOLEAN);
+        $this->marshaler->skipValidation($skipValidation);
+
         try {
-            /** @var Node $node */
             $node = $this->marshaler->unmarshal($response['Item']);
         } catch (\Throwable $e) {
             $this->logger->error(
@@ -191,17 +178,18 @@ final class DynamoDbNcr implements Ncr
                 ]
             );
 
+            $this->marshaler->skipValidation(false);
             throw NodeNotFound::forNodeRef($nodeRef, $e);
         }
 
+        $this->marshaler->skipValidation(false);
         return $node;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getNodes(array $nodeRefs, bool $consistent = false, array $context = []): array
     {
+        $context = $this->enrichContext(__FUNCTION__, $context);
+
         if (empty($nodeRefs)) {
             return [];
         } elseif (count($nodeRefs) === 1) {
@@ -232,7 +220,10 @@ final class DynamoDbNcr implements Ncr
             $batch->addItemKey($tableName, [NodeTable::HASH_KEY_NAME => ['S' => $nodeRef->toString()]]);
         }
 
+        $skipValidation = filter_var($context['skip_validation'] ?? !$consistent, FILTER_VALIDATE_BOOLEAN);
+        $this->marshaler->skipValidation($skipValidation);
         $nodes = [];
+
         foreach ($batch->getItems() as $item) {
             try {
                 $nodeRef = NodeRef::fromString($item[NodeTable::HASH_KEY_NAME]['S']);
@@ -245,18 +236,19 @@ final class DynamoDbNcr implements Ncr
             }
         }
 
+        $this->marshaler->skipValidation(false);
         return $nodes;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function putNode(Node $node, ?string $expectedEtag = null, array $context = []): void
+    public function putNode(Message $node, ?string $expectedEtag = null, array $context = []): void
     {
         $node->freeze();
-        $nodeRef = NodeRef::fromNode($node);
+        $nodeRef = $node->generateNodeRef();
+
+        $context = $this->enrichContext(__FUNCTION__, $context);
         $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $context);
         $table = $this->tableManager->getNodeTable($nodeRef->getQName());
+        $this->marshaler->skipValidation(false);
 
         $params = ['TableName' => $tableName];
         if (null !== $expectedEtag) {
@@ -272,7 +264,7 @@ final class DynamoDbNcr implements Ncr
             $this->client->putItem($params);
         } catch (\Throwable $e) {
             if ($e instanceof AwsException) {
-                $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
+                $errorName = $e->getAwsErrorCode() ?: ClassUtil::getShortName($e);
                 if ('ConditionalCheckFailedException' === $errorName) {
                     throw new OptimisticCheckFailed(
                         sprintf(
@@ -289,7 +281,7 @@ final class DynamoDbNcr implements Ncr
                     $code = Code::UNAVAILABLE;
                 }
             } else {
-                $errorName = ClassUtils::getShortName($e);
+                $errorName = ClassUtil::getShortName($e);
                 $code = Code::INTERNAL;
             }
 
@@ -306,11 +298,9 @@ final class DynamoDbNcr implements Ncr
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function deleteNode(NodeRef $nodeRef, array $context = []): void
     {
+        $context = $this->enrichContext(__FUNCTION__, $context);
         $tableName = $this->tableManager->getNodeTableName($nodeRef->getQName(), $context);
 
         try {
@@ -320,7 +310,7 @@ final class DynamoDbNcr implements Ncr
             ]);
         } catch (\Throwable $e) {
             if ($e instanceof AwsException) {
-                $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
+                $errorName = $e->getAwsErrorCode() ?: ClassUtil::getShortName($e);
                 if ('ResourceNotFoundException' === $errorName) {
                     // if it's already deleted, it's fine
                     return;
@@ -330,7 +320,7 @@ final class DynamoDbNcr implements Ncr
                     $code = Code::UNAVAILABLE;
                 }
             } else {
-                $errorName = ClassUtils::getShortName($e);
+                $errorName = ClassUtil::getShortName($e);
                 $code = Code::INTERNAL;
             }
 
@@ -347,11 +337,9 @@ final class DynamoDbNcr implements Ncr
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function findNodeRefs(IndexQuery $query, array $context = []): IndexQueryResult
     {
+        $context = $this->enrichContext(__FUNCTION__, $context);
         $tableName = $this->tableManager->getNodeTableName($query->getQName(), $context);
         $table = $this->tableManager->getNodeTable($query->getQName());
 
@@ -359,7 +347,7 @@ final class DynamoDbNcr implements Ncr
             throw new RepositoryIndexNotFound(
                 sprintf(
                     '%s::Index [%s] does not exist on table [%s].',
-                    ClassUtils::getShortName($table),
+                    ClassUtil::getShortName($table),
                     $query->getAlias(),
                     $tableName
                 )
@@ -385,14 +373,14 @@ final class DynamoDbNcr implements Ncr
             $response = $this->client->query($params);
         } catch (\Throwable $e) {
             if ($e instanceof AwsException) {
-                $errorName = $e->getAwsErrorCode() ?: ClassUtils::getShortName($e);
+                $errorName = $e->getAwsErrorCode() ?: ClassUtil::getShortName($e);
                 if ('ProvisionedThroughputExceededException' === $errorName) {
                     $code = Code::RESOURCE_EXHAUSTED;
                 } else {
                     $code = Code::UNAVAILABLE;
                 }
             } else {
-                $errorName = ClassUtils::getShortName($e);
+                $errorName = ClassUtil::getShortName($e);
                 $code = Code::INTERNAL;
             }
 
@@ -447,39 +435,55 @@ final class DynamoDbNcr implements Ncr
         return new IndexQueryResult($query, array_slice($nodeRefs, 0, $query->getCount()), $nextCursor);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function pipeNodes(SchemaQName $qname, callable $receiver, array $context = []): void
+    public function pipeNodes(SchemaQName $qname, array $context = []): \Generator
     {
+        $context = $this->enrichContext(__FUNCTION__, $context);
         $context['node_refs_only'] = false;
-        $this->doPipeNodes($qname, $receiver, $context);
+        $generator = $this->doPipeNodes($qname, $context);
+
+        /** @var \SplQueue $queue */
+        $queue = $generator->current();
+
+        do {
+            $generator->next();
+            while (!$queue->isEmpty()) {
+                yield $queue->dequeue();
+            }
+        } while ($generator->valid());
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function pipeNodeRefs(SchemaQName $qname, callable $receiver, array $context = []): void
+    public function pipeNodeRefs(SchemaQName $qname, array $context = []): \Generator
     {
+        $context = $this->enrichContext(__FUNCTION__, $context);
         $context['node_refs_only'] = true;
-        $this->doPipeNodes($qname, $receiver, $context);
+        $generator = $this->doPipeNodes($qname, $context);
+
+        /** @var \SplQueue $queue */
+        $queue = $generator->current();
+
+        do {
+            $generator->next();
+            while (!$queue->isEmpty()) {
+                yield $queue->dequeue();
+            }
+        } while ($generator->valid());
     }
 
-    /**
-     * @param SchemaQName $qname
-     * @param callable    $receiver
-     * @param array       $context
-     */
-    private function doPipeNodes(SchemaQName $qname, callable $receiver, array $context): void
+    private function doPipeNodes(SchemaQName $qname, array $context): \Generator
     {
         static $alreadyPiped = [];
 
         $tableName = $context['table_name'] ?? $this->tableManager->getNodeTableName($qname, $context);
-        $skipErrors = filter_var($context['skip_errors'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $reindexing = filter_var($context['reindexing'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $reindexAll = filter_var($context['reindex_all'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        $totalSegments = NumberUtils::bound($context['total_segments'] ?? 16, 1, 64);
-        $concurrency = NumberUtils::bound($context['concurrency'] ?? 25, 1, 100);
+        $skipErrors = filter_var($context['skip_errors'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $skipValidation = filter_var($context['skip_validation'] ?? true, FILTER_VALIDATE_BOOLEAN);
+        $totalSegments = NumberUtil::bound($context['total_segments'] ?? 16, 1, 64);
+        $concurrency = NumberUtil::bound($context['concurrency'] ?? 25, 1, 100);
+
+        $this->marshaler->skipValidation($skipValidation);
+        $queue = new \SplQueue();
+        yield $queue;
 
         if ($reindexing && isset($alreadyPiped[$tableName])) {
             // multiple qnames can be in the same table.
@@ -534,7 +538,7 @@ final class DynamoDbNcr implements Ncr
         }
 
         $fulfilled = function (ResultInterface $result, string $iterKey) use (
-            $qname, $receiver, $tableName, $context, $params, &$pending, &$iter2seg
+            $qname, $queue, $tableName, $context, $params, &$pending, &$iter2seg
         ) {
             $segment = $iter2seg['prev'][$iterKey];
 
@@ -563,9 +567,9 @@ final class DynamoDbNcr implements Ncr
                 }
 
                 if ($context['node_refs_only']) {
-                    $receiver($nodeRef);
+                    $queue->enqueue($nodeRef);
                 } else {
-                    $receiver($node);
+                    $queue->enqueue($node);
                 }
             }
 
@@ -592,7 +596,7 @@ final class DynamoDbNcr implements Ncr
         ) {
             $segment = $iter2seg['prev'][$iterKey];
 
-            $errorName = $exception->getAwsErrorCode() ?: ClassUtils::getShortName($exception);
+            $errorName = $exception->getAwsErrorCode() ?: ClassUtil::getShortName($exception);
             if ('ProvisionedThroughputExceededException' === $errorName) {
                 $code = Code::RESOURCE_EXHAUSTED;
             } else {
@@ -617,6 +621,7 @@ final class DynamoDbNcr implements Ncr
                 return;
             }
 
+            $this->marshaler->skipValidation(false);
             $aggregatePromise->reject(
                 new RepositoryOperationFailed(
                     sprintf(
@@ -636,6 +641,9 @@ final class DynamoDbNcr implements Ncr
             $commands = $pending;
             $pending = [];
             $pool = new CommandPool($this->client, $commands, [
+                'before'      => function () {
+                    gc_collect_cycles();
+                },
                 'fulfilled'   => $fulfilled,
                 'rejected'    => $rejected,
                 'concurrency' => $concurrency,
@@ -643,6 +651,22 @@ final class DynamoDbNcr implements Ncr
             $pool->promise()->wait();
             $iter2seg['prev'] = $iter2seg['next'];
             $iter2seg['next'] = [];
+            yield;
         }
+
+        yield;
+        $this->marshaler->skipValidation(false);
+    }
+
+    protected function enrichContext(string $operation, array $context): array
+    {
+        if (isset($context['already_enriched'])) {
+            return $context;
+        }
+
+        $event = new EnrichContextEvent('ncr', $operation, $context);
+        $context = $this->dispatcher->dispatch($event, PbjxEvents::ENRICH_CONTEXT)->all();
+        $context['already_enriched'] = true;
+        return $context;
     }
 }
