@@ -113,7 +113,7 @@ TEXT;
 
         $client = $this->getClientForWrite($context);
         $documents = [];
-        $refresh = (bool)($options['consistent_write'] ?? false);
+        $refresh = (bool)($context['consistent_write'] ?? false);
 
         foreach ($nodes as $node) {
             /** @var Schema $schema */

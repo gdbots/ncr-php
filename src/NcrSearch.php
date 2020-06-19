@@ -52,7 +52,7 @@ interface NcrSearch
      * @param Message       $request     Search request containing pagination, date filters, etc.
      * @param ParsedQuery   $parsedQuery Parsed version of the search query (the "q" field of the request).
      * @param Message       $response    Results from search will be added to this object.
-     * @param SchemaQName[] $qnames      An array of curies that the search should limit its search to.
+     * @param SchemaQName[] $qnames      An array of qnames that the search should limit its search to.
      *                                   If empty, it will search all nodes in all indexes.
      * @param array         $context     Data that helps the NCR Search decide where to read/write data from.
      *

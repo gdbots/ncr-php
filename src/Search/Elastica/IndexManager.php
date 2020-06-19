@@ -5,17 +5,35 @@ namespace Gdbots\Ncr\Search\Elastica;
 
 use Elastica\Client;
 use Elastica\Index;
-use Elastica\Type;
-use Gdbots\Common\Util\ClassUtils;
-use Gdbots\Common\Util\NumberUtils;
+use Elastica\Mapping;
 use Gdbots\Ncr\Exception\SearchOperationFailed;
+use Gdbots\Pbj\MessageResolver;
 use Gdbots\Pbj\SchemaQName;
+use Gdbots\Pbj\Util\ClassUtil;
+use Gdbots\Pbj\Util\NumberUtil;
+use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 
 class IndexManager
 {
-    /** @var string */
-    private $prefix;
+    /**
+     * Our "created_at" field is a 16 digit integer (seconds + 6 digits microtime)
+     * In order to use elasticsearch time range queries we'll store a derived value
+     * of the ISO (in UTC/ZULU) into another field.
+     *
+     * Generally we use "__" to indicate a derived field but kibana won't recognize it
+     * and it's already been debated with no fix yet.
+     *
+     * @link  https://github.com/elastic/kibana/issues/2551
+     * @link  https://github.com/elastic/kibana/issues/4762
+     *
+     * So for now, we'll use "d__" to indicate a derived field for ES.
+     *
+     * @const string
+     */
+    const CREATED_AT_ISO_FIELD_NAME = 'd__created_at_iso';
+
+    private string $prefix;
 
     /**
      * An array of indexes keyed by index_name. For example:
@@ -28,7 +46,7 @@ class IndexManager
      *
      * @var array
      */
-    private $indexes = [];
+    private array $indexes = [];
 
     /**
      * An array keyed by a qname with a value that references the index
@@ -37,26 +55,20 @@ class IndexManager
      *      'acme:article' => [
      *          'mapper_class' => 'Acme\Ncr\Search\Elastica\ArticleMapper',
      *          'index_name'   => 'article',
-     *          'type_name'    => 'post' // optional, use if the "message" portion of qname is not desired.
      *      ]
      * ]
      *
      * @var array
      */
-    private $types = [];
+    private array $types = [];
 
     /**
      * Array of NodeMapper instances keyed by its class name.
      *
      * @var NodeMapper[]
      */
-    private $mappers = [];
+    private array $mappers = [];
 
-    /**
-     * @param string $prefix  The prefix to use for all index names.  Typically "app-environment-ncr", e.g. "acme-prod-ncr"
-     * @param array  $indexes Index settings keyed by index_name.
-     * @param array  $types   Config for types keyed by a qname, e.g. "acme:article"
-     */
     public function __construct(string $prefix, array $indexes = [], array $types = [])
     {
         $this->prefix = trim($prefix, '-');
@@ -72,19 +84,19 @@ class IndexManager
         }
 
         $this->types['default'] += [
-            'mapper_class' => 'Gdbots\Ncr\Search\Elastica\NodeMapper',
+            'mapper_class' => NodeMapper::class,
             'index_name'   => 'default',
         ];
 
         foreach ($this->indexes as $indexName => $settings) {
             $this->indexes[$indexName]['fq_index_name'] = 'default' === $indexName ? $this->prefix : "{$this->prefix}-{$indexName}";
-            $this->indexes[$indexName]['number_of_shards'] = NumberUtils::bound($settings['number_of_shards'] ?? 5, 1, 100);
-            $this->indexes[$indexName]['number_of_replicas'] = NumberUtils::bound($settings['number_of_replicas'] ?? 1, 1, 100);
+            $this->indexes[$indexName]['number_of_shards'] = NumberUtil::bound($settings['number_of_shards'] ?? 5, 1, 100);
+            $this->indexes[$indexName]['number_of_replicas'] = NumberUtil::bound($settings['number_of_replicas'] ?? 1, 1, 100);
         }
     }
 
     /**
-     * Creates the index in ElasticSearch if it doesn't already exist.  It will NOT
+     * Creates the index in ElasticSearch if it doesn't already exist. It will NOT
      * perform an update as that requires the index be closed and reopened which
      * is not currently supported on AWS ElasticSearch service.
      *
@@ -106,7 +118,6 @@ class IndexManager
 
         $index = $created[$indexName] = $client->getIndex($indexName);
         $type = $this->types[$qname->toString()] ?? $this->types['default'];
-        $mapper = $this->getNodeMapper($qname);
         $settings = $this->filterIndexSettings($this->indexes[$type['index_name'] ?? 'default'], $qname, $context);
         unset($settings['fq_index_name']);
 
@@ -117,7 +128,7 @@ class IndexManager
                 throw new SearchOperationFailed(
                     sprintf(
                         '%s while deleting index [%s] for qname [%s].',
-                        ClassUtils::getShortName($e),
+                        ClassUtil::getShortName($e),
                         $index->getName(),
                         $qname
                     ),
@@ -130,17 +141,19 @@ class IndexManager
         try {
             if (!$index->exists()) {
                 $settings['analysis'] = [
-                    'analyzer'   => $mapper->getCustomAnalyzers(),
-                    'normalizer' => $mapper->getCustomNormalizers(),
+                    'analyzer'   => $this->getCustomAnalyzers(),
+                    'normalizer' => $this->getCustomNormalizers(),
                 ];
-
+                $settings['mappings'] = $this->createMapping()->toArray();
                 $index->create($settings);
+            } else {
+                $index->setMapping($this->createMapping());
             }
         } catch (\Throwable $e) {
             throw new SearchOperationFailed(
                 sprintf(
                     '%s while creating index [%s] for qname [%s].',
-                    ClassUtils::getShortName($e),
+                    ClassUtil::getShortName($e),
                     $index->getName(),
                     $qname
                 ),
@@ -150,40 +163,6 @@ class IndexManager
         }
 
         return $index;
-    }
-
-    /**
-     * Creates or updates the Type in ElasticSearch.  This expects the
-     * Index to already exist and have any analyzers it needs.
-     *
-     * @param Index       $index The Elastica Index to create the Type in.
-     * @param SchemaQName $qname QName used to derive the type name.
-     *
-     * @return Type
-     */
-    final public function createType(Index $index, SchemaQName $qname): Type
-    {
-        $type = new Type($index, $this->getTypeName($qname));
-        $mapping = $this->getNodeMapper($qname)->getMapping($qname);
-        $mapping->setType($type);
-
-        try {
-            $mapping->send();
-        } catch (\Throwable $e) {
-            throw new SearchOperationFailed(
-                sprintf(
-                    '%s while putting mapping for type [%s/%s] into ElasticSearch for qname [%s].',
-                    ClassUtils::getShortName($e),
-                    $index->getName(),
-                    $type->getName(),
-                    $qname
-                ),
-                Code::INTERNAL,
-                $e
-            );
-        }
-
-        return $type;
     }
 
     /**
@@ -213,24 +192,6 @@ class IndexManager
         return $this->filterIndexName($this->indexes[$type['index_name'] ?? 'default']['fq_index_name'], $qname, $context);
     }
 
-    /**
-     * Returns the type name that should be used to read/write from for the given SchemaQName.
-     *
-     * @param SchemaQName $qname QName used to derive the type name.
-     *
-     * @return string
-     */
-    final public function getTypeName(SchemaQName $qname): string
-    {
-        $type = $this->types[$qname->toString()] ?? $this->types['default'];
-        return $type['type_name'] ?? $qname->getMessage();
-    }
-
-    /**
-     * @param SchemaQName $qname
-     *
-     * @return NodeMapper
-     */
     final public function getNodeMapper(SchemaQName $qname): NodeMapper
     {
         $key = $qname->toString();
@@ -253,7 +214,7 @@ class IndexManager
     }
 
     /**
-     * Filter the index settings before it's returned to the consumer.  Typically used to adjust
+     * Filter the index settings before it's returned to the consumer. Typically used to adjust
      * the sharding/replica config using the context.
      *
      * @param array       $settings Index settings used when creating/updating the index.
@@ -268,8 +229,8 @@ class IndexManager
     }
 
     /**
-     * Filter the index name before it's returned to the consumer.  Typically used to add
-     * prefixes or suffixes for multi-tenant applications using the hints array.
+     * Filter the index name before it's returned to the consumer. Typically used to add
+     * prefixes or suffixes for multi-tenant applications using the context.
      *
      * @param string      $indexName The resolved index name, from converting qname to the config value.
      * @param SchemaQName $qname     QName used to derive the unfiltered index name.
@@ -280,5 +241,46 @@ class IndexManager
     protected function filterIndexName(string $indexName, ?SchemaQName $qname, array $context): string
     {
         return $indexName;
+    }
+
+    protected function createMapping(): Mapping
+    {
+        $builder = $this->getMappingBuilder();
+        foreach (MessageResolver::findAllUsingMixin(NodeV1Mixin::SCHEMA_CURIE_MAJOR) as $curie) {
+            $builder->addSchema(MessageResolver::resolveCurie($curie)::schema());
+        }
+
+        $mapping = $builder->build();
+        $properties = $mapping->getProperties();
+        unset($properties[NodeV1Mixin::_ID_FIELD]);
+        $properties[self::CREATED_AT_ISO_FIELD_NAME] = MappingBuilder::TYPES['date'];
+        $mapping->setProperties($properties);
+
+        return $mapping;
+    }
+
+    /**
+     * @link http://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-custom-analyzer.html
+     *
+     * @return array
+     */
+    protected function getCustomAnalyzers(): array
+    {
+        return MappingBuilder::getCustomAnalyzers();
+    }
+
+    /**
+     * @link https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-normalizers.html
+     *
+     * @return array
+     */
+    protected function getCustomNormalizers(): array
+    {
+        return MappingBuilder::getCustomNormalizers();
+    }
+
+    protected function getMappingBuilder(): MappingBuilder
+    {
+        return new MappingBuilder();
     }
 }
