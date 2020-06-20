@@ -13,12 +13,10 @@ use Gdbots\Common\Util\NumberUtils;
 use Gdbots\Ncr\Exception\SearchOperationFailed;
 use Gdbots\Ncr\NcrSearch;
 use Gdbots\Pbj\Marshaler\Elastica\DocumentMarshaler;
+use Gdbots\Pbj\Message;
 use Gdbots\Pbj\Schema;
 use Gdbots\Pbj\SchemaQName;
 use Gdbots\QueryParser\ParsedQuery;
-use Gdbots\Schemas\Ncr\Mixin\SearchNodesRequest\SearchNodesRequest;
-use Gdbots\Schemas\Ncr\Mixin\SearchNodesResponse\SearchNodesResponse;
-use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -66,45 +64,33 @@ class ElasticaNcrSearch implements NcrSearch
         $this->marshaler = new DocumentMarshaler();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function createStorage(SchemaQName $qname, array $context = []): void
     {
         $client = $this->getClientForWrite($context);
         $index = $this->indexManager->createIndex($client, $qname, $context);
-        $this->indexManager->createType($index, $qname);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function describeStorage(SchemaQName $qname, array $context = []): string
     {
         $client = $this->getClientForWrite($context);
         $index = new Index($client, $this->indexManager->getIndexName($qname, $context));
-        $type = new Type($index, $this->indexManager->getTypeName($qname));
 
         $connection = $client->getConnection();
-        $url = "http://{$connection->getHost()}:{$connection->getPort()}/{$index->getName()}";
+        $url = "https://{$connection->getHost()}:{$connection->getPort()}/{$index->getName()}";
 
         $result = <<<TEXT
 
 Service:      ElasticSearch
 Index Name:   {$index->getName()}
-Type Name:    {$type->getName()}
-Documents:    {$type->count()}
-Index Stats:  curl "{$url}/_stats?pretty=1"
-Type Mapping: curl "{$url}/{$type->getName()}/_mapping?pretty=1"
+Documents:    {$index->count()}
+Index Stats:  curl "{$url}/_stats?pretty=true"
+Mappings:     curl "{$url}/_mapping?pretty=true"
 
 TEXT;
 
         return $result;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function indexNodes(array $nodes, array $context = []): void
     {
         if (empty($nodes)) {
@@ -173,9 +159,6 @@ TEXT;
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function deleteNodes(array $nodeRefs, array $context = []): void
     {
         if (empty($nodeRefs)) {
@@ -238,10 +221,7 @@ TEXT;
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function searchNodes(SearchNodesRequest $request, ParsedQuery $parsedQuery, SearchNodesResponse $response, array $qnames = [], array $context = []): void
+    public function searchNodes(Message $request, ParsedQuery $parsedQuery, Message $response, array $qnames = [], array $context = []): void
     {
         $search = new Search($this->getClientForRead($context));
 

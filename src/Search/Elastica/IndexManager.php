@@ -144,8 +144,10 @@ class IndexManager
                     'analyzer'   => $this->getCustomAnalyzers(),
                     'normalizer' => $this->getCustomNormalizers(),
                 ];
-                $settings['mappings'] = $this->createMapping()->toArray();
-                $index->create($settings);
+                $index->create([
+                    'settings' => $settings,
+                    'mappings' => $this->createMapping()->toArray(),
+                ]);
             } else {
                 $index->setMapping($this->createMapping());
             }
