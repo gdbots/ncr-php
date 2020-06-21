@@ -132,12 +132,12 @@ Searching nodes is generally done in a request handler.  Here is an example of s
 
 ```php
 /**
- * @param SearchUsersRequest $request
- * @param Pbjx               $pbjx
+ * @param Message $request
+ * @param Pbjx    $pbjx
  *
- * @return SearchUsersResponse
+ * @return Message
  */
-protected function handle(SearchUsersRequest $request, Pbjx $pbjx): SearchUsersResponse
+public function handleRequest(Message $request, Pbjx $pbjx): Message
 {
     $parsedQuery = ParsedQuery::fromArray(json_decode($request->get('parsed_query_json', '{}'), true));
 
