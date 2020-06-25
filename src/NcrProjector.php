@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
+use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Pbj\Message;
 use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Pbjx\DependencyInjection\PbjxProjector;
@@ -43,8 +44,32 @@ class NcrProjector implements EventSubscriber, PbjxProjector
 
     public function onNodeCreated(Message $event, Pbjx $pbjx): void
     {
-        $node = $event->get($event::NODE_FIELD);
-        $this->updateAndIndexNode($node, $event, $pbjx);
+        $this->updateAndIndexNode($event->get($event::NODE_FIELD), $event, $pbjx);
+    }
+
+    public function onNodeDeleted(Message $event, Pbjx $pbjx): void
+    {
+        /** @var NodeRef $nodeRef */
+        $nodeRef = $event->get($event::NODE_REF_FIELD);
+        $context = ['causator' => $event];
+
+        try {
+            $node = $this->ncr->getNode($nodeRef, true, $context);
+            $aggregate = AggregateResolver::resolve($nodeRef->getQName())::fromNode($node, $pbjx);
+        } catch (NodeNotFound $nf) {
+            // ignore already deleted nodes.
+            return;
+        } catch (\Throwable $e) {
+            throw $e;
+        }
+
+        if ($aggregate->useSoftDelete()) {
+            $this->updateAndIndexNode($node, $event, $pbjx);
+            return;
+        }
+
+        $this->ncr->deleteNode($nodeRef, $context);
+        $this->ncrSearch->deleteNodes([$nodeRef], $context);
     }
 
     public function onNodeMarkedAsPending(Message $event, Pbjx $pbjx): void

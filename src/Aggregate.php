@@ -14,6 +14,7 @@ use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 use Gdbots\Schemas\Ncr\Event\NodeCreatedV1;
+use Gdbots\Schemas\Ncr\Event\NodeDeletedV1;
 use Gdbots\Schemas\Ncr\Event\NodeMarkedAsPendingV1;
 use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
 use Gdbots\Schemas\Ncr\Mixin\Publishable\PublishableV1Mixin;
@@ -223,6 +224,28 @@ class Aggregate
         $this->recordEvent($event);
     }
 
+    public function deleteNode(Message $command): void
+    {
+        if ($this->node->get(NodeV1Mixin::STATUS_FIELD)->equals(NodeStatus::DELETED())) {
+            // node already deleted, ignore
+            return;
+        }
+
+        /** @var NodeRef $nodeRef */
+        $nodeRef = $command->get($command::NODE_REF_FIELD);
+        $this->assertNodeRefMatches($nodeRef);
+
+        $event = NodeDeletedV1::create();
+        $this->pbjx->copyContext($command, $event);
+        $event->set($event::NODE_REF_FIELD, $this->nodeRef);
+
+        if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
+            $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
+        }
+
+        $this->recordEvent($event);
+    }
+
     public function markNodeAsPending(Message $command): void
     {
         if ($this->node->get(NodeV1Mixin::STATUS_FIELD)->equals(NodeStatus::PENDING())) {
@@ -248,6 +271,11 @@ class Aggregate
     protected function applyNodeCreated(Message $event): void
     {
         $this->node = clone $event->get(NodeCreatedV1::NODE_FIELD);
+    }
+
+    protected function applyNodeDeleted(Message $event): void
+    {
+        $this->node->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::DELETED());
     }
 
     protected function applyNodeMarkedAsPending(Message $event): void

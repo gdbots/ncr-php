@@ -12,6 +12,7 @@ use Gdbots\Pbjx\RequestHandler;
 use Gdbots\Schemas\Ncr\Request\GetNodeRequestV1;
 use Gdbots\Schemas\Ncr\Request\GetNodeResponseV1;
 
+// todo: add handling for when node hasn't been projected yet
 class GetNodeRequestHandler implements RequestHandler
 {
     protected Ncr $ncr;
