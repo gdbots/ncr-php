@@ -76,7 +76,7 @@ final class NcrPreloader
     {
         $published = NodeStatus::PUBLISHED();
         return $this->getNodes(function (Message $node) use ($published) {
-            return $published->equals($node->get('status'));
+            return $published->equals($node->get($node::STATUS_FIELD));
         }, $namespace);
     }
 

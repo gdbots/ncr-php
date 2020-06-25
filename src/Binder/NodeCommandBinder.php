@@ -19,7 +19,6 @@ use Gdbots\Schemas\Ncr\Mixin\RenameNode\RenameNodeV1Mixin;
 use Gdbots\Schemas\Ncr\Mixin\Sluggable\SluggableV1Mixin;
 use Gdbots\Schemas\Ncr\Mixin\UpdateNode\UpdateNodeV1Mixin;
 use Gdbots\Schemas\Ncr\Request\GetNodeRequestV1;
-use Gdbots\Schemas\Ncr\Request\GetNodeResponseV1;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 
 class NodeCommandBinder implements EventSubscriber, PbjxBinder
@@ -67,6 +66,7 @@ class NodeCommandBinder implements EventSubscriber, PbjxBinder
         try {
             $request = GetNodeRequestV1::create()
                 ->set(GetNodeRequestV1::CONSISTENT_READ_FIELD, true)
+                ->set(GetNodeRequestV1::NODE_REF_FIELD, $nodeRef)
                 ->set(GetNodeRequestV1::QNAME_FIELD, $nodeRef->getQName()->toString());
 
             $response = $pbjx->copyContext($command, $request)->request($request);
@@ -81,13 +81,13 @@ class NodeCommandBinder implements EventSubscriber, PbjxBinder
         }
 
         $expectedEtag = $command->get(UpdateNodeV1::EXPECTED_ETAG_FIELD);
-        $actualEtag = $response->get(GetNodeResponseV1::NODE_FIELD)->get(NodeV1Mixin::ETAG_FIELD);
+        $actualEtag = $response->get($response::NODE_FIELD)->get(NodeV1Mixin::ETAG_FIELD);
         if (null !== $expectedEtag && $expectedEtag !== $actualEtag) {
             throw new OptimisticCheckFailed(
                 sprintf('NodeRef [%s] did not have expected etag [%s].', $nodeRef, $expectedEtag)
             );
         }
 
-        return $response->get(GetNodeResponseV1::NODE_FIELD)->freeze();
+        return $response->get($response::NODE_FIELD)->freeze();
     }
 }

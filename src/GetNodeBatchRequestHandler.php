@@ -13,7 +13,7 @@ use Gdbots\Schemas\Ncr\Request\GetNodeBatchResponseV1;
 // fixme: add NcrPolicy logic here or in binder/validator?
 class GetNodeBatchRequestHandler implements RequestHandler
 {
-    private Ncr $ncr;
+    protected Ncr $ncr;
 
     public static function handlesCuries(): array
     {

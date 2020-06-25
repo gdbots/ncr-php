@@ -20,7 +20,6 @@ use Gdbots\Schemas\Ncr\Mixin\RenameNode\RenameNodeV1Mixin;
 use Gdbots\Schemas\Ncr\Mixin\Sluggable\SluggableV1Mixin;
 use Gdbots\Schemas\Ncr\Mixin\UpdateNode\UpdateNodeV1Mixin;
 use Gdbots\Schemas\Ncr\Request\GetNodeRequestV1;
-use Gdbots\Schemas\Ncr\Request\GetNodeResponseV1;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 use Gdbots\Schemas\Pbjx\StreamId;
 
@@ -111,7 +110,7 @@ class UniqueNodeValidator implements EventSubscriber, PbjxValidator
         }
 
         /** @var Message $node */
-        $node = $response->get(GetNodeResponseV1::NODE_FIELD);
+        $node = $response->get($response::NODE_FIELD);
 
         if ($nodeRef->getId() === $node->fget(NodeV1Mixin::_ID_FIELD)) {
             // this is the same node.
