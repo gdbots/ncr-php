@@ -72,6 +72,11 @@ class NcrProjector implements EventSubscriber, PbjxProjector
         $this->ncrSearch->deleteNodes([$nodeRef], $context);
     }
 
+    public function onNodeExpired(Message $event, Pbjx $pbjx): void
+    {
+        $this->updateAndIndexNodeRef($event->get($event::NODE_REF_FIELD), $event, $pbjx);
+    }
+
     public function onNodeMarkedAsPending(Message $event, Pbjx $pbjx): void
     {
         $this->updateAndIndexNodeRef($event->get($event::NODE_REF_FIELD), $event, $pbjx);

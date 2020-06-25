@@ -15,6 +15,7 @@ use Gdbots\Pbjx\Pbjx;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 use Gdbots\Schemas\Ncr\Event\NodeCreatedV1;
 use Gdbots\Schemas\Ncr\Event\NodeDeletedV1;
+use Gdbots\Schemas\Ncr\Event\NodeExpiredV1;
 use Gdbots\Schemas\Ncr\Event\NodeMarkedAsPendingV1;
 use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
 use Gdbots\Schemas\Ncr\Mixin\Publishable\PublishableV1Mixin;
@@ -246,6 +247,30 @@ class Aggregate
         $this->recordEvent($event);
     }
 
+    public function expireNode(Message $command): void
+    {
+        /** @var NodeStatus $currStatus */
+        $currStatus = $this->node->get(NodeV1Mixin::STATUS_FIELD);
+        if ($currStatus->equals(NodeStatus::DELETED()) || $currStatus->equals(NodeStatus::EXPIRED())) {
+            // already expired or soft-deleted nodes can be ignored
+            return;
+        }
+
+        /** @var NodeRef $nodeRef */
+        $nodeRef = $command->get($command::NODE_REF_FIELD);
+        $this->assertNodeRefMatches($nodeRef);
+
+        $event = NodeExpiredV1::create();
+        $this->pbjx->copyContext($command, $event);
+        $event->set($event::NODE_REF_FIELD, $this->nodeRef);
+
+        if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
+            $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
+        }
+
+        $this->recordEvent($event);
+    }
+
     public function markNodeAsPending(Message $command): void
     {
         if ($this->node->get(NodeV1Mixin::STATUS_FIELD)->equals(NodeStatus::PENDING())) {
@@ -276,6 +301,11 @@ class Aggregate
     protected function applyNodeDeleted(Message $event): void
     {
         $this->node->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::DELETED());
+    }
+
+    protected function applyNodeExpired(Message $event): void
+    {
+        $this->node->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::EXPIRED());
     }
 
     protected function applyNodeMarkedAsPending(Message $event): void
