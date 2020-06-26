@@ -16,7 +16,10 @@ use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 use Gdbots\Schemas\Ncr\Event\NodeCreatedV1;
 use Gdbots\Schemas\Ncr\Event\NodeDeletedV1;
 use Gdbots\Schemas\Ncr\Event\NodeExpiredV1;
+use Gdbots\Schemas\Ncr\Event\NodeMarkedAsDraftV1;
 use Gdbots\Schemas\Ncr\Event\NodeMarkedAsPendingV1;
+use Gdbots\Schemas\Ncr\Event\NodeRenamedV1;
+use Gdbots\Schemas\Ncr\Mixin\Expirable\ExpirableV1Mixin;
 use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
 use Gdbots\Schemas\Ncr\Mixin\Publishable\PublishableV1Mixin;
 use Gdbots\Schemas\Ncr\Mixin\Sluggable\SluggableV1Mixin;
@@ -249,6 +252,12 @@ class Aggregate
 
     public function expireNode(Message $command): void
     {
+        if (!$this->node::schema()->hasMixin(ExpirableV1Mixin::SCHEMA_CURIE)) {
+            throw new InvalidArgumentException(
+                "Node [{$this->nodeRef}] must have [" . ExpirableV1Mixin::SCHEMA_CURIE . "]."
+            );
+        }
+
         /** @var NodeStatus $currStatus */
         $currStatus = $this->node->get(NodeV1Mixin::STATUS_FIELD);
         if ($currStatus->equals(NodeStatus::DELETED()) || $currStatus->equals(NodeStatus::EXPIRED())) {
@@ -261,6 +270,28 @@ class Aggregate
         $this->assertNodeRefMatches($nodeRef);
 
         $event = NodeExpiredV1::create();
+        $this->pbjx->copyContext($command, $event);
+        $event->set($event::NODE_REF_FIELD, $this->nodeRef);
+
+        if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
+            $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
+        }
+
+        $this->recordEvent($event);
+    }
+
+    public function markNodeAsDraft(Message $command): void
+    {
+        if ($this->node->get(NodeV1Mixin::STATUS_FIELD)->equals(NodeStatus::DRAFT())) {
+            // node already draft, ignore
+            return;
+        }
+
+        /** @var NodeRef $nodeRef */
+        $nodeRef = $command->get($command::NODE_REF_FIELD);
+        $this->assertNodeRefMatches($nodeRef);
+
+        $event = NodeMarkedAsDraftV1::create();
         $this->pbjx->copyContext($command, $event);
         $event->set($event::NODE_REF_FIELD, $this->nodeRef);
 
@@ -293,6 +324,34 @@ class Aggregate
         $this->recordEvent($event);
     }
 
+    public function renameNode(Message $command): void
+    {
+        if (!$this->node::schema()->hasMixin(SluggableV1Mixin::SCHEMA_CURIE)) {
+            throw new InvalidArgumentException(
+                "Node [{$this->nodeRef}] must have [" . SluggableV1Mixin::SCHEMA_CURIE . "]."
+            );
+        }
+
+        if ($this->node->get(SluggableV1Mixin::SLUG_FIELD) === $command->get($command::NEW_SLUG_FIELD)) {
+            // ignore a pointless rename
+            return;
+        }
+
+        /** @var NodeRef $nodeRef */
+        $nodeRef = $command->get($command::NODE_REF_FIELD);
+        $this->assertNodeRefMatches($nodeRef);
+
+        $event = NodeRenamedV1::create();
+        $this->pbjx->copyContext($command, $event);
+        $event
+            ->set($event::NODE_REF_FIELD, $nodeRef)
+            ->set($event::NEW_SLUG_FIELD, $command->get($command::NEW_SLUG_FIELD))
+            ->set($event::OLD_SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD))
+            ->set($event::NODE_STATUS_FIELD, $this->node->get(NodeV1Mixin::STATUS_FIELD));
+
+        $this->recordEvent($event);
+    }
+
     protected function applyNodeCreated(Message $event): void
     {
         $this->node = clone $event->get(NodeCreatedV1::NODE_FIELD);
@@ -308,12 +367,25 @@ class Aggregate
         $this->node->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::EXPIRED());
     }
 
+    protected function applyNodeMarkedAsDraft(Message $event): void
+    {
+        $this->node->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::DRAFT());
+        if ($this->node::schema()->hasMixin(PublishableV1Mixin::SCHEMA_CURIE)) {
+            $this->node->clear(PublishableV1Mixin::PUBLISHED_AT_FIELD);
+        }
+    }
+
     protected function applyNodeMarkedAsPending(Message $event): void
     {
         $this->node->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::PENDING());
         if ($this->node::schema()->hasMixin(PublishableV1Mixin::SCHEMA_CURIE)) {
             $this->node->clear(PublishableV1Mixin::PUBLISHED_AT_FIELD);
         }
+    }
+
+    protected function applyNodeRenamed(Message $event): void
+    {
+        $this->node->set(SluggableV1Mixin::SLUG_FIELD, $event->get(NodeRenamedV1::NEW_SLUG_FIELD));
     }
 
     protected function enrichNodeCreated(Message $event): void
