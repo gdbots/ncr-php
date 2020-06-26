@@ -92,6 +92,11 @@ class NcrProjector implements EventSubscriber, PbjxProjector
         $this->updateAndIndexNodeRef($event->get($event::NODE_REF_FIELD), $event, $pbjx);
     }
 
+    public function onNodeUnpublished(Message $event, Pbjx $pbjx): void
+    {
+        $this->updateAndIndexNodeRef($event->get($event::NODE_REF_FIELD), $event, $pbjx);
+    }
+
     protected function updateAndIndexNodeRef(NodeRef $nodeRef, Message $event, Pbjx $pbjx): void
     {
         $node = $this->ncr->getNode($nodeRef, true, ['causator' => $event]);
