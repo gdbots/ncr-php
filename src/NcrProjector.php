@@ -98,7 +98,7 @@ class NcrProjector implements EventSubscriber, PbjxProjector
             return;
         }
 
-        $this->projectNode($event->get($event::NODE_FIELD), $event, $pbjx);
+        $this->projectNode($event->get(NodeCreatedV1::NODE_FIELD), $event, $pbjx);
     }
 
     public function onNodeDeleted(Message $event, Pbjx $pbjx): void
@@ -108,7 +108,7 @@ class NcrProjector implements EventSubscriber, PbjxProjector
         }
 
         /** @var NodeRef $nodeRef */
-        $nodeRef = $event->get($event::NODE_REF_FIELD);
+        $nodeRef = $event->get(NodeDeletedV1::NODE_REF_FIELD);
         $context = ['causator' => $event];
 
         try {
@@ -136,7 +136,7 @@ class NcrProjector implements EventSubscriber, PbjxProjector
             return;
         }
 
-        $this->projectNode($event->get($event::NEW_NODE_FIELD), $event, $pbjx);
+        $this->projectNode($event->get(NodeUpdatedV1::NEW_NODE_FIELD), $event, $pbjx);
     }
 
     protected function projectNodeRef(NodeRef $nodeRef, Message $event, Pbjx $pbjx): void

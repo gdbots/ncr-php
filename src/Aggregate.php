@@ -609,6 +609,8 @@ class Aggregate
             foreach ($schema->getFields() as $field) {
                 $fieldName = $field->getName();
                 if (isset($paths[$fieldName])) {
+
+                    echo $fieldName . PHP_EOL;
                     // this means we intended to set this value
                     // so leave it as is.
                     continue;
@@ -758,15 +760,18 @@ class Aggregate
     protected function enrichNodeCreated(Message $event): void
     {
         /** @var Message $node */
-        $node = $event->get($command::NODE_FIELD);
+        $node = $event->get(NodeCreatedV1::NODE_FIELD);
         $node->set(NodeV1Mixin::ETAG_FIELD, static::generateEtag($node));
     }
 
     protected function enrichNodeUpdated(Message $event): void
     {
         /** @var Message $node */
-        $node = $event->get($command::NEW_NODE_FIELD);
+        $node = $event->get(NodeUpdatedV1::NEW_NODE_FIELD);
         $node->set(NodeV1Mixin::ETAG_FIELD, static::generateEtag($node));
+        $event
+            ->set(NodeUpdatedV1::OLD_ETAG_FIELD, $this->node->get(NodeV1Mixin::ETAG_FIELD))
+            ->set(NodeUpdatedV1::NEW_ETAG_FIELD, $node->get(NodeV1Mixin::ETAG_FIELD));
     }
 
     protected function assertNodeRefMatches(NodeRef $nodeRef): void
@@ -805,12 +810,27 @@ class Aggregate
             ->set(NodeV1Mixin::ETAG_FIELD, static::generateEtag($this->node));
     }
 
+    protected function shouldRecordEvent(Message $event): bool
+    {
+        if (!$event->has(NodeUpdatedV1::NEW_ETAG_FIELD)) {
+            return true;
+        }
+
+        $oldEtag = $event->get(NodeUpdatedV1::OLD_ETAG_FIELD);
+        $newEtag = $event->get(NodeUpdatedV1::NEW_ETAG_FIELD);
+        return $oldEtag !== $newEtag;
+    }
+
     protected function recordEvent(Message $event): void
     {
         $this->pbjx->triggerLifecycle($event);
         $method = $event::schema()->getHandlerMethodName(false, 'enrich');
         if (is_callable([$this, $method])) {
             $this->$method($event);
+        }
+
+        if (!$this->shouldRecordEvent($event)) {
+            return;
         }
 
         $this->events[] = $event->freeze();
