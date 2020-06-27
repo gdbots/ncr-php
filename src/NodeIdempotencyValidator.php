@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Gdbots\Ncr\Validator;
+namespace Gdbots\Ncr;
 
 use Gdbots\Ncr\Exception\NodeAlreadyExists;
 use Gdbots\Pbj\Message;

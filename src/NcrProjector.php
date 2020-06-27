@@ -37,6 +37,21 @@ use Gdbots\Schemas\Ncr\Mixin\NodeUpdated\NodeUpdatedV1Mixin;
 
 class NcrProjector implements EventSubscriber, PbjxProjector
 {
+    protected const DEPRECATED_MIXINS_TO_SUFFIX = [
+        NodeCreatedV1Mixin::SCHEMA_CURIE         => 'created',
+        NodeDeletedV1Mixin::SCHEMA_CURIE         => 'deleted',
+        NodeExpiredV1Mixin::SCHEMA_CURIE         => 'expired',
+        NodeLockedV1Mixin::SCHEMA_CURIE          => 'locked',
+        NodeMarkedAsDraftV1Mixin::SCHEMA_CURIE   => 'marked-as-draft',
+        NodeMarkedAsPendingV1Mixin::SCHEMA_CURIE => 'marked-as-pending',
+        NodePublishedV1Mixin::SCHEMA_CURIE       => 'published',
+        NodeRenamedV1Mixin::SCHEMA_CURIE         => 'renamed',
+        NodeScheduledV1Mixin::SCHEMA_CURIE       => 'scheduled',
+        NodeUnlockedV1Mixin::SCHEMA_CURIE        => 'unlocked',
+        NodeUnpublishedV1Mixin::SCHEMA_CURIE     => 'unpublished',
+        NodeUpdatedV1Mixin::SCHEMA_CURIE         => 'updated',
+    ];
+
     protected Ncr $ncr;
     protected NcrSearch $ncrSearch;
     protected bool $enabled;
@@ -128,6 +143,7 @@ class NcrProjector implements EventSubscriber, PbjxProjector
 
         $this->ncr->deleteNode($nodeRef, $context);
         $this->ncrSearch->deleteNodes([$nodeRef], $context);
+        $this->afterNodeProjected($node, $event, $pbjx);
     }
 
     public function onNodeUpdated(Message $event, Pbjx $pbjx): void
@@ -159,7 +175,25 @@ class NcrProjector implements EventSubscriber, PbjxProjector
 
     protected function afterNodeProjected(Message $node, Message $event, Pbjx $pbjx): void
     {
-        $suffix = $event::schema()->getId()->getMessage();
-        $pbjx->trigger($node, $suffix, new NodeProjectedEvent($node, $event), false);
+        $pbjxEvent = new NodeProjectedEvent($node, $event);
+        $pbjx->trigger($node, 'projected', $pbjxEvent, false);
+        $pbjx->trigger($node, $this->createProjectedEventSuffix($node, $event), $pbjxEvent, false);
+    }
+
+    protected function createProjectedEventSuffix(Message $node, Message $event): string
+    {
+        $schema = $event::schema();
+        $id = $schema->getId();
+        if ('gdbots' === $id->getVendor() && 'ncr' === $id->getPackage()) {
+            return str_replace('node-', '', $id->getMessage());
+        }
+
+        foreach (static::DEPRECATED_MIXINS_TO_SUFFIX as $mixin => $suffix) {
+            if ($schema->hasMixin($mixin)) {
+                return $suffix;
+            }
+        }
+
+        return $id->getMessage();
     }
 }
