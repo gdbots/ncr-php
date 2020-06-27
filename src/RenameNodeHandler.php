@@ -4,10 +4,12 @@ declare(strict_types=1);
 namespace Gdbots\Ncr;
 
 use Gdbots\Pbj\Message;
+use Gdbots\Pbj\MessageResolver;
 use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Pbjx\CommandHandler;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Schemas\Ncr\Command\RenameNodeV1;
+use Gdbots\Schemas\Ncr\Mixin\RenameNode\RenameNodeV1Mixin;
 
 class RenameNodeHandler implements CommandHandler
 {
@@ -15,9 +17,10 @@ class RenameNodeHandler implements CommandHandler
 
     public static function handlesCuries(): array
     {
-        return [
-            RenameNodeV1::SCHEMA_CURIE,
-        ];
+        // deprecated mixins, will be removed in 3.x
+        $curies = MessageResolver::findAllUsingMixin(RenameNodeV1Mixin::SCHEMA_CURIE, false);
+        $curies[] = RenameNodeV1::SCHEMA_CURIE;
+        return $curies;
     }
 
     public function __construct(Ncr $ncr)

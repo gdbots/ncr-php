@@ -12,3 +12,5 @@ __BREAKING CHANGES__
 * Adds `NcrProjector` with concrete ncr and ncr search projections.
 * Adds `ExpirableWatcher` and `PublishableWatcher` which handles the job scheduling. This was previously done in the `AbstractNodeProjector`.
 * Removes `NodeEtagEnricher` since this is now done in the `Aggregate`.
+* Removes `BindFromNodeEvent` and `BeforePutNodeEvent` as these features should now be handled in the `Aggregate`.
+* Adds `NodeProjectedEvent` which is dispatched after the `NcrProjector` puts the new node into the Ncr and NcrSearch.

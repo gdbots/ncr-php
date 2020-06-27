@@ -6,7 +6,7 @@ namespace Gdbots\Ncr\Event;
 use Gdbots\Pbj\Message;
 use Gdbots\Pbjx\Event\PbjxEvent;
 
-class BeforePutNodeEvent extends PbjxEvent
+class NodeProjectedEvent extends PbjxEvent
 {
     protected Message $lastEvent;
 
@@ -14,6 +14,11 @@ class BeforePutNodeEvent extends PbjxEvent
     {
         parent::__construct($node);
         $this->lastEvent = $lastEvent;
+    }
+
+    public function getNode(): Message
+    {
+        return $this->message;
     }
 
     public function getLastEvent(): Message

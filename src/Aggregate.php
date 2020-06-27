@@ -5,6 +5,7 @@ namespace Gdbots\Ncr;
 
 use Gdbots\Ncr\Exception\InvalidArgumentException;
 use Gdbots\Ncr\Exception\LogicException;
+use Gdbots\Ncr\Exception\NodeAlreadyLocked;
 use Gdbots\Pbj\Message;
 use Gdbots\Pbj\MessageResolver;
 use Gdbots\Pbj\Util\ClassUtil;
@@ -12,15 +13,22 @@ use Gdbots\Pbj\WellKnown\MessageRef;
 use Gdbots\Pbj\WellKnown\Microtime;
 use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Pbjx\Pbjx;
+use Gdbots\Schemas\Common\Mixin\Taggable\TaggableV1Mixin;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 use Gdbots\Schemas\Ncr\Event\NodeCreatedV1;
 use Gdbots\Schemas\Ncr\Event\NodeDeletedV1;
 use Gdbots\Schemas\Ncr\Event\NodeExpiredV1;
+use Gdbots\Schemas\Ncr\Event\NodeLockedV1;
 use Gdbots\Schemas\Ncr\Event\NodeMarkedAsDraftV1;
 use Gdbots\Schemas\Ncr\Event\NodeMarkedAsPendingV1;
+use Gdbots\Schemas\Ncr\Event\NodePublishedV1;
 use Gdbots\Schemas\Ncr\Event\NodeRenamedV1;
+use Gdbots\Schemas\Ncr\Event\NodeScheduledV1;
+use Gdbots\Schemas\Ncr\Event\NodeUnlockedV1;
 use Gdbots\Schemas\Ncr\Event\NodeUnpublishedV1;
+use Gdbots\Schemas\Ncr\Event\NodeUpdatedV1;
 use Gdbots\Schemas\Ncr\Mixin\Expirable\ExpirableV1Mixin;
+use Gdbots\Schemas\Ncr\Mixin\Lockable\LockableV1Mixin;
 use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
 use Gdbots\Schemas\Ncr\Mixin\Publishable\PublishableV1Mixin;
 use Gdbots\Schemas\Ncr\Mixin\Sluggable\SluggableV1Mixin;
@@ -209,7 +217,7 @@ class Aggregate
         $node = clone $command->get($command::NODE_FIELD);
         $this->assertNodeRefMatches($node->generateNodeRef());
 
-        $event = NodeCreatedV1::create();
+        $event = $this->createNodeCreatedEvent($command);
         $this->pbjx->copyContext($command, $event);
         $event->set($event::NODE_FIELD, $node);
 
@@ -226,6 +234,12 @@ class Aggregate
             $node->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::PUBLISHED());
         }
 
+        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
+            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
+                $event->addToMap($event::TAGS_FIELD, $k, $v);
+            }
+        }
+
         $this->recordEvent($event);
     }
 
@@ -240,12 +254,18 @@ class Aggregate
         $nodeRef = $command->get($command::NODE_REF_FIELD);
         $this->assertNodeRefMatches($nodeRef);
 
-        $event = NodeDeletedV1::create();
+        $event = $this->createNodeDeletedEvent($command);
         $this->pbjx->copyContext($command, $event);
         $event->set($event::NODE_REF_FIELD, $this->nodeRef);
 
         if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
             $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
+        }
+
+        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
+            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
+                $event->addToMap($event::TAGS_FIELD, $k, $v);
+            }
         }
 
         $this->recordEvent($event);
@@ -270,12 +290,59 @@ class Aggregate
         $nodeRef = $command->get($command::NODE_REF_FIELD);
         $this->assertNodeRefMatches($nodeRef);
 
-        $event = NodeExpiredV1::create();
+        $event = $this->createNodeExpiredEvent($command);
         $this->pbjx->copyContext($command, $event);
         $event->set($event::NODE_REF_FIELD, $this->nodeRef);
 
         if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
             $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
+        }
+
+        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
+            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
+                $event->addToMap($event::TAGS_FIELD, $k, $v);
+            }
+        }
+
+        $this->recordEvent($event);
+    }
+
+    public function lockNode(Message $command): void
+    {
+        if (!$this->node::schema()->hasMixin(LockableV1Mixin::SCHEMA_CURIE)) {
+            throw new InvalidArgumentException(
+                "Node [{$this->nodeRef}] must have [" . LockableV1Mixin::SCHEMA_CURIE . "]."
+            );
+        }
+
+        if ($this->node->get(LockableV1Mixin::IS_LOCKED_FIELD)) {
+            if ($command->has($command::CTX_USER_REF_FIELD)) {
+                $userNodeRef = NodeRef::fromMessageRef($command->get($command::CTX_USER_REF_FIELD));
+                if ((string)$this->node->get(LockableV1Mixin::LOCKED_BY_REF_FIELD) === (string)$userNodeRef) {
+                    // if it's the same user we can ignore it because they already own the lock
+                    return;
+                }
+            }
+
+            throw new NodeAlreadyLocked();
+        }
+
+        /** @var NodeRef $nodeRef */
+        $nodeRef = $command->get($command::NODE_REF_FIELD);
+        $this->assertNodeRefMatches($nodeRef);
+
+        $event = $this->createNodeLockedEvent($command);
+        $this->pbjx->copyContext($command, $event);
+        $event->set($event::NODE_REF_FIELD, $this->nodeRef);
+
+        if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
+            $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
+        }
+
+        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
+            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
+                $event->addToMap($event::TAGS_FIELD, $k, $v);
+            }
         }
 
         $this->recordEvent($event);
@@ -298,12 +365,18 @@ class Aggregate
         $nodeRef = $command->get($command::NODE_REF_FIELD);
         $this->assertNodeRefMatches($nodeRef);
 
-        $event = NodeMarkedAsDraftV1::create();
+        $event = $this->createNodeMarkedAsDraftEvent($command);
         $this->pbjx->copyContext($command, $event);
         $event->set($event::NODE_REF_FIELD, $this->nodeRef);
 
         if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
             $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
+        }
+
+        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
+            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
+                $event->addToMap($event::TAGS_FIELD, $k, $v);
+            }
         }
 
         $this->recordEvent($event);
@@ -326,12 +399,82 @@ class Aggregate
         $nodeRef = $command->get($command::NODE_REF_FIELD);
         $this->assertNodeRefMatches($nodeRef);
 
-        $event = NodeMarkedAsPendingV1::create();
+        $event = $this->createNodeMarkedAsPendingEvent($command);
         $this->pbjx->copyContext($command, $event);
         $event->set($event::NODE_REF_FIELD, $this->nodeRef);
 
         if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
             $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
+        }
+
+        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
+            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
+                $event->addToMap($event::TAGS_FIELD, $k, $v);
+            }
+        }
+
+        $this->recordEvent($event);
+    }
+
+    public function publishNode(Message $command, ?\DateTimeZone $localTimeZone = null): void
+    {
+        if (!$this->node::schema()->hasMixin(PublishableV1Mixin::SCHEMA_CURIE)) {
+            throw new InvalidArgumentException(
+                "Node [{$this->nodeRef}] must have [" . PublishableV1Mixin::SCHEMA_CURIE . "]."
+            );
+        }
+
+        /** @var NodeRef $nodeRef */
+        $nodeRef = $command->get($command::NODE_REF_FIELD);
+        $this->assertNodeRefMatches($nodeRef);
+
+        /** @var \DateTimeInterface $publishAt */
+        $publishAt = $command->get($command::PUBLISH_AT_FIELD) ?: $command->get($command::OCCURRED_AT_FIELD)->toDateTime();
+        /*
+         * If the node will publish within 15 seconds then we'll
+         * just publish it now rather than schedule it.
+         */
+        $now = time() + 15;
+
+        /** @var NodeStatus $currStatus */
+        $currStatus = $this->node->get(NodeV1Mixin::STATUS_FIELD);
+        $currPublishedAt = $this->node->has(PublishableV1Mixin::PUBLISHED_AT_FIELD)
+            ? $this->node->get(PublishableV1Mixin::PUBLISHED_AT_FIELD)->getTimestamp()
+            : null;
+
+        if ($now >= $publishAt->getTimestamp()) {
+            if ($currStatus->equals(NodeStatus::PUBLISHED()) && $currPublishedAt === $publishAt->getTimestamp()) {
+                return;
+            }
+            $event = $this->createNodePublishedEvent($command);
+            $event->set($event::PUBLISHED_AT_FIELD, $publishAt);
+        } else {
+            if ($currStatus->equals(NodeStatus::SCHEDULED()) && $currPublishedAt === $publishAt->getTimestamp()) {
+                return;
+            }
+            $event = $this->createNodeScheduledEvent($command);
+            $event->set($event::PUBLISH_AT_FIELD, $publishAt);
+        }
+
+        $this->pbjx->copyContext($command, $event);
+        $event->set($event::NODE_REF_FIELD, $this->nodeRef);
+
+        if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
+            $slug = $this->node->get(SluggableV1Mixin::SLUG_FIELD);
+            if (null !== $localTimeZone && SlugUtils::containsDate($slug)) {
+                $date = $publishAt instanceof \DateTimeImmutable
+                    ? \DateTime::createFromImmutable($publishAt)
+                    : clone $publishAt;
+                $date->setTimezone($localTimeZone);
+                $slug = SlugUtils::addDate($slug, $date);
+            }
+            $event->set($event::SLUG_FIELD, $slug);
+        }
+
+        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
+            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
+                $event->addToMap($event::TAGS_FIELD, $k, $v);
+            }
         }
 
         $this->recordEvent($event);
@@ -354,13 +497,53 @@ class Aggregate
         $nodeRef = $command->get($command::NODE_REF_FIELD);
         $this->assertNodeRefMatches($nodeRef);
 
-        $event = NodeRenamedV1::create();
+        $event = $this->createNodeRenamedEvent($command);
         $this->pbjx->copyContext($command, $event);
         $event
             ->set($event::NODE_REF_FIELD, $nodeRef)
             ->set($event::NEW_SLUG_FIELD, $command->get($command::NEW_SLUG_FIELD))
             ->set($event::OLD_SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD))
             ->set($event::NODE_STATUS_FIELD, $this->node->get(NodeV1Mixin::STATUS_FIELD));
+
+        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
+            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
+                $event->addToMap($event::TAGS_FIELD, $k, $v);
+            }
+        }
+
+        $this->recordEvent($event);
+    }
+
+    public function unlockNode(Message $command): void
+    {
+        if (!$this->node::schema()->hasMixin(LockableV1Mixin::SCHEMA_CURIE)) {
+            throw new InvalidArgumentException(
+                "Node [{$this->nodeRef}] must have [" . LockableV1Mixin::SCHEMA_CURIE . "]."
+            );
+        }
+
+        if (!$this->node->get(LockableV1Mixin::IS_LOCKED_FIELD)) {
+            // node already unlocked, ignore
+            return;
+        }
+
+        /** @var NodeRef $nodeRef */
+        $nodeRef = $command->get($command::NODE_REF_FIELD);
+        $this->assertNodeRefMatches($nodeRef);
+
+        $event = $this->createNodeUnlockedEvent($command);
+        $this->pbjx->copyContext($command, $event);
+        $event->set($event::NODE_REF_FIELD, $this->nodeRef);
+
+        if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
+            $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
+        }
+
+        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
+            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
+                $event->addToMap($event::TAGS_FIELD, $k, $v);
+            }
+        }
 
         $this->recordEvent($event);
     }
@@ -382,12 +565,18 @@ class Aggregate
         $nodeRef = $command->get($command::NODE_REF_FIELD);
         $this->assertNodeRefMatches($nodeRef);
 
-        $event = NodeUnpublishedV1::create();
+        $event = $this->createNodeUnpublishedEvent($command);
         $this->pbjx->copyContext($command, $event);
         $event->set($event::NODE_REF_FIELD, $this->nodeRef);
 
         if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
             $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
+        }
+
+        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
+            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
+                $event->addToMap($event::TAGS_FIELD, $k, $v);
+            }
         }
 
         $this->recordEvent($event);
@@ -408,6 +597,26 @@ class Aggregate
         $this->node->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::EXPIRED());
     }
 
+    protected function applyNodeLocked(Message $event): void
+    {
+        if ($event->has(NodeLockedV1::CTX_USER_REF_FIELD)) {
+            $lockedByRef = NodeRef::fromMessageRef($event->get(NodeLockedV1::CTX_USER_REF_FIELD));
+        } else {
+            /*
+             * todo: make "bots" a first class citizen in iam services
+             * this is not likely to ever occur (being locked without a user ref)
+             * but if it did we'll fake our future bot strategy for now.  the
+             * eventual solution is that bots will be like users but will perform
+             * operations through pbjx endpoints only, not via the web clients.
+             */
+            $lockedByRef = NodeRef::fromString("{$this->nodeRef->getVendor()}:user:e3949dc0-4261-4731-beb0-d32e723de939");
+        }
+
+        $this->node
+            ->set(LockableV1Mixin::IS_LOCKED_FIELD, true)
+            ->set(LockableV1Mixin::LOCKED_BY_REF_FIELD, $lockedByRef);
+    }
+
     protected function applyNodeMarkedAsDraft(Message $event): void
     {
         $this->node
@@ -422,9 +631,38 @@ class Aggregate
             ->clear(PublishableV1Mixin::PUBLISHED_AT_FIELD);
     }
 
+    protected function applyNodePublished(Message $event): void
+    {
+        $this->node
+            ->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::PUBLISHED())
+            ->set(PublishableV1Mixin::PUBLISHED_AT_FIELD, $event->get(NodePublishedV1::PUBLISHED_AT_FIELD));
+
+        if ($event->has(NodePublishedV1::SLUG_FIELD)) {
+            $this->node->set(SluggableV1Mixin::SLUG_FIELD, $event->get(NodePublishedV1::SLUG_FIELD));
+        }
+    }
+
     protected function applyNodeRenamed(Message $event): void
     {
         $this->node->set(SluggableV1Mixin::SLUG_FIELD, $event->get(NodeRenamedV1::NEW_SLUG_FIELD));
+    }
+
+    protected function applyNodeScheduled(Message $event): void
+    {
+        $this->node
+            ->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::SCHEDULED())
+            ->set(PublishableV1Mixin::PUBLISHED_AT_FIELD, $event->get(NodeScheduledV1::PUBLISH_AT_FIELD));
+
+        if ($event->has(NodeScheduledV1::SLUG_FIELD)) {
+            $this->node->set(SluggableV1Mixin::SLUG_FIELD, $event->get(NodeScheduledV1::SLUG_FIELD));
+        }
+    }
+
+    protected function applyNodeUnlocked(Message $event): void
+    {
+        $this->node
+            ->set(LockableV1Mixin::IS_LOCKED_FIELD, false)
+            ->clear(LockableV1Mixin::LOCKED_BY_REF_FIELD);
     }
 
     protected function applyNodeUnpublished(Message $event): void
@@ -434,10 +672,22 @@ class Aggregate
             ->clear(PublishableV1Mixin::PUBLISHED_AT_FIELD);
     }
 
+    protected function applyNodeUpdated(Message $event): void
+    {
+        $this->node = clone $event->get(NodeUpdatedV1::NEW_NODE_FIELD);
+    }
+
     protected function enrichNodeCreated(Message $event): void
     {
         /** @var Message $node */
         $node = $event->get($command::NODE_FIELD);
+        $node->set(NodeV1Mixin::ETAG_FIELD, static::generateEtag($node));
+    }
+
+    protected function enrichNodeUpdated(Message $event): void
+    {
+        /** @var Message $node */
+        $node = $event->get($command::NEW_NODE_FIELD);
         $node->set(NodeV1Mixin::ETAG_FIELD, static::generateEtag($node));
     }
 
@@ -487,5 +737,185 @@ class Aggregate
 
         $this->events[] = $event->freeze();
         $this->applyEvent($event);
+    }
+
+    /**
+     * This is for legacy uses of command/event mixins for common
+     * ncr operations. It will be removed in 3.x.
+     *
+     * @param Message $command
+     *
+     * @return Message
+     *
+     * @deprecated Will be removed in 3.x.
+     */
+    protected function createNodeCreatedEvent(Message $command): Message
+    {
+        return NodeCreatedV1::create();
+    }
+
+    /**
+     * This is for legacy uses of command/event mixins for common
+     * ncr operations. It will be removed in 3.x.
+     *
+     * @param Message $command
+     *
+     * @return Message
+     *
+     * @deprecated Will be removed in 3.x.
+     */
+    protected function createNodeDeletedEvent(Message $command): Message
+    {
+        return NodeDeletedV1::create();
+    }
+
+    /**
+     * This is for legacy uses of command/event mixins for common
+     * ncr operations. It will be removed in 3.x.
+     *
+     * @param Message $command
+     *
+     * @return Message
+     *
+     * @deprecated Will be removed in 3.x.
+     */
+    protected function createNodeExpiredEvent(Message $command): Message
+    {
+        return NodeExpiredV1::create();
+    }
+
+    /**
+     * This is for legacy uses of command/event mixins for common
+     * ncr operations. It will be removed in 3.x.
+     *
+     * @param Message $command
+     *
+     * @return Message
+     *
+     * @deprecated Will be removed in 3.x.
+     */
+    protected function createNodeLockedEvent(Message $command): Message
+    {
+        return NodeLockedV1::create();
+    }
+
+    /**
+     * This is for legacy uses of command/event mixins for common
+     * ncr operations. It will be removed in 3.x.
+     *
+     * @param Message $command
+     *
+     * @return Message
+     *
+     * @deprecated Will be removed in 3.x.
+     */
+    protected function createNodeMarkedAsDraftEvent(Message $command): Message
+    {
+        return NodeMarkedAsDraftV1::create();
+    }
+
+    /**
+     * This is for legacy uses of command/event mixins for common
+     * ncr operations. It will be removed in 3.x.
+     *
+     * @param Message $command
+     *
+     * @return Message
+     *
+     * @deprecated Will be removed in 3.x.
+     */
+    protected function createNodeMarkedAsPendingEvent(Message $command): Message
+    {
+        return NodeMarkedAsPendingV1::create();
+    }
+
+    /**
+     * This is for legacy uses of command/event mixins for common
+     * ncr operations. It will be removed in 3.x.
+     *
+     * @param Message $command
+     *
+     * @return Message
+     *
+     * @deprecated Will be removed in 3.x.
+     */
+    protected function createNodePublishedEvent(Message $command): Message
+    {
+        return NodePublishedV1::create();
+    }
+
+    /**
+     * This is for legacy uses of command/event mixins for common
+     * ncr operations. It will be removed in 3.x.
+     *
+     * @param Message $command
+     *
+     * @return Message
+     *
+     * @deprecated Will be removed in 3.x.
+     */
+    protected function createNodeRenamedEvent(Message $command): Message
+    {
+        return NodeRenamedV1::create();
+    }
+
+    /**
+     * This is for legacy uses of command/event mixins for common
+     * ncr operations. It will be removed in 3.x.
+     *
+     * @param Message $command
+     *
+     * @return Message
+     *
+     * @deprecated Will be removed in 3.x.
+     */
+    protected function createNodeScheduledEvent(Message $command): Message
+    {
+        return NodeScheduledV1::create();
+    }
+
+    /**
+     * This is for legacy uses of command/event mixins for common
+     * ncr operations. It will be removed in 3.x.
+     *
+     * @param Message $command
+     *
+     * @return Message
+     *
+     * @deprecated Will be removed in 3.x.
+     */
+    protected function createNodeUnlockedEvent(Message $command): Message
+    {
+        return NodeUnlockedV1::create();
+    }
+
+    /**
+     * This is for legacy uses of command/event mixins for common
+     * ncr operations. It will be removed in 3.x.
+     *
+     * @param Message $command
+     *
+     * @return Message
+     *
+     * @deprecated Will be removed in 3.x.
+     */
+    protected function createNodeUnpublishedEvent(Message $command): Message
+    {
+        return NodeUnpublishedV1::create();
+    }
+
+    /**
+     * This is for legacy uses of command/event mixins for common
+     * ncr operations. It will be removed in 3.x.
+     *
+     * @param Message $command
+     *
+     * @return Message
+     *
+     * @deprecated Will be removed in 3.x.
+     */
+    protected function createNodeUpdatedEvent(Message $command): Message
+    {
+        return NodeUpdatedV1::create();
     }
 }

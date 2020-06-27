@@ -4,10 +4,12 @@ declare(strict_types=1);
 namespace Gdbots\Ncr;
 
 use Gdbots\Pbj\Message;
+use Gdbots\Pbj\MessageResolver;
 use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Pbjx\CommandHandler;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Schemas\Ncr\Command\MarkNodeAsDraftV1;
+use Gdbots\Schemas\Ncr\Mixin\MarkNodeAsDraft\MarkNodeAsDraftV1Mixin;
 
 class MarkNodeAsDraftHandler implements CommandHandler
 {
@@ -15,9 +17,10 @@ class MarkNodeAsDraftHandler implements CommandHandler
 
     public static function handlesCuries(): array
     {
-        return [
-            MarkNodeAsDraftV1::SCHEMA_CURIE,
-        ];
+        // deprecated mixins, will be removed in 3.x
+        $curies = MessageResolver::findAllUsingMixin(MarkNodeAsDraftV1Mixin::SCHEMA_CURIE, false);
+        $curies[] = MarkNodeAsDraftV1::SCHEMA_CURIE;
+        return $curies;
     }
 
     public function __construct(Ncr $ncr)
