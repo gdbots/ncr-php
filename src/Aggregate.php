@@ -582,6 +582,84 @@ class Aggregate
         $this->recordEvent($event);
     }
 
+    public function updateNode(Message $command): void
+    {
+        /** @var NodeRef $nodeRef */
+        $nodeRef = $command->get($command::NODE_REF_FIELD);
+        $this->assertNodeRefMatches($nodeRef);
+
+        /** @var Message $newNode */
+        $newNode = clone $command->get($command::NEW_NODE_FIELD);
+        $this->assertNodeRefMatches($newNode->generateNodeRef());
+
+        $oldNode = (clone $this->node)->freeze();
+        $event = $this->createNodeUpdatedEvent($command);
+        $this->pbjx->copyContext($command, $event);
+        $event
+            ->set($event::NODE_REF_FIELD, $this->nodeRef)
+            ->set($event::OLD_NODE_FIELD, $oldNode)
+            ->set($event::NEW_NODE_FIELD, $newNode);
+
+        $schema = $newNode::schema();
+
+        if ($command->has($event::PATHS_FIELD)) {
+            $paths = $command->get($event::PATHS_FIELD);
+            $event->addToSet($event::PATHS_FIELD, $paths);
+            $paths = array_flip($paths);
+            foreach ($schema->getFields() as $field) {
+                $fieldName = $field->getName();
+                if (isset($paths[$fieldName])) {
+                    // this means we intended to set this value
+                    // so leave it as is.
+                    continue;
+                }
+
+                $newNode->setWithoutValidation($fieldName, $oldNode->fget($fieldName));
+            }
+        }
+
+        $newNode
+            ->set(NodeV1Mixin::UPDATED_AT_FIELD, $event->get($event::OCCURRED_AT_FIELD))
+            ->set(NodeV1Mixin::UPDATER_REF_FIELD, $event->get($event::CTX_USER_REF_FIELD))
+            ->set(NodeV1Mixin::LAST_EVENT_REF_FIELD, $event->generateMessageRef())
+            // status SHOULD NOT change during an update, use the appropriate
+            // command to change a status (delete, publish, etc.)
+            ->set(NodeV1Mixin::STATUS_FIELD, $oldNode->get(NodeV1Mixin::STATUS_FIELD))
+            // created_at and creator_ref MUST NOT change
+            ->set(NodeV1Mixin::CREATED_AT_FIELD, $oldNode->get(NodeV1Mixin::CREATED_AT_FIELD))
+            ->set(NodeV1Mixin::CREATOR_REF_FIELD, $oldNode->get(NodeV1Mixin::CREATOR_REF_FIELD));
+
+        // published_at SHOULD NOT change during an update, use "[un]publish-node"
+        if ($schema->hasMixin(PublishableV1Mixin::SCHEMA_CURIE)) {
+            $newNode->set(PublishableV1Mixin::PUBLISHED_AT_FIELD, $oldNode->get(PublishableV1Mixin::PUBLISHED_AT_FIELD));
+        }
+
+        // slug SHOULD NOT change during an update, use "rename-node"
+        if ($schema->hasMixin(SluggableV1Mixin::SCHEMA_CURIE)) {
+            $newNode->set(SluggableV1Mixin::SLUG_FIELD, $oldNode->get(SluggableV1Mixin::SLUG_FIELD));
+        }
+
+        // is_locked and locked_by_ref SHOULD NOT change during an update, use "[un]lock-node"
+        if ($schema->hasMixin(LockableV1Mixin::SCHEMA_CURIE)) {
+            $newNode
+                ->set(LockableV1Mixin::IS_LOCKED_FIELD, $oldNode->get(LockableV1Mixin::IS_LOCKED_FIELD))
+                ->set(LockableV1Mixin::LOCKED_BY_REF_FIELD, $oldNode->get(LockableV1Mixin::LOCKED_BY_REF_FIELD));
+        }
+
+        // if a node is being updated and it's deleted, restore the default status
+        if (NodeStatus::DELETED()->equals($newNode->get(NodeV1Mixin::STATUS_FIELD))) {
+            $newNode->clear(NodeV1Mixin::STATUS_FIELD);
+        }
+
+        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
+            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
+                $event->addToMap($event::TAGS_FIELD, $k, $v);
+            }
+        }
+
+        $this->recordEvent($event);
+    }
+
     protected function applyNodeCreated(Message $event): void
     {
         $this->node = clone $event->get(NodeCreatedV1::NODE_FIELD);
