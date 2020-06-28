@@ -30,7 +30,7 @@ class GetNodeBatchRequestHandler implements RequestHandler
     public function handleRequest(Message $request, Pbjx $pbjx): Message
     {
         $nodeRefs = $request->get(GetNodeBatchRequestV1::NODE_REFS_FIELD);
-        $response = GetNodeBatchResponseV1::create();
+        $response = $this->createGetNodeBatchResponse($request, $pbjx);
 
         if (empty($nodeRefs)) {
             return $response;
@@ -50,5 +50,10 @@ class GetNodeBatchRequestHandler implements RequestHandler
         $response->addToSet($response::MISSING_NODE_REFS_FIELD, $missing);
 
         return $response;
+    }
+
+    protected function createGetNodeBatchResponse(Message $request, Pbjx $pbjx): Message
+    {
+        return GetNodeBatchResponseV1::create();
     }
 }

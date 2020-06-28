@@ -34,7 +34,7 @@ class GetNodeRequestHandler implements RequestHandler
         /** @var NodeRef $nodeRef */
         $nodeRef = $request->get(GetNodeRequestV1::NODE_REF_FIELD);
         $consistent = $request->get(GetNodeRequestV1::CONSISTENT_READ_FIELD);
-        $response = GetNodeResponseV1::create();
+        $response = $this->createGetNodeResponse($request, $pbjx);
         $context = ['causator' => $request];
 
         if ($request->has(GetNodeRequestV1::NODE_REF_FIELD)) {
@@ -65,5 +65,10 @@ class GetNodeRequestHandler implements RequestHandler
         }
 
         return $response->set($response::NODE_FIELD, $node);
+    }
+
+    protected function createGetNodeResponse(Message $request, Pbjx $pbjx): Message
+    {
+        return GetNodeResponseV1::create();
     }
 }
