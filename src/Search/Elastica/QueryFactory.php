@@ -5,7 +5,6 @@ namespace Gdbots\Ncr\Search\Elastica;
 
 use Elastica\Query;
 use Elastica\Query\AbstractQuery;
-use Gdbots\Pbj\Marshaler\Elastica\MappingBuilder;
 use Gdbots\Pbj\Message;
 use Gdbots\Pbj\SchemaQName;
 use Gdbots\Pbj\Util\DateUtil;
