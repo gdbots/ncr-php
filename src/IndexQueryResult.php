@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
-
 use Gdbots\Pbj\WellKnown\NodeRef;
 
 final class IndexQueryResult implements \JsonSerializable, \IteratorAggregate, \Countable

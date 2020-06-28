@@ -609,8 +609,6 @@ class Aggregate
             foreach ($schema->getFields() as $field) {
                 $fieldName = $field->getName();
                 if (isset($paths[$fieldName])) {
-
-                    echo $fieldName . PHP_EOL;
                     // this means we intended to set this value
                     // so leave it as is.
                     continue;

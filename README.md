@@ -67,7 +67,7 @@ Getting data out of the Ncr should be dead simple, it's just json after all.  Us
 __Exporting nodes using pipeNodes:__
 
 ```php
-foreach ($ncr->pipeNodes(SchemaQName::fromString('acme:article') as $node) {
+foreach ($ncr->pipeNodes(SchemaQName::fromString('acme:article')) as $node) {
     echo json_encode($node) . PHP_EOL;
 }
 ```
