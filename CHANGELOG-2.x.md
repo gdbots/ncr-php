@@ -14,4 +14,3 @@ __BREAKING CHANGES__
 * Removes `NodeEtagEnricher` since this is now done in the `Aggregate`.
 * Removes `BindFromNodeEvent` and `BeforePutNodeEvent` as these features should now be handled in the `Aggregate`.
 * Adds `NodeProjectedEvent` which is dispatched after the `NcrProjector` puts the new node into the Ncr and NcrSearch.
-
