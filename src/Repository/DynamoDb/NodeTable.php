@@ -9,7 +9,6 @@ use Gdbots\Ncr\Exception\RepositoryOperationFailed;
 use Gdbots\Pbj\Message;
 use Gdbots\Pbj\Util\ClassUtil;
 use Gdbots\Pbjx\Util\ShardUtil;
-use Gdbots\Schemas\Ncr\Mixin\Indexed\IndexedV1Mixin;
 use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 
@@ -182,9 +181,6 @@ class NodeTable
     {
         $this->loadIndexes();
         $this->addShardAttributes($item, $node);
-        if ($node::schema()->hasMixin(IndexedV1Mixin::SCHEMA_CURIE)) {
-            $item[NodeTable::INDEXED_KEY_NAME] = ['BOOL' => true];
-        }
 
         foreach ($this->gsi as $gsi) {
             $gsi->beforePutItem($item, $node);
