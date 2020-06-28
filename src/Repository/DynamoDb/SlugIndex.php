@@ -3,39 +3,28 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr\Repository\DynamoDb;
 
+use Gdbots\Pbj\Message;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
-use Gdbots\Schemas\Ncr\Mixin\Sluggable\Sluggable;
+use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
+use Gdbots\Schemas\Ncr\Mixin\Sluggable\SluggableV1Mixin;
 
 final class SlugIndex extends AbstractIndex
 {
-    /**
-     * {@inheritdoc}
-     */
     public function getAlias(): string
     {
         return 'slug';
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getHashKeyName(): string
     {
         return '__slug';
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getRangeKeyName(): ?string
     {
-        return 'created_at';
+        return NodeV1Mixin::CREATED_AT_FIELD;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getKeyAttributes(): array
     {
         return [
@@ -44,41 +33,32 @@ final class SlugIndex extends AbstractIndex
         ];
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getFilterableAttributes(): array
     {
         return [
             'created_at' => ['AttributeName' => $this->getRangeKeyName(), 'AttributeType' => 'N'],
-            'status'     => ['AttributeName' => 'status', 'AttributeType' => 'S'],
-            'etag'       => ['AttributeName' => 'etag', 'AttributeType' => 'S'],
+            'status'     => ['AttributeName' => NodeV1Mixin::STATUS_FIELD, 'AttributeType' => 'S'],
+            'etag'       => ['AttributeName' => NodeV1Mixin::ETAG_FIELD, 'AttributeType' => 'S'],
         ];
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getProjection(): array
     {
         return [
             'ProjectionType'   => 'INCLUDE',
-            'NonKeyAttributes' => ['status', 'etag'],
+            'NonKeyAttributes' => [NodeV1Mixin::STATUS_FIELD, NodeV1Mixin::ETAG_FIELD],
         ];
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function beforePutItem(array &$item, Node $node): void
+    public function beforePutItem(array &$item, Message $node): void
     {
-        if (!$node instanceof Sluggable
-            || !$node->has('slug')
-            || $node->get('status')->equals(NodeStatus::DELETED())
+        if (!$node->has(SluggableV1Mixin::SLUG_FIELD)
+            || $node->get(NodeV1Mixin::STATUS_FIELD)->equals(NodeStatus::DELETED())
+            || !$node::schema()->hasMixin(SluggableV1Mixin::SCHEMA_CURIE)
         ) {
             return;
         }
 
-        $item[$this->getHashKeyName()] = ['S' => (string)$node->get('slug')];
+        $item[$this->getHashKeyName()] = ['S' => (string)$node->get(SluggableV1Mixin::SLUG_FIELD)];
     }
 }

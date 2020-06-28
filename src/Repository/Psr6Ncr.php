@@ -7,9 +7,9 @@ use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Ncr\IndexQuery;
 use Gdbots\Ncr\IndexQueryResult;
 use Gdbots\Ncr\Ncr;
+use Gdbots\Pbj\Message;
 use Gdbots\Pbj\SchemaQName;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
-use Gdbots\Schemas\Ncr\NodeRef;
+use Gdbots\Pbj\WellKnown\NodeRef;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
 
@@ -18,24 +18,16 @@ class Psr6Ncr implements Ncr
     private const NODE_NOT_FOUND = 'nnf';
     private const NODE_NOT_FOUND_TTL = 600;
 
-    /** @var Ncr */
-    private $next;
-
-    /** @var CacheItemPoolInterface */
-    private $cache;
+    private Ncr $next;
+    private CacheItemPoolInterface $cache;
 
     /**
      * If true, the cache pool will be updated when a cache miss occurs.
      *
      * @var bool
      */
-    private $readThrough = true;
+    private bool $readThrough;
 
-    /**
-     * @param Ncr                    $next
-     * @param CacheItemPoolInterface $cache
-     * @param bool                   $readThrough
-     */
     public function __construct(Ncr $next, CacheItemPoolInterface $cache, bool $readThrough = true)
     {
         $this->next = $next;
@@ -43,25 +35,16 @@ class Psr6Ncr implements Ncr
         $this->readThrough = $readThrough;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     final public function createStorage(SchemaQName $qname, array $context = []): void
     {
         $this->next->createStorage($qname, $context);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     final public function describeStorage(SchemaQName $qname, array $context = []): string
     {
         return $this->next->describeStorage($qname, $context);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     final public function hasNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): bool
     {
         if (!$consistent) {
@@ -69,7 +52,7 @@ class Psr6Ncr implements Ncr
             $cacheItem = $this->cache->getItem($cacheKey);
             if ($cacheItem->isHit()) {
                 $node = $cacheItem->get();
-                if ($node instanceof Node) {
+                if ($node instanceof Message) {
                     return true;
                 }
 
@@ -82,10 +65,7 @@ class Psr6Ncr implements Ncr
         return $this->next->hasNode($nodeRef, $consistent, $context);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    final public function getNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): Node
+    final public function getNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): Message
     {
         $cacheKey = $this->getCacheKey($nodeRef, $context);
         $cacheItem = null;
@@ -94,7 +74,7 @@ class Psr6Ncr implements Ncr
             $cacheItem = $this->cache->getItem($cacheKey);
             if ($cacheItem->isHit()) {
                 $node = $cacheItem->get();
-                if ($node instanceof Node) {
+                if ($node instanceof Message) {
                     return $node;
                 }
 
@@ -133,9 +113,6 @@ class Psr6Ncr implements Ncr
         return $node;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     final public function getNodes(array $nodeRefs, bool $consistent = false, array $context = []): array
     {
         if (empty($nodeRefs)) {
@@ -181,7 +158,7 @@ class Psr6Ncr implements Ncr
                 }
 
                 $cachedNode = $cacheItem->get();
-                if ($cachedNode instanceof Node) {
+                if ($cachedNode instanceof Message) {
                     $cachedNodes[$nodeRef->toString()] = $cachedNode;
                     unset($nodeRefs[$idx]);
                     continue;
@@ -226,10 +203,7 @@ class Psr6Ncr implements Ncr
         return $nodes;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    final public function putNode(Node $node, ?string $expectedEtag = null, array $context = []): void
+    final public function putNode(Message $node, ?string $expectedEtag = null, array $context = []): void
     {
         $this->next->putNode($node, $expectedEtag, $context);
         $nodeRef = NodeRef::fromNode($node);
@@ -238,37 +212,25 @@ class Psr6Ncr implements Ncr
         $this->cache->save($cacheItem->set($node));
     }
 
-    /**
-     * {@inheritdoc}
-     */
     final public function deleteNode(NodeRef $nodeRef, array $context = []): void
     {
         $this->next->deleteNode($nodeRef, $context);
         $this->cache->deleteItem($this->getCacheKey($nodeRef, $context));
     }
 
-    /**
-     * {@inheritdoc}
-     */
     final public function findNodeRefs(IndexQuery $query, array $context = []): IndexQueryResult
     {
         return $this->next->findNodeRefs($query, $context);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    final public function pipeNodes(SchemaQName $qname, callable $receiver, array $context = []): void
+    final public function pipeNodes(SchemaQName $qname, array $context = []): \Generator
     {
-        $this->next->pipeNodes($qname, $receiver, $context);
+        return $this->next->pipeNodes($qname, $context);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    final public function pipeNodeRefs(SchemaQName $qname, callable $receiver, array $context = []): void
+    final public function pipeNodeRefs(SchemaQName $qname, array $context = []): \Generator
     {
-        $this->next->pipeNodeRefs($qname, $receiver, $context);
+        return $this->next->pipeNodeRefs($qname, $context);
     }
 
     /**
@@ -302,9 +264,9 @@ class Psr6Ncr implements Ncr
      * a per item basis by overriding this method.
      *
      * @param CacheItemInterface $cacheItem
-     * @param Node               $node
+     * @param Message            $node
      */
-    protected function beforeSaveCacheItem(CacheItemInterface $cacheItem, Node $node): void
+    protected function beforeSaveCacheItem(CacheItemInterface $cacheItem, Message $node): void
     {
         $cacheItem->expiresAfter(null)->expiresAt(null);
     }

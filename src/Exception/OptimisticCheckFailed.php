@@ -7,10 +7,6 @@ use Gdbots\Schemas\Pbjx\Enum\Code;
 
 final class OptimisticCheckFailed extends \RuntimeException implements GdbotsNcrException
 {
-    /**
-     * @param string     $message
-     * @param \Throwable $previous
-     */
     public function __construct(string $message = '', ?\Throwable $previous = null)
     {
         parent::__construct($message, Code::FAILED_PRECONDITION, $previous);

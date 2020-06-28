@@ -4,9 +4,9 @@ declare(strict_types=1);
 namespace Gdbots\Ncr;
 
 use Gdbots\Ncr\Exception\NodeNotFound;
-use Gdbots\Pbj\MessageRef;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
-use Gdbots\Schemas\Ncr\NodeRef;
+use Gdbots\Pbj\Message;
+use Gdbots\Pbj\WellKnown\MessageRef;
+use Gdbots\Pbj\WellKnown\NodeRef;
 
 /**
  * NcrCache is a first level cache which is ONLY seen and used by
@@ -32,15 +32,14 @@ use Gdbots\Schemas\Ncr\NodeRef;
  */
 final class NcrCache
 {
-    /** @var NcrLazyLoader */
-    private $lazyLoader;
+    private NcrLazyLoader $lazyLoader;
 
     /**
      * Array of nodes keyed by their NodeRef.
      *
-     * @var Node[]
+     * @var Message[]
      */
-    private $nodes = [];
+    private array $nodes = [];
 
     /**
      * The maximum number of items to keep in cache.
@@ -48,39 +47,21 @@ final class NcrCache
      *
      * @var int
      */
-    private $maxItems = 1000;
+    private int $maxItems;
+    private bool $disablePruning = false;
 
-    /** @var bool */
-    private $disablePruning = false;
-
-    /**
-     * @param NcrLazyLoader $lazyLoader
-     * @param int           $maxItems
-     */
     public function __construct(NcrLazyLoader $lazyLoader, int $maxItems = 1000)
     {
         $this->lazyLoader = $lazyLoader;
         $this->maxItems = $maxItems;
     }
 
-    /**
-     * @param NodeRef $nodeRef The NodeRef to check for in the NcrCache.
-     *
-     * @return bool
-     */
     public function hasNode(NodeRef $nodeRef): bool
     {
         return isset($this->nodes[$nodeRef->toString()]);
     }
 
-    /**
-     * @param NodeRef $nodeRef The NodeRef to get from the NcrCache.
-     *
-     * @return Node
-     *
-     * @throws NodeNotFound
-     */
-    public function getNode(NodeRef $nodeRef): Node
+    public function getNode(NodeRef $nodeRef): Message
     {
         if (!$this->hasNode($nodeRef)) {
             if ($this->lazyLoader->hasNodeRef($nodeRef)) {
@@ -103,19 +84,16 @@ final class NcrCache
         return $node;
     }
 
-    /**
-     * @param Node $node The Node to put into the NcrCache.
-     */
-    public function addNode(Node $node): void
+    public function addNode(Message $node): void
     {
         $this->pruneNodeCache();
-        $nodeRef = NodeRef::fromNode($node);
+        $nodeRef = $node->generateNodeRef();
         $this->nodes[$nodeRef->toString()] = $node;
         $this->lazyLoader->removeNodeRefs([$nodeRef]);
     }
 
     /**
-     * @param Node[] $nodes The Nodes to put into the NcrCache.
+     * @param Message[] $nodes
      */
     public function addNodes(array $nodes): void
     {
@@ -123,7 +101,7 @@ final class NcrCache
         $nodeRefs = [];
 
         foreach ($nodes as $node) {
-            $nodeRef = NodeRef::fromNode($node);
+            $nodeRef = $node->generateNodeRef();
             $nodeRefs[] = $nodeRef;
             $this->nodes[$nodeRef->toString()] = $node;
         }
@@ -131,9 +109,6 @@ final class NcrCache
         $this->lazyLoader->removeNodeRefs($nodeRefs);
     }
 
-    /**
-     * @param NodeRef $nodeRef The NodeRef to delete from the NcrCache.
-     */
     public function removeNode(NodeRef $nodeRef): void
     {
         unset($this->nodes[$nodeRef->toString()]);
@@ -145,13 +120,13 @@ final class NcrCache
      * within the provided fields. e.g. derefNodes(article, ['category_refs', 'image_ref'])
      * would return the category and image nodes associated with the article.
      *
-     * @param Node   $node   The node containing the references.
-     * @param array  $fields Array of field names containing references you want to dereference to nodes.
-     * @param string $return The field name to return from those nodes, or null to get the entire node.
+     * @param Message $node   The node containing the references.
+     * @param array   $fields Array of field names containing references you want to dereference to nodes.
+     * @param string  $return The field name to return from those nodes, or null to get the entire node.
      *
      * @return array
      */
-    public function derefNodes(Node $node, array $fields, ?string $return = null): array
+    public function derefNodes(Message $node, array $fields, ?string $return = null): array
     {
         $nodeRefs = [];
         foreach ($fields as $field) {
@@ -174,8 +149,8 @@ final class NcrCache
                 } elseif ($value instanceof MessageRef) {
                     $nodeRef = NodeRef::fromMessageRef($value);
                     $nodeRefs[$nodeRef->toString()] = $nodeRef;
-                } elseif ($value instanceof Node) {
-                    $nodeRef = NodeRef::fromNode($value);
+                } elseif ($value instanceof Message) {
+                    $nodeRef = $value->generateNodeRef();
                     $nodeRefs[$nodeRef->toString()] = $nodeRef;
                     $this->addNode($value);
                 } else {
@@ -211,9 +186,6 @@ final class NcrCache
         return $derefs;
     }
 
-    /**
-     * Clears the NcrCache.
-     */
     public function clear(): void
     {
         $this->nodes = [];

@@ -7,8 +7,7 @@ use Gdbots\Pbj\SchemaQName;
 
 class TableManager
 {
-    /** @var string */
-    private $tableNamePrefix;
+    private string $tableNamePrefix;
 
     /**
      * An array of tables keyed by a qname. For example:
@@ -21,13 +20,11 @@ class TableManager
      *
      * @var array
      */
-    private $nodeTables = [];
+    private array $nodeTables = [];
 
     /** @var NodeTable[] */
-    private $instances = [];
-
-    /** @var array */
-    private $resolvedTableNames = [];
+    private array $instances = [];
+    private array $resolvedTableNames = [];
 
     /**
      * @param string $tableNamePrefix The prefix to use for all table names.  Typically "app-environment-ncr", e.g. "acme-prod-ncr"
@@ -40,21 +37,16 @@ class TableManager
 
         if (!isset($this->nodeTables['default'])) {
             $this->nodeTables['default'] = [
-                'class'      => 'Gdbots\Ncr\Repository\DynamoDb\NodeTable',
+                'class'      => NodeTable::class,
                 'table_name' => 'multi',
             ];
         }
 
         if (!isset($this->nodeTables['default']['class'])) {
-            $this->nodeTables['default']['class'] = 'Gdbots\Ncr\Repository\DynamoDb\NodeTable';
+            $this->nodeTables['default']['class'] = NodeTable::class;
         }
     }
 
-    /**
-     * @param SchemaQName $qname
-     *
-     * @return NodeTable
-     */
     final public function getNodeTable(SchemaQName $qname): NodeTable
     {
         $key = $qname->toString();

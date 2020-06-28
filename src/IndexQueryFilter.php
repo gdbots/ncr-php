@@ -3,25 +3,14 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
-use Gdbots\Common\ToArray;
 use Gdbots\Ncr\Enum\IndexQueryFilterOperator;
 
-final class IndexQueryFilter implements ToArray, \JsonSerializable
+final class IndexQueryFilter implements \JsonSerializable
 {
-    /** @var string */
-    private $field;
-
-    /** @var IndexQueryFilterOperator */
-    private $operator;
-
-    /** @var mixed */
+    private string $field;
+    private IndexQueryFilterOperator $operator;
     private $value;
 
-    /**
-     * @param string                   $field
-     * @param IndexQueryFilterOperator $operator
-     * @param mixed                    $value
-     */
     public function __construct(string $field, IndexQueryFilterOperator $operator, $value)
     {
         $this->field = $field;
@@ -29,34 +18,22 @@ final class IndexQueryFilter implements ToArray, \JsonSerializable
         $this->value = $value;
     }
 
-    /**
-     * @return string
-     */
     public function getField(): string
     {
         return $this->field;
     }
 
-    /**
-     * @return IndexQueryFilterOperator
-     */
     public function getOperator(): IndexQueryFilterOperator
     {
         return $this->operator;
     }
 
-    /**
-     * @return mixed
-     */
     public function getValue()
     {
         return $this->value;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function toArray()
+    public function toArray(): array
     {
         return [
             'field'    => $this->field,
@@ -65,9 +42,6 @@ final class IndexQueryFilter implements ToArray, \JsonSerializable
         ];
     }
 
-    /**
-     * @return array
-     */
     public function jsonSerialize()
     {
         return $this->toArray();

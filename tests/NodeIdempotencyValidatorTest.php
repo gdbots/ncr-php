@@ -1,30 +1,26 @@
 <?php
 declare(strict_types=1);
 
-namespace Gdbots\Tests\Ncr\Repository;
+namespace Gdbots\Tests\Ncr;
 
-use Acme\Schemas\Forms\Command\CreateFormV1;
 use Acme\Schemas\Forms\Node\FormV1;
-use Gdbots\Ncr\Validator\NodeIdempotencyValidator;
+use Gdbots\Ncr\Exception\NodeAlreadyExists;
+use Gdbots\Ncr\NodeIdempotencyValidator;
 use Gdbots\Pbjx\Event\PbjxEvent;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Pbjx\RegisteringServiceLocator;
+use Gdbots\Schemas\Ncr\Command\CreateNodeV1;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 class NodeIdempotencyValidatorTest extends TestCase
 {
-    /** @var RegisteringServiceLocator */
-    protected $locator;
+    protected RegisteringServiceLocator $locator;
+    protected Pbjx $pbjx;
+    protected CacheItemPoolInterface $cache;
 
-    /** @var Pbjx */
-    protected $pbjx;
-
-    /** @var CacheItemPoolInterface */
-    protected $cache;
-
-    public function setUp()
+    public function setUp(): void
     {
         $this->locator = new RegisteringServiceLocator();
         $this->pbjx = $this->locator->getPbjx();
@@ -39,7 +35,7 @@ class NodeIdempotencyValidatorTest extends TestCase
         $node = FormV1::create()
             ->set('title', 'A Title')
             ->set('slug', 'slug');
-        $command = CreateFormV1::create()->set('node', $node);
+        $command = CreateNodeV1::create()->set('node', $node);
         $pbjxEvent = new PbjxEvent($command);
 
         $validator->validateCreateNode($pbjxEvent);
@@ -47,11 +43,9 @@ class NodeIdempotencyValidatorTest extends TestCase
         $this->assertTrue(true, 'no exception should be thrown without existing cache entry');
     }
 
-    /**
-     * @expectedException \Gdbots\Ncr\Exception\NodeAlreadyExists
-     */
     public function testValidateCreateNodeWithExistingTitle(): void
     {
+        $this->expectException(NodeAlreadyExists::class);
         $validator = new NodeIdempotencyValidator($this->cache);
 
         $node = FormV1::create()->set('title', 'Existing Title');
@@ -60,17 +54,15 @@ class NodeIdempotencyValidatorTest extends TestCase
             $this->cache->save($this->cache->getItem($cacheKey)->set(true));
         }
 
-        $command = CreateFormV1::create()->set('node', $node);
+        $command = CreateNodeV1::create()->set('node', $node);
         $pbjxEvent = new PbjxEvent($command);
 
         $validator->validateCreateNode($pbjxEvent);
     }
 
-    /**
-     * @expectedException \Gdbots\Ncr\Exception\NodeAlreadyExists
-     */
     public function testValidateCreateNodeWithExistingSlug(): void
     {
+        $this->expectException(NodeAlreadyExists::class);
         $validator = new NodeIdempotencyValidator($this->cache);
 
         $node = FormV1::create()->set('slug', 'existing-slug');
@@ -79,7 +71,7 @@ class NodeIdempotencyValidatorTest extends TestCase
             $this->cache->save($this->cache->getItem($cacheKey)->set(true));
         }
 
-        $command = CreateFormV1::create()->set('node', $node);
+        $command = CreateNodeV1::create()->set('node', $node);
         $pbjxEvent = new PbjxEvent($command);
 
         $validator->validateCreateNode($pbjxEvent);
@@ -92,7 +84,8 @@ class NodeIdempotencyValidatorTest extends TestCase
         $node = FormV1::create()
             ->set('title', 'A Title')
             ->set('slug', 'slug');
-        $command = CreateFormV1::create()->set('node', $node);
+
+        $command = CreateNodeV1::create()->set('node', $node);
         $pbjxEvent = new PbjxEvent($command);
 
         $validator->onCreateNodeAfterHandle($pbjxEvent);

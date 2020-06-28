@@ -6,27 +6,20 @@ namespace Gdbots\Tests\Ncr;
 use Acme\Schemas\Iam\Node\UserV1;
 use Gdbots\Ncr\NcrCache;
 use Gdbots\Ncr\NcrLazyLoader;
+use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Pbjx\RegisteringServiceLocator;
 use Gdbots\Pbjx\SimplePbjx;
-use Gdbots\Schemas\Ncr\NodeRef;
 use PHPUnit\Framework\TestCase;
 
 class NcrCacheTest extends TestCase
 {
-    /** @var RegisteringServiceLocator */
-    protected $locator;
+    protected RegisteringServiceLocator $locator;
+    protected Pbjx $pbjx;
+    protected NcrLazyLoader $ncrLazyLoader;
+    protected NcrCache $ncrCache;
 
-    /** @var Pbjx */
-    protected $pbjx;
-
-    /** @var NcrLazyLoader */
-    protected $ncrLazyLoader;
-
-    /** @var NcrCache */
-    protected $ncrCache;
-
-    public function setUp()
+    public function setUp(): void
     {
         $this->locator = new RegisteringServiceLocator();
         $this->pbjx = new SimplePbjx($this->locator);
@@ -34,7 +27,7 @@ class NcrCacheTest extends TestCase
         $this->ncrCache = new NcrCache($this->ncrLazyLoader, 10);
     }
 
-    public function testHasNode()
+    public function testHasNode(): void
     {
         $node = UserV1::create();
         $nodeRef = NodeRef::fromNode($node);
@@ -46,7 +39,7 @@ class NcrCacheTest extends TestCase
         $this->assertFalse($this->ncrCache->hasNode($nodeRef));
     }
 
-    public function testGetNode()
+    public function testGetNode(): void
     {
         $expectedNode = UserV1::create();
         $nodeRef = NodeRef::fromNode($expectedNode);
@@ -61,7 +54,7 @@ class NcrCacheTest extends TestCase
         $this->assertTrue($expectedNode->equals($actualNode));
     }
 
-    public function testClear()
+    public function testClear(): void
     {
         $node1 = UserV1::create();
         $node2 = UserV1::create();
@@ -75,7 +68,7 @@ class NcrCacheTest extends TestCase
         $this->assertFalse($this->ncrCache->hasNode(NodeRef::fromNode($node2)));
     }
 
-    public function testPrune()
+    public function testPrune(): void
     {
         $nodes = [];
         $count = 10;

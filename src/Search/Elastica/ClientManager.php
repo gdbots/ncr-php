@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Gdbots\Ncr\Search\Elastica;
 
 use Elastica\Client;
+use Gdbots\Ncr\Exception\InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 
 class ClientManager
@@ -33,18 +34,13 @@ class ClientManager
      *
      * @var array
      */
-    private $clusters;
+    private array $clusters;
 
-    /** @var LoggerInterface */
-    private $logger;
+    private ?LoggerInterface $logger;
 
     /** @var Client[] */
-    private $clients = [];
+    private array $clients = [];
 
-    /**
-     * @param array           $clusters
-     * @param LoggerInterface $logger
-     */
     public function __construct(array $clusters, ?LoggerInterface $logger = null)
     {
         $this->clusters = $clusters;
@@ -67,7 +63,7 @@ class ClientManager
         }
 
         if (!$this->hasCluster($cluster)) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 sprintf(
                     'The cluster [%s] is not one of the available clusters [%s].',
                     $cluster,
@@ -100,15 +96,9 @@ class ClientManager
         }
 
         $config['servers'] = $configuredServers;
-
         return $this->clients[$cluster] = new Client($config, null, $config['log'] ? $this->logger : null);
     }
 
-    /**
-     * @param string $cluster
-     *
-     * @return bool
-     */
     final public function hasCluster(string $cluster): bool
     {
         return isset($this->clusters[$cluster]);
@@ -124,12 +114,6 @@ class ClientManager
         return array_keys($this->clusters);
     }
 
-    /**
-     * @param string $cluster
-     * @param array  $config
-     *
-     * @return array
-     */
     protected function configureCluster(string $cluster, array $config): array
     {
         return $config;

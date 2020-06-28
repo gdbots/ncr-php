@@ -4,12 +4,13 @@ declare(strict_types=1);
 namespace Gdbots\Tests\Ncr\Repository;
 
 use Acme\Schemas\Iam\Node\UserV1;
+use Gdbots\Ncr\Exception\OptimisticCheckFailed;
 use Gdbots\Ncr\IndexQueryBuilder;
 use Gdbots\Ncr\IndexQueryFilter;
 use Gdbots\Ncr\Repository\InMemoryNcr;
+use Gdbots\Pbj\Message;
 use Gdbots\Pbj\SchemaQName;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
-use Gdbots\Schemas\Ncr\NodeRef;
+use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Tests\Ncr\Fixtures\SimpsonsTrait;
 use PHPUnit\Framework\TestCase;
 
@@ -17,15 +18,14 @@ class InMemoryNcrTest extends TestCase
 {
     use SimpsonsTrait;
 
-    /** @var InMemoryNcr */
-    protected $ncr;
+    protected InMemoryNcr $ncr;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->ncr = new InMemoryNcr();
     }
 
-    public function testHasNode()
+    public function testHasNode(): void
     {
         $node = UserV1::create();
         $nodeRef = NodeRef::fromNode($node);
@@ -36,7 +36,7 @@ class InMemoryNcrTest extends TestCase
         $this->assertFalse($this->ncr->hasNode($nodeRef));
     }
 
-    public function testGetAndPutNode()
+    public function testGetAndPutNode(): void
     {
         $expectedNode = UserV1::create();
         $this->ncr->putNode($expectedNode);
@@ -45,7 +45,7 @@ class InMemoryNcrTest extends TestCase
         $this->assertTrue($actualNode->equals($expectedNode));
     }
 
-    public function testDeleteNode()
+    public function testDeleteNode(): void
     {
         $node = UserV1::create();
         $this->ncr->putNode($node);
@@ -56,25 +56,23 @@ class InMemoryNcrTest extends TestCase
         $this->assertFalse($this->ncr->hasNode($nodeRef));
     }
 
-    public function testPutNodeWithValidExpectedEtag()
+    public function testPutNodeWithValidExpectedEtag(): void
     {
         $expectedEtag = 'test';
-        $expectedNode = UserV1::create()->set('etag', $expectedEtag);
+        $expectedNode = UserV1::create()->set(UserV1::ETAG_FIELD, $expectedEtag);
         $this->ncr->putNode($expectedNode);
         $nodeRef = NodeRef::fromNode($expectedNode);
 
         $nextNode = $this->ncr->getNode($nodeRef);
         $this->ncr->putNode($nextNode, $expectedEtag);
-        $this->assertSame($expectedNode->get('etag'), $nextNode->get('etag'));
+        $this->assertSame($expectedNode->get(UserV1::ETAG_FIELD), $nextNode->get(UserV1::ETAG_FIELD));
     }
 
-    /**
-     * @expectedException \Gdbots\Ncr\Exception\OptimisticCheckFailed
-     */
     public function testPutNodeWithInvalidExpectedEtag1()
     {
+        $this->expectException(OptimisticCheckFailed::class);
         $expectedEtag = 'test';
-        $expectedNode = UserV1::create()->set('etag', $expectedEtag);
+        $expectedNode = UserV1::create()->set(UserV1::ETAG_FIELD, $expectedEtag);
         $this->ncr->putNode($expectedNode);
         $nodeRef = NodeRef::fromNode($expectedNode);
 
@@ -83,13 +81,11 @@ class InMemoryNcrTest extends TestCase
         $this->ncr->putNode($nextNode, $invalidEtag);
     }
 
-    /**
-     * @expectedException \Gdbots\Ncr\Exception\OptimisticCheckFailed
-     */
     public function testPutNodeWithInvalidExpectedEtag2()
     {
+        $this->expectException(OptimisticCheckFailed::class);
         $expectedEtag = 'test';
-        $expectedNode = UserV1::create()->set('etag', $expectedEtag);
+        $expectedNode = UserV1::create()->set(UserV1::ETAG_FIELD, $expectedEtag);
         $this->ncr->putNode($expectedNode);
         $nodeRef = NodeRef::fromNode($expectedNode);
 
@@ -98,7 +94,7 @@ class InMemoryNcrTest extends TestCase
         $this->ncr->putNode($expectedNode, $expectedEtag);
     }
 
-    public function testGetNodes()
+    public function testGetNodes(): void
     {
         $nodes = [];
         $nodeRefs = [];
@@ -114,7 +110,7 @@ class InMemoryNcrTest extends TestCase
             $this->ncr->putNode($node);
         }
 
-        /** @var Node[] $actualNodes */
+        /** @var Message[] $actualNodes */
         shuffle($nodeRefs);
         $expectedNodeRefs = array_slice($nodeRefs, 0, 2);
         $actualNodes = $this->ncr->getNodes($expectedNodeRefs);
@@ -130,7 +126,7 @@ class InMemoryNcrTest extends TestCase
         }
     }
 
-    public function testFindNodeRefs()
+    public function testFindNodeRefs(): void
     {
         foreach ($this->getSimpsonsAsNodes() as $node) {
             $this->ncr->putNode($node);
@@ -160,7 +156,7 @@ class InMemoryNcrTest extends TestCase
         }
     }
 
-    public function testFindNodeRefsPaged1()
+    public function testFindNodeRefsPaged1(): void
     {
         foreach ($this->getSimpsonsAsNodes() as $node) {
             $this->ncr->putNode($node);
@@ -200,7 +196,7 @@ class InMemoryNcrTest extends TestCase
         $this->assertEquals([NodeRef::fromString('gdbots:fake-node:milhouse')], $result->getNodeRefs());
     }
 
-    public function testFindNodeRefsPaged3()
+    public function testFindNodeRefsPaged3(): void
     {
         foreach ($this->getSimpsonsAsNodes() as $node) {
             $this->ncr->putNode($node);
@@ -236,7 +232,7 @@ class InMemoryNcrTest extends TestCase
     }
 
 
-    public function testFindNodeRefsPaged25()
+    public function testFindNodeRefsPaged25(): void
     {
         foreach ($this->getSimpsonsAsNodes() as $node) {
             $this->ncr->putNode($node);

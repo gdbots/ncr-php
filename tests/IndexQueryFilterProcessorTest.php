@@ -5,8 +5,8 @@ namespace Gdbots\Tests\Ncr;
 
 use Gdbots\Ncr\IndexQueryFilter;
 use Gdbots\Ncr\IndexQueryFilterProcessor;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
-use Gdbots\Schemas\Ncr\NodeRef;
+use Gdbots\Pbj\Message;
+use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Tests\Ncr\Fixtures\SimpsonsTrait;
 use PHPUnit\Framework\TestCase;
 
@@ -14,10 +14,9 @@ class IndexQueryFilterProcessorTest extends TestCase
 {
     use SimpsonsTrait;
 
-    /** @var IndexQueryFilterProcessor */
-    protected $processor;
+    protected IndexQueryFilterProcessor $processor;
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->processor = new IndexQueryFilterProcessor();
     }
@@ -29,24 +28,19 @@ class IndexQueryFilterProcessorTest extends TestCase
      * @param IndexQueryFilter[] $filters
      * @param NodeRef[]          $expected
      */
-    public function testFilters(string $name, array $filters, array $expected)
+    public function testFilters(string $name, array $filters, array $expected): void
     {
         $nodes = $this->processor->filter($this->getSimpsonsAsNodes(), $filters);
         $this->assertEquals($expected, $this->getNodeRefs($nodes), "Test filter [{$name}] failed.");
     }
 
     /**
-     * @param Node[] $nodes
+     * @param Message[] $nodes
      *
      * @return NodeRef[]
      */
     protected function getNodeRefs(array $nodes): array
     {
-        $nodeRefs = [];
-        foreach ($nodes as $node) {
-            $nodeRefs[] = NodeRef::fromNode($node);
-        }
-
-        return $nodeRefs;
+        return array_values(array_map(fn (Message $node) => $node->generateNodeRef(), $nodes));
     }
 }

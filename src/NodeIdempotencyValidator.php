@@ -1,31 +1,38 @@
 <?php
 declare(strict_types=1);
 
-namespace Gdbots\Ncr\Validator;
+namespace Gdbots\Ncr;
 
-use Gdbots\Common\Util\SlugUtils;
 use Gdbots\Ncr\Exception\NodeAlreadyExists;
+use Gdbots\Pbj\Message;
 use Gdbots\Pbj\SchemaQName;
+use Gdbots\Pbj\Util\SlugUtil;
 use Gdbots\Pbjx\DependencyInjection\PbjxValidator;
 use Gdbots\Pbjx\Event\PbjxEvent;
 use Gdbots\Pbjx\EventSubscriber;
-use Gdbots\Schemas\Iam\Mixin\User\User;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
+use Gdbots\Schemas\Iam\Mixin\User\UserV1Mixin;
+use Gdbots\Schemas\Ncr\Command\CreateNodeV1;
+use Gdbots\Schemas\Ncr\Mixin\CreateNode\CreateNodeV1Mixin;
+use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
+use Gdbots\Schemas\Ncr\Mixin\Sluggable\SluggableV1Mixin;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
 
 class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
 {
-    /** @var CacheItemPoolInterface */
-    protected $cache;
+    protected CacheItemPoolInterface $cache;
+    protected array $ttl;
 
-    /** @var array */
-    protected $ttl = ['default' => 60];
+    public static function getSubscribedEvents()
+    {
+        return [
+            CreateNodeV1Mixin::SCHEMA_CURIE . '.validate'     => 'validateCreateNode',
+            CreateNodeV1Mixin::SCHEMA_CURIE . '.after_handle' => 'onCreateNodeAfterHandle',
+            CreateNodeV1::SCHEMA_CURIE . '.validate'          => 'validateCreateNode',
+            CreateNodeV1::SCHEMA_CURIE . '.after_handle'      => 'onCreateNodeAfterHandle',
+        ];
+    }
 
-    /**
-     * @param CacheItemPoolInterface $cache
-     * @param array                  $ttl
-     */
     public function __construct(CacheItemPoolInterface $cache, array $ttl = [])
     {
         $this->cache = $cache;
@@ -33,31 +40,15 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
         $this->ttl = $ttl;
     }
 
-    /**
-     * @return array
-     */
-    public static function getSubscribedEvents()
-    {
-        return [
-            'gdbots:ncr:mixin:create-node.validate'     => 'validateCreateNode',
-            'gdbots:ncr:mixin:create-node.after_handle' => 'onCreateNodeAfterHandle',
-        ];
-    }
-
-    /**
-     * @param PbjxEvent $pbjxEvent
-     *
-     * @throws NodeAlreadyExists
-     */
     public function validateCreateNode(PbjxEvent $pbjxEvent): void
     {
         $command = $pbjxEvent->getMessage();
-        if (!$command->has('node')) {
+        if (!$command->has(CreateNodeV1::NODE_FIELD)) {
             return;
         }
 
-        /** @var Node $node */
-        $node = $command->get('node');
+        /** @var Message $node */
+        $node = $command->get(CreateNodeV1::NODE_FIELD);
         if ($this->shouldIgnoreNode($node)) {
             return;
         }
@@ -89,12 +80,12 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
     public function onCreateNodeAfterHandle(PbjxEvent $pbjxEvent): void
     {
         $command = $pbjxEvent->getMessage();
-        if (!$command->has('node')) {
+        if (!$command->has(CreateNodeV1::NODE_FIELD)) {
             return;
         }
 
-        /** @var Node $node */
-        $node = $command->get('node');
+        /** @var Message $node */
+        $node = $command->get(CreateNodeV1::NODE_FIELD);
         if ($this->shouldIgnoreNode($node)) {
             return;
         }
@@ -111,25 +102,27 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
     /**
      * Derives the keys to use for the idempotency check from the node itself.
      *
-     * @param Node $node
+     * @param Message $node
      *
      * @return array
      */
-    public function getIdempotencyKeys(Node $node): array
+    public function getIdempotencyKeys(Message $node): array
     {
         $qname = $node::schema()->getQName();
         $keys = [];
 
-        if ($node->has('title')) {
-            $keys[$this->getCacheKey($qname, SlugUtils::create($node->get('title')))] = true;
+        if ($node->has(NodeV1Mixin::TITLE_FIELD)) {
+            $keys[$this->getCacheKey($qname, SlugUtil::create($node->get(NodeV1Mixin::TITLE_FIELD)))] = true;
         }
 
-        if ($node->has('slug')) {
-            $keys[$this->getCacheKey($qname, $node->get('slug'))] = true;
+        if ($node->has(SluggableV1Mixin::SLUG_FIELD)) {
+            $keys[$this->getCacheKey($qname, $node->get(SluggableV1Mixin::SLUG_FIELD))] = true;
         }
 
-        if ($node instanceof User && $node->has('email')) {
-            $keys[$this->getCacheKey($qname, $node->get('email'))] = true;
+        if ($node->has(UserV1Mixin::EMAIL_FIELD)
+            && $node::schema()->hasMixin(UserV1Mixin::SCHEMA_CURIE)
+        ) {
+            $keys[$this->getCacheKey($qname, $node->get(UserV1Mixin::EMAIL_FIELD))] = true;
         }
 
         return array_keys($keys);
@@ -140,11 +133,11 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
      * check is performed, useful for when you expect to get a lot of
      * nodes with the same title, email, etc.
      *
-     * @param Node $node
+     * @param Message $node
      *
      * @return bool
      */
-    protected function shouldIgnoreNode(Node $node): bool
+    protected function shouldIgnoreNode(Message $node): bool
     {
         return false;
     }
@@ -171,12 +164,7 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
         ));
     }
 
-    /**
-     * @param Node $node
-     *
-     * @return int
-     */
-    protected function getCacheTtl(Node $node): int
+    protected function getCacheTtl(Message $node): int
     {
         return $this->ttl[$node::schema()->getQName()->toString()] ?? $this->ttl['default'];
     }

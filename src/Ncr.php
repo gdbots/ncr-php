@@ -7,9 +7,9 @@ use Gdbots\Ncr\Exception\GdbotsNcrException;
 use Gdbots\Ncr\Exception\NodeNotFound;
 use Gdbots\Ncr\Exception\OptimisticCheckFailed;
 use Gdbots\Ncr\Exception\RepositoryIndexNotFound;
+use Gdbots\Pbj\Message;
 use Gdbots\Pbj\SchemaQName;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
-use Gdbots\Schemas\Ncr\NodeRef;
+use Gdbots\Pbj\WellKnown\NodeRef;
 
 interface Ncr
 {
@@ -47,33 +47,33 @@ interface Ncr
      * @param bool    $consistent An eventually consistent read is used by default unless this is true.
      * @param array   $context    Data that helps the NCR decide where to read/write data from.
      *
-     * @return Node
+     * @return Message
      *
      * @throws NodeNotFound
      * @throws GdbotsNcrException
      */
-    public function getNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): Node;
+    public function getNode(NodeRef $nodeRef, bool $consistent = false, array $context = []): Message;
 
     /**
      * @param NodeRef[] $nodeRefs   An array of NodeRefs to get from the NCR.
      * @param bool      $consistent An eventually consistent read is used by default unless this is true.
      * @param array     $context    Data that helps the NCR decide where to read/write data from.
      *
-     * @return Node[]
+     * @return Message[]
      *
      * @throws GdbotsNcrException
      */
     public function getNodes(array $nodeRefs, bool $consistent = false, array $context = []): array;
 
     /**
-     * @param Node   $node         The Node to put into the NCR.
-     * @param string $expectedEtag Used to perform optimistic concurrency check.
-     * @param array  $context      Data that helps the NCR decide where to read/write data from.
+     * @param Message $node         The Node to put into the NCR.
+     * @param string  $expectedEtag Used to perform optimistic concurrency check.
+     * @param array   $context      Data that helps the NCR decide where to read/write data from.
      *
      * @throws OptimisticCheckFailed
      * @throws GdbotsNcrException
      */
-    public function putNode(Node $node, ?string $expectedEtag = null, array $context = []): void;
+    public function putNode(Message $node, ?string $expectedEtag = null, array $context = []): void;
 
     /**
      * @param NodeRef $nodeRef The NodeRef to delete from the NCR.
@@ -95,26 +95,26 @@ interface Ncr
     public function findNodeRefs(IndexQuery $query, array $context = []): IndexQueryResult;
 
     /**
-     * Reads nodes from the NCR (unordered) and executes the $receiver for every
-     * node returned, i.e. "$receiver($node);".
+     * Reads nodes from the NCR (unordered).
      *
      * @param SchemaQName $qname
-     * @param callable    $receiver The callable that will receive the node. "function f(Node $node)".
-     * @param array       $context  Data that helps the NCR decide where to read/write data from.
+     * @param array       $context Data that helps the NCR decide where to read/write data from.
+     *
+     * @return \Generator
      *
      * @throws GdbotsNcrException
      */
-    public function pipeNodes(SchemaQName $qname, callable $receiver, array $context = []): void;
+    public function pipeNodes(SchemaQName $qname, array $context = []): \Generator;
 
     /**
-     * Reads nodeRefs from the NCR (unordered) and executes the $receiver for every
-     * NodeRef returned, i.e. "$receiver($nodeRef);".
+     * Reads nodeRefs from the NCR (unordered).
      *
      * @param SchemaQName $qname
-     * @param callable    $receiver The callable that will receive the NodeRef. "function f(NodeRef $nodeRef)".
-     * @param array       $context  Data that helps the NCR decide where to read/write data from.
+     * @param array       $context Data that helps the NCR decide where to read/write data from.
+     *
+     * @return \Generator
      *
      * @throws GdbotsNcrException
      */
-    public function pipeNodeRefs(SchemaQName $qname, callable $receiver, array $context = []): void;
+    public function pipeNodeRefs(SchemaQName $qname, array $context = []): \Generator;
 }

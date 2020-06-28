@@ -8,39 +8,38 @@ use Aws\CommandPool;
 use Aws\DynamoDb\DynamoDbClient;
 use Aws\Exception\AwsException;
 use Aws\ResultInterface;
-use Gdbots\Common\Util\NumberUtils;
+use Gdbots\Pbj\Util\NumberUtil;
 
 /**
  * The BatchGetItemRequest is an object that is capable of efficiently handling
- * batchGetItem requests.  It processes with the fewest requests to DynamoDB
+ * batchGetItem requests. It processes with the fewest requests to DynamoDB
  * as possible and also re-queues any unprocessed items to ensure that all
  * items are fetched.
  */
 final class BatchGetItemRequest
 {
-    /** @var DynamoDbClient */
-    private $client;
+    private DynamoDbClient $client;
 
     /**
      * Number of items to fetch per request.  (AWS max is 100)
      *
      * @var int
      */
-    private $batchSize = 100;
+    private int $batchSize = 100;
 
     /**
      * Number of parallel requests to run.
      *
      * @var int
      */
-    private $poolSize = 25;
+    private int $concurrency = 25;
 
     /**
      * When true, a ConsistentRead is used.
      *
      * @var bool
      */
-    private $consistentRead = false;
+    private bool $consistentRead = false;
 
     /**
      * A callable to execute when an error occurs.
@@ -49,56 +48,32 @@ final class BatchGetItemRequest
      */
     private $errorFunc;
 
-    /** @var array */
-    private $queue;
+    private array $queue;
 
-    /**
-     * @param DynamoDbClient $client
-     */
     public function __construct(DynamoDbClient $client)
     {
         $this->client = $client;
         $this->queue = [];
     }
 
-    /**
-     * @param int $batchSize
-     *
-     * @return self
-     */
     public function batchSize(int $batchSize = 100): self
     {
-        $this->batchSize = NumberUtils::bound($batchSize, 2, 100);
+        $this->batchSize = NumberUtil::bound($batchSize, 2, 100);
         return $this;
     }
 
-    /**
-     * @param int $poolSize
-     *
-     * @return self
-     */
-    public function poolSize(int $poolSize = 25): self
+    public function concurrency(int $concurrency = 25): self
     {
-        $this->poolSize = NumberUtils::bound($poolSize, 1, 50);
+        $this->concurrency = NumberUtil::bound($concurrency, 1, 50);
         return $this;
     }
 
-    /**
-     * @param bool $consistentRead
-     *
-     * @return self
-     */
     public function consistentRead(bool $consistentRead = false): self
     {
         $this->consistentRead = $consistentRead;
         return $this;
     }
 
-    /**
-     * @param callable $func
-     *
-     * @return self
-     */
     public function onError(callable $func): self
     {
         $this->errorFunc = $func;
@@ -133,7 +108,7 @@ final class BatchGetItemRequest
         while ($this->queue) {
             $commands = $this->prepareCommands();
             $pool = new CommandPool($this->client, $commands, [
-                'concurrency' => $this->poolSize,
+                'concurrency' => $this->concurrency,
                 'fulfilled'   => function (ResultInterface $result) use (&$allItems) {
                     if ($result->hasKey('UnprocessedKeys')) {
                         $this->retryUnprocessed($result['UnprocessedKeys']);
@@ -175,14 +150,24 @@ final class BatchGetItemRequest
         $this->queue = [];
 
         $commands = [];
+        $ids = [];
+
         foreach ($batches as $batch) {
             $requests = [];
             foreach ($batch as $item) {
+                $id = $item['table'] . current($item['key'])['S'];
+                if (isset($ids[$id])) {
+                    continue;
+                }
+
                 if (!isset($requests[$item['table']])) {
                     $requests[$item['table']] = ['Keys' => [], 'ConsistentRead' => $this->consistentRead];
                 }
+
+                $ids[$id] = true;
                 $requests[$item['table']]['Keys'][] = $item['key'];
             }
+
             $commands[] = $this->client->getCommand('BatchGetItem', ['RequestItems' => $requests]);
         }
 

@@ -5,37 +5,31 @@ namespace Gdbots\Tests\Ncr;
 
 use Acme\Schemas\Iam\Node\UserV1;
 use Gdbots\Ncr\NcrLazyLoader;
-use Gdbots\Pbj\MessageRef;
+use Gdbots\Pbj\Message;
+use Gdbots\Pbj\WellKnown\MessageRef;
+use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Pbjx\RegisteringServiceLocator;
 use Gdbots\Pbjx\RequestHandler;
 use Gdbots\Pbjx\SimplePbjx;
-use Gdbots\Schemas\Ncr\NodeRef;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchRequestV1;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchResponseV1;
-use Gdbots\Schemas\Pbjx\Mixin\Request\Request;
-use Gdbots\Schemas\Pbjx\Mixin\Response\Response;
 use PHPUnit\Framework\TestCase;
 
 class NcrLazyLoaderTest extends TestCase
 {
-    /** @var RegisteringServiceLocator */
-    protected $locator;
+    protected RegisteringServiceLocator $locator;
+    protected Pbjx $pbjx;
+    protected NcrLazyLoader $ncrLazyLoader;
 
-    /** @var Pbjx */
-    protected $pbjx;
-
-    /** @var NcrLazyLoader */
-    protected $ncrLazyLoader;
-
-    public function setUp()
+    public function setUp(): void
     {
         $this->locator = new RegisteringServiceLocator();
         $this->pbjx = new SimplePbjx($this->locator);
         $this->ncrLazyLoader = new NcrLazyLoader($this->pbjx);
     }
 
-    public function testHasNodeRef()
+    public function testHasNodeRef(): void
     {
         $nodeRef1 = NodeRef::fromString('acme:user:123');
         $nodeRef2 = NodeRef::fromString('acme:user:abc');
@@ -48,7 +42,7 @@ class NcrLazyLoaderTest extends TestCase
         $this->assertTrue($this->ncrLazyLoader->hasNodeRef($nodeRef2));
     }
 
-    public function testaddEmbeddedNodeRefs()
+    public function testAddEmbeddedNodeRefs(): void
     {
         $messageRef = MessageRef::fromString('acme:iam:node:user:homer');
         $nodeRef = NodeRef::fromMessageRef($messageRef);
@@ -61,7 +55,7 @@ class NcrLazyLoaderTest extends TestCase
         $this->assertTrue($this->ncrLazyLoader->hasNodeRef(NodeRef::fromString("acme:user:{$node->get('_id')}")));
     }
 
-    public function testClear()
+    public function testClear(): void
     {
         $nodeRef1 = NodeRef::fromString('acme:user:123');
         $nodeRef2 = NodeRef::fromString('acme:user:abc');
@@ -73,13 +67,12 @@ class NcrLazyLoaderTest extends TestCase
         $this->assertFalse($this->ncrLazyLoader->hasNodeRef($nodeRef2));
     }
 
-    public function testFlush()
+    public function testFlush(): void
     {
-        $handler = new class implements RequestHandler
-        {
-            public $worked = false;
+        $handler = new class implements RequestHandler {
+            public bool $worked = false;
 
-            public function handleRequest(Request $request, Pbjx $pbjx): Response
+            public function handleRequest(Message $request, Pbjx $pbjx): Message
             {
                 $this->worked = $request->isInSet('node_refs', NodeRef::fromString('acme:user:123'));
                 return GetNodeBatchResponseV1::create();

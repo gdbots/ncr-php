@@ -3,74 +3,57 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
+use Gdbots\Pbj\Message;
+use Gdbots\Pbj\WellKnown\NodeRef;
+use Gdbots\Pbjx\Pbjx;
 use Gdbots\Pbjx\RequestHandler;
-use Gdbots\Pbjx\RequestHandlerTrait;
-use Gdbots\Schemas\Ncr\NodeRef;
-use Gdbots\Schemas\Ncr\Request\GetNodeBatchRequest;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchRequestV1;
-use Gdbots\Schemas\Ncr\Request\GetNodeBatchResponse;
 use Gdbots\Schemas\Ncr\Request\GetNodeBatchResponseV1;
 
-/**
- * This handler SHOULD only be used internally.
- * Clients should not be able to make this request as it
- * allows for access to batch request any kind of node.
- */
-final class GetNodeBatchRequestHandler implements RequestHandler
+// fixme: add NcrPolicy logic here or in binder/validator?
+class GetNodeBatchRequestHandler implements RequestHandler
 {
-    use RequestHandlerTrait;
+    protected Ncr $ncr;
 
-    /** @var Ncr */
-    private $ncr;
+    public static function handlesCuries(): array
+    {
+        return [
+            GetNodeBatchRequestV1::SCHEMA_CURIE,
+        ];
+    }
 
-    /**
-     * @param Ncr $ncr
-     */
     public function __construct(Ncr $ncr)
     {
         $this->ncr = $ncr;
     }
 
-    /**
-     * @param GetNodeBatchRequest $request
-     *
-     * @return GetNodeBatchResponse
-     */
-    protected function handle(GetNodeBatchRequest $request): GetNodeBatchResponse
+    public function handleRequest(Message $request, Pbjx $pbjx): Message
     {
-        $nodeRefs = $request->get('node_refs');
-        $response = GetNodeBatchResponseV1::create();
+        $nodeRefs = $request->get(GetNodeBatchRequestV1::NODE_REFS_FIELD);
+        $response = $this->createGetNodeBatchResponse($request, $pbjx);
 
         if (empty($nodeRefs)) {
             return $response;
         }
 
-        $nodes = $this->ncr->getNodes(
-            $nodeRefs,
-            $request->get('consistent_read'),
-            $request->get('context', [])
-        );
+        $context = $request->get(GetNodeBatchRequestV1::CONTEXT_FIELD, []);
+        $context['causator'] = $request;
+        $consistent = $request->get(GetNodeBatchRequestV1::CONSISTENT_READ_FIELD);
+        $nodes = $this->ncr->getNodes($nodeRefs, $consistent, $context);
 
         foreach ($nodes as $nodeRef => $node) {
-            $response->addToMap('nodes', $nodeRef, $node);
+            $response->addToMap($response::NODES_FIELD, $nodeRef, $node);
         }
 
         $missing = array_keys(array_diff_key(array_flip(array_map('strval', $nodeRefs)), $nodes));
-        $missing = array_map(function ($str) {
-            return NodeRef::fromString($str);
-        }, $missing);
-        $response->addToSet('missing_node_refs', $missing);
+        $missing = array_map(fn(string $str) => NodeRef::fromString($str), $missing);
+        $response->addToSet($response::MISSING_NODE_REFS_FIELD, $missing);
 
         return $response;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public static function handlesCuries(): array
+    protected function createGetNodeBatchResponse(Message $request, Pbjx $pbjx): Message
     {
-        return [
-            GetNodeBatchRequestV1::schema()->getCurie(),
-        ];
+        return GetNodeBatchResponseV1::create();
     }
 }

@@ -4,12 +4,10 @@ declare(strict_types=1);
 namespace Gdbots\Ncr;
 
 use Gdbots\Ncr\Exception\GdbotsNcrException;
+use Gdbots\Pbj\Message;
 use Gdbots\Pbj\SchemaQName;
+use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\QueryParser\ParsedQuery;
-use Gdbots\Schemas\Ncr\Mixin\Indexed\Indexed;
-use Gdbots\Schemas\Ncr\Mixin\SearchNodesRequest\SearchNodesRequest;
-use Gdbots\Schemas\Ncr\Mixin\SearchNodesResponse\SearchNodesResponse;
-use Gdbots\Schemas\Ncr\NodeRef;
 
 interface NcrSearch
 {
@@ -32,7 +30,7 @@ interface NcrSearch
     public function describeStorage(SchemaQName $qname, array $context = []): string;
 
     /**
-     * @param Indexed[] $nodes   An array of Nodes to add to the search index.
+     * @param Message[] $nodes   An array of Nodes to add to the search index.
      * @param array     $context Data that helps the NCR Search decide where to read/write data from.
      *
      * @throws GdbotsNcrException
@@ -51,14 +49,14 @@ interface NcrSearch
      * Executes a search request and populates the provided response object with
      * the nodes found, total, time_taken, etc.
      *
-     * @param SearchNodesRequest  $request      Search request containing pagination, date filters, etc.
-     * @param ParsedQuery         $parsedQuery  Parsed version of the search query (the "q" field of the request).
-     * @param SearchNodesResponse $response     Results from search will be added to this object.
-     * @param SchemaQName[]       $qnames       An array of curies that the search should limit its search to.
-     *                                          If empty, it will search all nodes in all indexes.
-     * @param array               $context      Data that helps the NCR Search decide where to read/write data from.
+     * @param Message       $request     Search request containing pagination, date filters, etc.
+     * @param ParsedQuery   $parsedQuery Parsed version of the search query (the "q" field of the request).
+     * @param Message       $response    Results from search will be added to this object.
+     * @param SchemaQName[] $qnames      An array of qnames that the search should limit its search to.
+     *                                   If empty, it will search all nodes in all indexes.
+     * @param array         $context     Data that helps the NCR Search decide where to read/write data from.
      *
      * @throws GdbotsNcrException
      */
-    public function searchNodes(SearchNodesRequest $request, ParsedQuery $parsedQuery, SearchNodesResponse $response, array $qnames = [], array $context = []): void;
+    public function searchNodes(Message $request, ParsedQuery $parsedQuery, Message $response, array $qnames = [], array $context = []): void;
 }

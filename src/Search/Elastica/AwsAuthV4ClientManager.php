@@ -8,35 +8,16 @@ use Psr\Log\LoggerInterface;
 
 class AwsAuthV4ClientManager extends ClientManager
 {
-    /** @var CredentialsInterface */
-    private $credentials;
+    protected CredentialsInterface $credentials;
+    protected string $region;
 
-    /** @var string */
-    private $region;
-
-    /**
-     * @param CredentialsInterface $credentials
-     * @param string               $region
-     * @param array                $clusters
-     * @param LoggerInterface      $logger
-     */
-    public function __construct(
-        CredentialsInterface $credentials,
-        string $region,
-        array $clusters,
-        ?LoggerInterface $logger = null
-    ) {
+    public function __construct(CredentialsInterface $credentials, string $region, array $clusters, ?LoggerInterface $logger = null)
+    {
         parent::__construct($clusters, $logger);
         $this->credentials = $credentials;
         $this->region = $region;
     }
 
-    /**
-     * @param string $cluster
-     * @param array  $config
-     *
-     * @return array
-     */
     protected function configureCluster(string $cluster, array $config): array
     {
         $config['transport'] = 'AwsAuthV4';

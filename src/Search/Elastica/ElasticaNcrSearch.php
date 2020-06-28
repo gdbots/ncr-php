@@ -7,129 +7,114 @@ use Elastica\Client;
 use Elastica\Document;
 use Elastica\Index;
 use Elastica\Search;
-use Elastica\Type;
-use Gdbots\Common\Util\ClassUtils;
-use Gdbots\Common\Util\NumberUtils;
 use Gdbots\Ncr\Exception\SearchOperationFailed;
 use Gdbots\Ncr\NcrSearch;
 use Gdbots\Pbj\Marshaler\Elastica\DocumentMarshaler;
-use Gdbots\Pbj\Schema;
+use Gdbots\Pbj\Message;
 use Gdbots\Pbj\SchemaQName;
+use Gdbots\Pbj\Util\ClassUtil;
+use Gdbots\Pbj\Util\DateUtil;
+use Gdbots\Pbj\Util\NumberUtil;
+use Gdbots\Pbj\WellKnown\NodeRef;
+use Gdbots\Pbjx\Event\EnrichContextEvent;
+use Gdbots\Pbjx\PbjxEvents;
 use Gdbots\QueryParser\ParsedQuery;
-use Gdbots\Schemas\Ncr\Mixin\SearchNodesRequest\SearchNodesRequest;
-use Gdbots\Schemas\Ncr\Mixin\SearchNodesResponse\SearchNodesResponse;
-use Gdbots\Schemas\Ncr\NodeRef;
+use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
+use Gdbots\Schemas\Ncr\Mixin\SearchNodesRequest\SearchNodesRequestV1Mixin;
+use Gdbots\Schemas\Ncr\Mixin\SearchNodesResponse\SearchNodesResponseV1Mixin;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 
 class ElasticaNcrSearch implements NcrSearch
 {
-    /** @var ClientManager */
-    protected $clientManager;
-
-    /** @var LoggerInterface */
-    protected $logger;
-
-    /** @var IndexManager */
-    protected $indexManager;
-
-    /** @var DocumentMarshaler */
-    protected $marshaler;
-
-    /** @var QueryFactory */
-    protected $queryFactory;
+    protected ClientManager $clientManager;
+    protected EventDispatcher $dispatcher;
+    protected IndexManager $indexManager;
+    protected LoggerInterface $logger;
+    protected DocumentMarshaler $marshaler;
+    protected ?QueryFactory $queryFactory = null;
 
     /**
      * Used to limit the amount of time a query can take.
      *
      * @var string
      */
-    protected $timeout;
+    protected string $timeout;
 
-    /**
-     * @param ClientManager   $clientManager
-     * @param IndexManager    $indexManager
-     * @param LoggerInterface $logger
-     * @param string          $timeout
-     */
     public function __construct(
         ClientManager $clientManager,
+        EventDispatcher $dispatcher,
         IndexManager $indexManager,
         ?LoggerInterface $logger = null,
         ?string $timeout = null
     ) {
         $this->clientManager = $clientManager;
+        $this->dispatcher = $dispatcher;
         $this->indexManager = $indexManager;
         $this->logger = $logger ?: new NullLogger();
         $this->timeout = $timeout ?: '100ms';
         $this->marshaler = new DocumentMarshaler();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function createStorage(SchemaQName $qname, array $context = []): void
     {
+        $context = $this->enrichContext(__FUNCTION__, $context);
         $client = $this->getClientForWrite($context);
         $index = $this->indexManager->createIndex($client, $qname, $context);
-        $this->indexManager->createType($index, $qname);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function describeStorage(SchemaQName $qname, array $context = []): string
     {
+        $context = $this->enrichContext(__FUNCTION__, $context);
         $client = $this->getClientForWrite($context);
         $index = new Index($client, $this->indexManager->getIndexName($qname, $context));
-        $type = new Type($index, $this->indexManager->getTypeName($qname));
 
         $connection = $client->getConnection();
-        $url = "http://{$connection->getHost()}:{$connection->getPort()}/{$index->getName()}";
+        $url = "https://{$connection->getHost()}:{$connection->getPort()}/{$index->getName()}";
 
         $result = <<<TEXT
 
-Service:      ElasticSearch
-Index Name:   {$index->getName()}
-Type Name:    {$type->getName()}
-Documents:    {$type->count()}
-Index Stats:  curl "{$url}/_stats?pretty=1"
-Type Mapping: curl "{$url}/{$type->getName()}/_mapping?pretty=1"
+Service:     ElasticSearch
+Index Name:  {$index->getName()}
+Documents:   {$index->count()}
+Index Stats: curl "{$url}/_stats?pretty=true"
+Mappings:    curl "{$url}/_mapping?pretty=true"
 
 TEXT;
 
         return $result;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function indexNodes(array $nodes, array $context = []): void
     {
         if (empty($nodes)) {
             return;
         }
 
+        $context = $this->enrichContext(__FUNCTION__, $context);
+        $refresh = filter_var($context['consistent_write'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $client = $this->getClientForWrite($context);
+        $this->marshaler->skipValidation(false);
         $documents = [];
-        $refresh = (bool)($options['consistent_write'] ?? false);
 
+        /** @var Message $node */
         foreach ($nodes as $node) {
-            /** @var Schema $schema */
-            $schema = $node::schema();
-            $qname = $schema->getQName();
-            $nodeRef = NodeRef::fromNode($node);
+            $nodeRef = $node->generateNodeRef();
+            $qname = $nodeRef->getQName();
             $indexName = null;
-            $typeName = null;
 
             try {
                 $indexName = $this->indexManager->getIndexName($qname, $context);
-                $typeName = $this->indexManager->getTypeName($qname);
                 $document = $this->marshaler->marshal($node)
-                    ->setId($node->get('_id')->toString())
-                    ->remove('_id')// the "_id" field must not exist in the source as well
-                    ->setType($typeName)
+                    ->setId($nodeRef->toString())
+                    ->remove(NodeV1Mixin::_ID_FIELD) // the "_id" field must not exist in the source as well
+                    ->set(MappingBuilder::TYPE_FIELD, $nodeRef->getLabel())
+                    ->set(
+                        IndexManager::CREATED_AT_ISO_FIELD_NAME,
+                        $node->get(NodeV1Mixin::CREATED_AT_FIELD)->toDateTime()->format(DateUtil::ISO8601_ZULU)
+                    )
                     ->setIndex($indexName)
                     ->setRefresh($refresh);
                 $this->indexManager->getNodeMapper($qname)->beforeIndex($document, $node);
@@ -137,16 +122,15 @@ TEXT;
             } catch (\Throwable $e) {
                 $message = sprintf(
                     '%s while adding node [{node_ref}] to batch index request ' .
-                    'into ElasticSearch [{index_name}/{type_name}].',
-                    ClassUtils::getShortName($e)
+                    'into ElasticSearch [{index_name}].',
+                    ClassUtil::getShortName($e)
                 );
 
                 $this->logger->error($message, [
                     'exception'  => $e,
                     'index_name' => $indexName,
-                    'type_name'  => $typeName,
                     'node_ref'   => $nodeRef->toString(),
-                    'node'       => $node->toArray(),
+                    'pbj'        => $node->toArray(),
                 ]);
             }
         }
@@ -164,7 +148,7 @@ TEXT;
             throw new SearchOperationFailed(
                 sprintf(
                     '%s while indexing batch into ElasticSearch with message: %s',
-                    ClassUtils::getShortName($e),
+                    ClassUtil::getShortName($e),
                     $e->getMessage()
                 ),
                 Code::INTERNAL,
@@ -173,44 +157,39 @@ TEXT;
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function deleteNodes(array $nodeRefs, array $context = []): void
     {
         if (empty($nodeRefs)) {
             return;
         }
 
+        $context = $this->enrichContext(__FUNCTION__, $context);
+        $refresh = filter_var($context['consistent_write'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $client = $this->getClientForWrite($context);
         $documents = [];
-        $refresh = (bool)($options['consistent_write'] ?? false);
 
         /** @var NodeRef $nodeRef */
         foreach ($nodeRefs as $nodeRef) {
             $qname = $nodeRef->getQName();
             $indexName = null;
-            $typeName = null;
 
             try {
                 $indexName = $this->indexManager->getIndexName($qname, $context);
-                $typeName = $this->indexManager->getTypeName($qname);
                 $documents[] = (new Document())
-                    ->setId((string)$nodeRef->getId())
-                    ->setType($typeName)
+                    ->setId($nodeRef->toString())
+                    ->set(MappingBuilder::TYPE_FIELD, $nodeRef->getLabel())
                     ->setIndex($indexName)
                     ->setRefresh($refresh);
             } catch (\Throwable $e) {
                 $message = sprintf(
                     '%s while adding node [{node_ref}] to batch delete request ' .
-                    'from ElasticSearch [{index_name}/{type_name}].',
-                    ClassUtils::getShortName($e)
+                    'from ElasticSearch [{index_name}].',
+                    ClassUtil::getShortName($e)
                 );
 
                 $this->logger->error($message, [
                     'exception'  => $e,
                     'index_name' => $indexName,
-                    'type_name'  => $typeName,
                     'node_ref'   => $nodeRef->toString(),
                 ]);
             }
@@ -229,7 +208,7 @@ TEXT;
             throw new SearchOperationFailed(
                 sprintf(
                     '%s while deleting batch from ElasticSearch with message: %s',
-                    ClassUtils::getShortName($e),
+                    ClassUtil::getShortName($e),
                     $e->getMessage()
                 ),
                 Code::INTERNAL,
@@ -238,11 +217,10 @@ TEXT;
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function searchNodes(SearchNodesRequest $request, ParsedQuery $parsedQuery, SearchNodesResponse $response, array $qnames = [], array $context = []): void
+    public function searchNodes(Message $request, ParsedQuery $parsedQuery, Message $response, array $qnames = [], array $context = []): void
     {
+        $context = $this->enrichContext(__FUNCTION__, $context);
+        $skipValidation = filter_var($context['skip_validation'] ?? true, FILTER_VALIDATE_BOOLEAN);
         $search = new Search($this->getClientForRead($context));
 
         if (empty($qnames)) {
@@ -250,14 +228,13 @@ TEXT;
         } else {
             foreach ($qnames as $qname) {
                 $search->addIndex($this->indexManager->getIndexName($qname, $context));
-                $search->addType($this->indexManager->getTypeName($qname));
             }
         }
 
-        $page = $request->has('cursor') ? 1 : $request->get('page');
-        $perPage = $request->get('count');
+        $page = $request->has(SearchNodesRequestV1Mixin::CURSOR_FIELD) ? 1 : $request->get(SearchNodesRequestV1Mixin::PAGE_FIELD);
+        $perPage = $request->get(SearchNodesRequestV1Mixin::COUNT_FIELD);
         $offset = ($page - 1) * $perPage;
-        $offset = NumberUtils::bound($offset, 0, 10000);
+        $offset = NumberUtil::bound($offset, 0, 10000);
         $options = [
             Search::OPTION_TIMEOUT                   => $this->timeout,
             Search::OPTION_FROM                      => $offset,
@@ -267,7 +244,7 @@ TEXT;
 
         try {
             $results = $search
-                ->setOptionsAndQuery($options, $this->getQueryFactory()->create($request, $parsedQuery))
+                ->setOptionsAndQuery($options, $this->getQueryFactory()->create($request, $parsedQuery, $qnames))
                 ->search();
         } catch (\Throwable $e) {
             $this->logger->error(
@@ -276,15 +253,15 @@ TEXT;
                     'exception'  => $e,
                     'pbj_schema' => $request->schema()->getId()->toString(),
                     'pbj'        => $request->toArray(),
-                    'query'      => $request->get('q'),
+                    'query'      => $request->get(SearchNodesRequestV1Mixin::Q_FIELD),
                 ]
             );
 
             throw new SearchOperationFailed(
                 sprintf(
                     'ElasticSearch query [%s] failed with message: %s',
-                    $request->get('q'),
-                    ClassUtils::getShortName($e) . '::' . $e->getMessage()
+                    $request->get(SearchNodesRequestV1Mixin::Q_FIELD),
+                    ClassUtil::getShortName($e) . '::' . $e->getMessage()
                 ),
                 Code::INTERNAL,
                 $e
@@ -292,10 +269,12 @@ TEXT;
         }
 
         $nodes = [];
+        $this->marshaler->skipValidation($skipValidation);
         foreach ($results->getResults() as $result) {
             try {
                 $source = $result->getSource();
-                $source['_id'] = (string)$result->getId();
+                [, , $id] = explode(':', (string)$result->getId(), 3);
+                $source['_id'] = $id;
                 $nodes[] = $this->marshaler->unmarshal($source);
             } catch (\Throwable $e) {
                 $this->logger->error(
@@ -304,13 +283,14 @@ TEXT;
                 );
             }
         }
+        $this->marshaler->skipValidation(false);
 
         $response
-            ->set('total', $results->getTotalHits())
-            ->set('has_more', ($offset + $perPage) < $results->getTotalHits() && $offset < 10000)
-            ->set('time_taken', (int)($results->getResponse()->getQueryTime() * 1000))
-            ->set('max_score', (float)$results->getMaxScore())
-            ->addToList('nodes', $nodes);
+            ->set(SearchNodesResponseV1Mixin::TOTAL_FIELD, $results->getTotalHits())
+            ->set(SearchNodesResponseV1Mixin::HAS_MORE_FIELD, ($offset + $perPage) < $results->getTotalHits() && $offset < 10000)
+            ->set(SearchNodesResponseV1Mixin::TIME_TAKEN_FIELD, (int)($results->getResponse()->getQueryTime() * 1000))
+            ->set(SearchNodesResponseV1Mixin::MAX_SCORE_FIELD, (float)$results->getMaxScore())
+            ->addToList(SearchNodesResponseV1Mixin::NODES_FIELD, $nodes);
     }
 
     /**
@@ -341,9 +321,18 @@ TEXT;
         return $this->clientManager->getClient($context['cluster'] ?? 'default');
     }
 
-    /**
-     * @return QueryFactory
-     */
+    protected function enrichContext(string $operation, array $context): array
+    {
+        if (isset($context['already_enriched'])) {
+            return $context;
+        }
+
+        $event = new EnrichContextEvent('ncr_search', $operation, $context);
+        $context = $this->dispatcher->dispatch($event, PbjxEvents::ENRICH_CONTEXT)->all();
+        $context['already_enriched'] = true;
+        return $context;
+    }
+
     final protected function getQueryFactory(): QueryFactory
     {
         if (null === $this->queryFactory) {
@@ -353,9 +342,6 @@ TEXT;
         return $this->queryFactory;
     }
 
-    /**
-     * @return QueryFactory
-     */
     protected function doGetQueryFactory(): QueryFactory
     {
         return new QueryFactory();

@@ -3,40 +3,32 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
+use Gdbots\Pbj\Message;
+use Gdbots\Pbj\MessageResolver;
 use Gdbots\Pbj\SchemaQName;
 use Gdbots\Pbjx\Pbjx;
+use Gdbots\Pbjx\RequestHandler;
 use Gdbots\QueryParser\Enum\BoolOperator;
 use Gdbots\QueryParser\Node\Field;
 use Gdbots\QueryParser\Node\Word;
 use Gdbots\QueryParser\ParsedQuery;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
-use Gdbots\Schemas\Ncr\Mixin\SearchNodesRequest\SearchNodesRequest;
-use Gdbots\Schemas\Ncr\Mixin\SearchNodesResponse\SearchNodesResponse;
+use Gdbots\Schemas\Ncr\Mixin\SearchNodesRequest\SearchNodesRequestV1Mixin;
 
-abstract class AbstractSearchNodesRequestHandler extends AbstractRequestHandler
+abstract class AbstractSearchNodesRequestHandler implements RequestHandler
 {
-    /** @var NcrSearch */
-    protected $ncrSearch;
+    protected NcrSearch $ncrSearch;
 
-    /**
-     * @param NcrSearch $ncrSearch
-     */
     public function __construct(NcrSearch $ncrSearch)
     {
         $this->ncrSearch = $ncrSearch;
     }
 
-    /**
-     * @param SearchNodesRequest $request
-     * @param Pbjx               $pbjx
-     *
-     * @return SearchNodesResponse
-     */
-    protected function handle(SearchNodesRequest $request, Pbjx $pbjx): SearchNodesResponse
+    public function handleRequest(Message $request, Pbjx $pbjx): Message
     {
         $response = $this->createSearchNodesResponse($request, $pbjx);
         $parsedQuery = ParsedQuery::fromArray(json_decode(
-            $request->get('parsed_query_json', '{}'),
+            $request->get(SearchNodesRequestV1Mixin::PARSED_QUERY_JSON_FIELD, '{}'),
             true
         ));
 
@@ -44,42 +36,44 @@ abstract class AbstractSearchNodesRequestHandler extends AbstractRequestHandler
 
         // if status is not specified in some way, default to not
         // showing any deleted nodes.
-        if (!$request->has('status')
-            && !$request->has('statuses')
-            && !$request->isInSet('fields_used', 'status')
+        if (!$request->has(SearchNodesRequestV1Mixin::STATUS_FIELD)
+            && !$request->has(SearchNodesRequestV1Mixin::STATUSES_FIELD)
+            && !$request->isInSet(
+                SearchNodesRequestV1Mixin::FIELDS_USED_FIELD,
+                SearchNodesRequestV1Mixin::STATUS_FIELD
+            )
         ) {
             $parsedQuery->addNode(
-                new Field('status', new Word(NodeStatus::DELETED, $prohibited), $prohibited)
+                new Field(
+                    SearchNodesRequestV1Mixin::STATUS_FIELD,
+                    new Word(NodeStatus::DELETED, $prohibited),
+                    $prohibited
+                )
             );
         }
 
         $qnames = $this->createQNamesForSearchNodes($request, $parsedQuery);
-        $context = $this->createNcrSearchContext($request);
-
+        $context = ['causator' => $request];
         $this->beforeSearchNodes($request, $parsedQuery);
         $this->ncrSearch->searchNodes($request, $parsedQuery, $response, $qnames, $context);
         return $response;
     }
 
-    /**
-     * @param SearchNodesRequest $request
-     * @param ParsedQuery        $parsedQuery
-     */
-    protected function beforeSearchNodes(SearchNodesRequest $request, ParsedQuery $parsedQuery): void
+    protected function beforeSearchNodes(Message $request, ParsedQuery $parsedQuery): void
     {
         // override to customize the parsed query before search nodes runs.
     }
 
     /**
-     * @param SearchNodesRequest $request
-     * @param ParsedQuery        $parsedQuery
+     * @param Message     $request
+     * @param ParsedQuery $parsedQuery
      *
      * @return SchemaQName[]
      */
-    protected function createQNamesForSearchNodes(SearchNodesRequest $request, ParsedQuery $parsedQuery): array
+    protected function createQNamesForSearchNodes(Message $request, ParsedQuery $parsedQuery): array
     {
         $curie = $request::schema()->getCurie();
-        $vendor = $curie->getVendor();
+        $vendor = MessageResolver::getDefaultVendor();
         // converts search-articles-request to "article"
         // converts search-categories-request to "category"
         $label = str_replace(['search-', 'ies-request', 's-request'], ['', 'y', ''], $curie->getMessage());
@@ -92,16 +86,5 @@ abstract class AbstractSearchNodesRequestHandler extends AbstractRequestHandler
         return [SchemaQName::fromString("{$vendor}:{$label}")];
     }
 
-    /**
-     * @param SearchNodesRequest $request
-     * @param Pbjx               $pbjx
-     *
-     * @return SearchNodesResponse
-     */
-    protected function createSearchNodesResponse(SearchNodesRequest $request, Pbjx $pbjx): SearchNodesResponse
-    {
-        /** @var SearchNodesResponse $response */
-        $response = $this->createResponseFromRequest($request, $pbjx);
-        return $response;
-    }
+    abstract protected function createSearchNodesResponse(Message $request, Pbjx $pbjx): Message;
 }

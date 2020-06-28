@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Gdbots\Ncr;
 
 use Gdbots\Ncr\Enum\IndexQueryFilterOperator;
-use Gdbots\Schemas\Ncr\Mixin\Node\Node;
+use Gdbots\Pbj\Message;
 
 /**
  * Provides in memory processing of IndexQueryFilter objects
@@ -41,32 +41,15 @@ class IndexQueryFilterProcessor
         });
     }
 
-    /**
-     * Extract the value from the item for the given field.
-     * The field name is from @see IndexQueryFilter::getField
-     *
-     * @param mixed  $item
-     * @param string $field
-     *
-     * @return mixed
-     */
     protected function extractValue($item, string $field)
     {
-        if ($item instanceof Node && $item->has($field)) {
+        if ($item instanceof Message && $item->has($field)) {
             return $item->get($field);
         }
 
         return null;
     }
 
-    /**
-     * Returns true if the provided value matches the filter.
-     *
-     * @param mixed            $value
-     * @param IndexQueryFilter $filter
-     *
-     * @return bool
-     */
     protected function valueMatchesFilter($value, IndexQueryFilter $filter): bool
     {
         switch ($filter->getOperator()) {

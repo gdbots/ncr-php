@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr\Enum;
 
-use Gdbots\Common\Enum;
+use Gdbots\Pbj\Enum;
 
 /**
  * @method static IndexQueryFilterOperator EQUAL_TO()
