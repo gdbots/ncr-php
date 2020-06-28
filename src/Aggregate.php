@@ -9,6 +9,7 @@ use Gdbots\Ncr\Exception\NodeAlreadyLocked;
 use Gdbots\Pbj\Message;
 use Gdbots\Pbj\MessageResolver;
 use Gdbots\Pbj\Util\ClassUtil;
+use Gdbots\Pbj\Util\SlugUtil;
 use Gdbots\Pbj\WellKnown\MessageRef;
 use Gdbots\Pbj\WellKnown\Microtime;
 use Gdbots\Pbj\WellKnown\NodeRef;
@@ -461,12 +462,12 @@ class Aggregate
 
         if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
             $slug = $this->node->get(SluggableV1Mixin::SLUG_FIELD);
-            if (null !== $localTimeZone && SlugUtils::containsDate($slug)) {
+            if (null !== $localTimeZone && SlugUtil::containsDate($slug)) {
                 $date = $publishAt instanceof \DateTimeImmutable
                     ? \DateTime::createFromImmutable($publishAt)
                     : clone $publishAt;
                 $date->setTimezone($localTimeZone);
-                $slug = SlugUtils::addDate($slug, $date);
+                $slug = SlugUtil::addDate($slug, $date);
             }
             $event->set($event::SLUG_FIELD, $slug);
         }

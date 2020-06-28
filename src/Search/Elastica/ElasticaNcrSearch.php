@@ -184,7 +184,7 @@ TEXT;
                 $message = sprintf(
                     '%s while adding node [{node_ref}] to batch delete request ' .
                     'from ElasticSearch [{index_name}].',
-                    ClassUtils::getShortName($e)
+                    ClassUtil::getShortName($e)
                 );
 
                 $this->logger->error($message, [
@@ -208,7 +208,7 @@ TEXT;
             throw new SearchOperationFailed(
                 sprintf(
                     '%s while deleting batch from ElasticSearch with message: %s',
-                    ClassUtils::getShortName($e),
+                    ClassUtil::getShortName($e),
                     $e->getMessage()
                 ),
                 Code::INTERNAL,
