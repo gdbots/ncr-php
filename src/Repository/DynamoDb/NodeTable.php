@@ -26,7 +26,6 @@ class NodeTable
 {
     const SCHEMA_VERSION = 'v1';
     const HASH_KEY_NAME = '__node_ref';
-    const INDEXED_KEY_NAME = '__indexed';
 
     /** @var GlobalSecondaryIndex[] */
     private ?array $gsi = null;

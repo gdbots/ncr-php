@@ -126,17 +126,11 @@ public function onSearchNodesResponse(ResponseCreatedEvent $pbjxEvent): void
 # NcrSearch
 The Ncr provides the reliable storage and retrieval of Nodes.  NcrSearch is in most cases a separate storage provider.  For example, DynamoDb for Ncr and ElasticSearch for NcrSearch. In fact, the only implementation we have right now is ElasticSearch.
 
-To use this feature, the nodes you want to index must be using the __"gdbots:ncr:mixin:indexed"__ mixin.  When using the __gdbots/ncr-bundle-php__ you can enable the indexing with a simple configuration option. The bundle also provides a reindex console command.
+When using the __gdbots/ncr-bundle-php__ you can enable the indexing with a simple configuration option. The bundle also provides a reindex console command.
 
 Searching nodes is generally done in a request handler.  Here is an example of searching nodes:
 
 ```php
-/**
- * @param Message $request
- * @param Pbjx    $pbjx
- *
- * @return Message
- */
 public function handleRequest(Message $request, Pbjx $pbjx): Message
 {
     $parsedQuery = ParsedQuery::fromArray(json_decode($request->get('parsed_query_json', '{}'), true));
