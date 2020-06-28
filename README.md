@@ -102,9 +102,6 @@ NcrCache and other request interceptors make use of this service to batch load n
 __Example lazy loading:__
 
 ```php
-/**
- * @param ResponseCreatedEvent $pbjxEvent
- */
 public function onSearchNodesResponse(ResponseCreatedEvent $pbjxEvent): void
 {
     $response = $pbjxEvent->getResponse();
