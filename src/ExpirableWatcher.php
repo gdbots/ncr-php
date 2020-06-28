@@ -22,7 +22,7 @@ class ExpirableWatcher implements EventSubscriber
             ExpirableV1Mixin::SCHEMA_CURIE . '.deleted'     => 'cancel',
             ExpirableV1Mixin::SCHEMA_CURIE . '.expired'     => 'cancel',
             ExpirableV1Mixin::SCHEMA_CURIE . '.unpublished' => 'cancel',
-            ExpirableV1Mixin::SCHEMA_CURIE . '.updated'     => 'update',
+            ExpirableV1Mixin::SCHEMA_CURIE . '.updated'     => 'reschedule',
         ];
     }
 
@@ -47,7 +47,7 @@ class ExpirableWatcher implements EventSubscriber
         $this->createJob($pbjxEvent->getNode(), $event, $pbjxEvent::getPbjx());
     }
 
-    public function update(NodeProjectedEvent $pbjxEvent): void
+    public function reschedule(NodeProjectedEvent $pbjxEvent): void
     {
         $event = $pbjxEvent->getLastEvent();
         if ($event->isReplay()) {
@@ -83,11 +83,9 @@ class ExpirableWatcher implements EventSubscriber
         }
 
         $nodeRef = $node->generateNodeRef();
-
+        $command = ExpireNodeV1::create()->set(ExpireNodeV1::NODE_REF_FIELD, $nodeRef);
         /** @var \DateTimeInterface $expiresAt */
         $expiresAt = $node->get(ExpirableV1Mixin::EXPIRES_AT_FIELD);
-
-        $command = ExpireNodeV1::create()->set(ExpireNodeV1::NODE_REF_FIELD, $nodeRef);
         $timestamp = $expiresAt->getTimestamp();
 
         if ($timestamp <= time()) {

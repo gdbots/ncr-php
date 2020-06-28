@@ -101,10 +101,7 @@ class NcrProjector implements EventSubscriber, PbjxProjector
             return;
         }
 
-        if ($event->has($event::NODE_REF_FIELD)) {
-            $this->projectNodeRef($event->get($event::NODE_REF_FIELD), $event, $pbjx);
-            return;
-        }
+        $this->projectNodeRef($event->get($event::NODE_REF_FIELD), $event, $pbjx);
     }
 
     public function onNodeCreated(Message $event, Pbjx $pbjx): void
