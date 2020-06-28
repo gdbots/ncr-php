@@ -32,7 +32,6 @@ use Gdbots\Pbj\WellKnown\NodeRef;
  */
 final class NcrCache
 {
-    /** @var NcrLazyLoader */
     private NcrLazyLoader $lazyLoader;
 
     /**

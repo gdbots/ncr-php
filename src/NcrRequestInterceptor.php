@@ -114,7 +114,7 @@ final class NcrRequestInterceptor implements EventSubscriber
         }
 
         $request->removeFromSet(GetNodeBatchRequestV1Mixin::NODE_REFS_FIELD, $ncrCachedNodeRefs);
-        $this->pickup[(string)$request->get('request_id')] = $ncrCachedNodeRefs;
+        $this->pickup[(string)$request->get($request::REQUEST_ID_FIELD)] = $ncrCachedNodeRefs;
     }
 
     public function onGetNodeResponseCreated(ResponseCreatedEvent $pbjxEvent): void
@@ -160,7 +160,7 @@ final class NcrRequestInterceptor implements EventSubscriber
             $this->ncrCache->addNodes($response->get(GetNodeBatchResponseV1Mixin::NODES_FIELD));
         }
 
-        $requestId = $response->get('ctx_request_ref')->getId();
+        $requestId = $response->get($response::CTX_REQUEST_REF_FIELD)->getId();
         if (!isset($this->pickup[$requestId])) {
             return;
         }
