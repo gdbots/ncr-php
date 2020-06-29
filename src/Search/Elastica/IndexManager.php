@@ -139,19 +139,25 @@ class IndexManager
         }
 
         try {
-            if (!$index->exists()) {
-                $settings['analysis'] = [
-                    'analyzer'   => $this->getCustomAnalyzers(),
-                    'normalizer' => $this->getCustomNormalizers(),
-                ];
-                $index->create([
-                    'settings' => $settings,
-                    'mappings' => $this->createMapping()->toArray(),
-                ]);
-            } else {
-                $index->setMapping($this->createMapping());
-            }
+            $settings['analysis'] = [
+                'analyzer'   => $this->getCustomAnalyzers(),
+                'normalizer' => $this->getCustomNormalizers(),
+            ];
+            $index->create([
+                'settings' => $settings,
+                'mappings' => $this->createMapping()->toArray(),
+            ]);
         } catch (\Throwable $e) {
+            if (strpos($e->getMessage(), 'resource_already_exists_exception')) {
+                try {
+                    $client->connect();
+                    $index->setMapping($this->createMapping());
+                    return $index;
+                } catch (\Throwable $e2) {
+                    $e = $e2;
+                }
+            }
+
             throw new SearchOperationFailed(
                 sprintf(
                     '%s while creating index [%s] for qname [%s].',

@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 2.x versions.
 
 
+## v2.0.1
+* Fix issue with Elastica/Guzzle throwing exception on `Index::exists` instead of returning a boolean.
+
+
 ## v2.0.0
 __BREAKING CHANGES__
 
