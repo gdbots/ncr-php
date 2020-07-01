@@ -219,7 +219,7 @@ class Aggregate
         $this->assertNodeRefMatches($node->generateNodeRef());
 
         $event = $this->createNodeCreatedEvent($command);
-        $this->pbjx->copyContext($command, $event);
+        $this->copyContext($command, $event);
         $event->set($event::NODE_FIELD, $node);
 
         $node
@@ -233,12 +233,6 @@ class Aggregate
             $node->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::DRAFT());
         } else {
             $node->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::PUBLISHED());
-        }
-
-        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
-            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
-                $event->addToMap($event::TAGS_FIELD, $k, $v);
-            }
         }
 
         $this->recordEvent($event);
@@ -256,17 +250,11 @@ class Aggregate
         $this->assertNodeRefMatches($nodeRef);
 
         $event = $this->createNodeDeletedEvent($command);
-        $this->pbjx->copyContext($command, $event);
+        $this->copyContext($command, $event);
         $event->set($event::NODE_REF_FIELD, $this->nodeRef);
 
         if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
             $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
-        }
-
-        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
-            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
-                $event->addToMap($event::TAGS_FIELD, $k, $v);
-            }
         }
 
         $this->recordEvent($event);
@@ -292,17 +280,11 @@ class Aggregate
         $this->assertNodeRefMatches($nodeRef);
 
         $event = $this->createNodeExpiredEvent($command);
-        $this->pbjx->copyContext($command, $event);
+        $this->copyContext($command, $event);
         $event->set($event::NODE_REF_FIELD, $this->nodeRef);
 
         if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
             $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
-        }
-
-        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
-            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
-                $event->addToMap($event::TAGS_FIELD, $k, $v);
-            }
         }
 
         $this->recordEvent($event);
@@ -333,17 +315,11 @@ class Aggregate
         $this->assertNodeRefMatches($nodeRef);
 
         $event = $this->createNodeLockedEvent($command);
-        $this->pbjx->copyContext($command, $event);
+        $this->copyContext($command, $event);
         $event->set($event::NODE_REF_FIELD, $this->nodeRef);
 
         if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
             $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
-        }
-
-        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
-            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
-                $event->addToMap($event::TAGS_FIELD, $k, $v);
-            }
         }
 
         $this->recordEvent($event);
@@ -367,17 +343,11 @@ class Aggregate
         $this->assertNodeRefMatches($nodeRef);
 
         $event = $this->createNodeMarkedAsDraftEvent($command);
-        $this->pbjx->copyContext($command, $event);
+        $this->copyContext($command, $event);
         $event->set($event::NODE_REF_FIELD, $this->nodeRef);
 
         if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
             $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
-        }
-
-        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
-            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
-                $event->addToMap($event::TAGS_FIELD, $k, $v);
-            }
         }
 
         $this->recordEvent($event);
@@ -401,17 +371,11 @@ class Aggregate
         $this->assertNodeRefMatches($nodeRef);
 
         $event = $this->createNodeMarkedAsPendingEvent($command);
-        $this->pbjx->copyContext($command, $event);
+        $this->copyContext($command, $event);
         $event->set($event::NODE_REF_FIELD, $this->nodeRef);
 
         if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
             $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
-        }
-
-        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
-            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
-                $event->addToMap($event::TAGS_FIELD, $k, $v);
-            }
         }
 
         $this->recordEvent($event);
@@ -457,7 +421,7 @@ class Aggregate
             $event->set($event::PUBLISH_AT_FIELD, $publishAt);
         }
 
-        $this->pbjx->copyContext($command, $event);
+        $this->copyContext($command, $event);
         $event->set($event::NODE_REF_FIELD, $this->nodeRef);
 
         if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
@@ -470,12 +434,6 @@ class Aggregate
                 $slug = SlugUtil::addDate($slug, $date);
             }
             $event->set($event::SLUG_FIELD, $slug);
-        }
-
-        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
-            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
-                $event->addToMap($event::TAGS_FIELD, $k, $v);
-            }
         }
 
         $this->recordEvent($event);
@@ -499,18 +457,12 @@ class Aggregate
         $this->assertNodeRefMatches($nodeRef);
 
         $event = $this->createNodeRenamedEvent($command);
-        $this->pbjx->copyContext($command, $event);
+        $this->copyContext($command, $event);
         $event
             ->set($event::NODE_REF_FIELD, $nodeRef)
             ->set($event::NEW_SLUG_FIELD, $command->get($command::NEW_SLUG_FIELD))
             ->set($event::OLD_SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD))
             ->set($event::NODE_STATUS_FIELD, $this->node->get(NodeV1Mixin::STATUS_FIELD));
-
-        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
-            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
-                $event->addToMap($event::TAGS_FIELD, $k, $v);
-            }
-        }
 
         $this->recordEvent($event);
     }
@@ -533,17 +485,11 @@ class Aggregate
         $this->assertNodeRefMatches($nodeRef);
 
         $event = $this->createNodeUnlockedEvent($command);
-        $this->pbjx->copyContext($command, $event);
+        $this->copyContext($command, $event);
         $event->set($event::NODE_REF_FIELD, $this->nodeRef);
 
         if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
             $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
-        }
-
-        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
-            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
-                $event->addToMap($event::TAGS_FIELD, $k, $v);
-            }
         }
 
         $this->recordEvent($event);
@@ -567,17 +513,11 @@ class Aggregate
         $this->assertNodeRefMatches($nodeRef);
 
         $event = $this->createNodeUnpublishedEvent($command);
-        $this->pbjx->copyContext($command, $event);
+        $this->copyContext($command, $event);
         $event->set($event::NODE_REF_FIELD, $this->nodeRef);
 
         if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
             $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
-        }
-
-        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
-            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
-                $event->addToMap($event::TAGS_FIELD, $k, $v);
-            }
         }
 
         $this->recordEvent($event);
@@ -595,7 +535,7 @@ class Aggregate
 
         $oldNode = (clone $this->node)->freeze();
         $event = $this->createNodeUpdatedEvent($command);
-        $this->pbjx->copyContext($command, $event);
+        $this->copyContext($command, $event);
         $event
             ->set($event::NODE_REF_FIELD, $this->nodeRef)
             ->set($event::OLD_NODE_FIELD, $oldNode)
@@ -650,12 +590,6 @@ class Aggregate
         // if a node is being updated and it's deleted, restore the default status
         if (NodeStatus::DELETED()->equals($newNode->get(NodeV1Mixin::STATUS_FIELD))) {
             $newNode->clear(NodeV1Mixin::STATUS_FIELD);
-        }
-
-        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
-            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
-                $event->addToMap($event::TAGS_FIELD, $k, $v);
-            }
         }
 
         $this->recordEvent($event);
@@ -807,6 +741,16 @@ class Aggregate
             ->set(NodeV1Mixin::UPDATER_REF_FIELD, $event->get($event::CTX_USER_REF_FIELD))
             ->set(NodeV1Mixin::LAST_EVENT_REF_FIELD, $eventRef)
             ->set(NodeV1Mixin::ETAG_FIELD, static::generateEtag($this->node));
+    }
+
+    protected function copyContext(Message $command, Message $event): void
+    {
+        $this->pbjx->copyContext($command, $event);
+        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
+            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
+                $event->addToMap($event::TAGS_FIELD, $k, $v);
+            }
+        }
     }
 
     protected function shouldRecordEvent(Message $event): bool

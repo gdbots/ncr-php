@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 2.x versions.
 
 
+## v2.0.3
+* Add `Aggregate::copyContext` to reduce duplicated code for common context fields.
+
+
 ## v2.0.2
 * Use `Message::SCHEMA_CURIE_MAJOR` when resolving with `MessageResolver::findAllUsingMixin`.
 
