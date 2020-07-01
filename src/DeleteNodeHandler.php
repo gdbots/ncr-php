@@ -18,7 +18,7 @@ class DeleteNodeHandler implements CommandHandler
     public static function handlesCuries(): array
     {
         // deprecated mixins, will be removed in 3.x
-        $curies = MessageResolver::findAllUsingMixin(DeleteNodeV1Mixin::SCHEMA_CURIE, false);
+        $curies = MessageResolver::findAllUsingMixin(DeleteNodeV1Mixin::SCHEMA_CURIE_MAJOR, false);
         $curies[] = DeleteNodeV1::SCHEMA_CURIE;
         return $curies;
     }

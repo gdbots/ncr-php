@@ -16,7 +16,7 @@ class UpdateNodeHandler implements CommandHandler
     public static function handlesCuries(): array
     {
         // deprecated mixins, will be removed in 3.x
-        $curies = MessageResolver::findAllUsingMixin(UpdateNodeV1Mixin::SCHEMA_CURIE, false);
+        $curies = MessageResolver::findAllUsingMixin(UpdateNodeV1Mixin::SCHEMA_CURIE_MAJOR, false);
         $curies[] = UpdateNodeV1::SCHEMA_CURIE;
         return $curies;
     }

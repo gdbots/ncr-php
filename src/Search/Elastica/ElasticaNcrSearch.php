@@ -62,7 +62,7 @@ class ElasticaNcrSearch implements NcrSearch
     {
         $context = $this->enrichContext(__FUNCTION__, $context);
         $client = $this->getClientForWrite($context);
-        $index = $this->indexManager->createIndex($client, $qname, $context);
+        $this->indexManager->createIndex($client, $qname, $context);
     }
 
     public function describeStorage(SchemaQName $qname, array $context = []): string

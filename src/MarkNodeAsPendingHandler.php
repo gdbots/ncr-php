@@ -18,7 +18,7 @@ class MarkNodeAsPendingHandler implements CommandHandler
     public static function handlesCuries(): array
     {
         // deprecated mixins, will be removed in 3.x
-        $curies = MessageResolver::findAllUsingMixin(MarkNodeAsPendingV1Mixin::SCHEMA_CURIE, false);
+        $curies = MessageResolver::findAllUsingMixin(MarkNodeAsPendingV1Mixin::SCHEMA_CURIE_MAJOR, false);
         $curies[] = MarkNodeAsPendingV1::SCHEMA_CURIE;
         return $curies;
     }

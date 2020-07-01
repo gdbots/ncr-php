@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Gdbots\Ncr;
 
 use Gdbots\Ncr\Event\NodeProjectedEvent;
+use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Pbjx\EventSubscriber;
 use Gdbots\Schemas\Ncr\Command\PublishNodeV1;
 use Gdbots\Schemas\Ncr\Event\NodeScheduledV1;

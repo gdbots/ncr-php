@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 2.x versions.
 
 
+## v2.0.2
+* Use `Message::SCHEMA_CURIE_MAJOR` when resolving with `MessageResolver::findAllUsingMixin`.
+
+
 ## v2.0.1
 * Fix issue with Elastica/Guzzle throwing exception on `Index::exists` instead of returning a boolean.
 

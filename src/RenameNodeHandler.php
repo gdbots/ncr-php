@@ -18,7 +18,7 @@ class RenameNodeHandler implements CommandHandler
     public static function handlesCuries(): array
     {
         // deprecated mixins, will be removed in 3.x
-        $curies = MessageResolver::findAllUsingMixin(RenameNodeV1Mixin::SCHEMA_CURIE, false);
+        $curies = MessageResolver::findAllUsingMixin(RenameNodeV1Mixin::SCHEMA_CURIE_MAJOR, false);
         $curies[] = RenameNodeV1::SCHEMA_CURIE;
         return $curies;
     }

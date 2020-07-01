@@ -18,7 +18,7 @@ class LockNodeHandler implements CommandHandler
     public static function handlesCuries(): array
     {
         // deprecated mixins, will be removed in 3.x
-        $curies = MessageResolver::findAllUsingMixin(LockNodeV1Mixin::SCHEMA_CURIE, false);
+        $curies = MessageResolver::findAllUsingMixin(LockNodeV1Mixin::SCHEMA_CURIE_MAJOR, false);
         $curies[] = LockNodeV1::SCHEMA_CURIE;
         return $curies;
     }
