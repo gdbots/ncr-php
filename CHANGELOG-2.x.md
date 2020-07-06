@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 2.x versions.
 
 
+## v2.0.4
+* Fix issue, yes again, with Elastica/Guzzle throwing exception on `Index::exists` instead of returning a boolean.
+
+
 ## v2.0.3
 * Add `Aggregate::copyContext` to reduce duplicated code for common context fields.
 

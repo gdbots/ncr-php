@@ -148,7 +148,9 @@ class IndexManager
                 'mappings' => $this->createMapping()->toArray(),
             ]);
         } catch (\Throwable $e) {
-            if (strpos($e->getMessage(), 'resource_already_exists_exception')) {
+            if (strpos($e->getMessage(), 'resource_already_exists_exception')
+                || strpos($e->getMessage(), 'already exists')
+            ) {
                 try {
                     $client->connect();
                     $index->setMapping($this->createMapping());
