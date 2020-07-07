@@ -34,7 +34,7 @@ class ExpirableWatcher implements EventSubscriber
         }
 
         $nodeRef = $pbjxEvent->getNode()->generateNodeRef();
-        $pbjxEvent::getPbjx()->cancelJobs(["{$nodeRef}.expire"]);
+        $pbjxEvent::getPbjx()->cancelJobs(["{$nodeRef}.expire"], ['causator' => $event]);
     }
 
     public function schedule(NodeProjectedEvent $pbjxEvent): void
@@ -68,7 +68,7 @@ class ExpirableWatcher implements EventSubscriber
 
         if (null === $newExpiresAt) {
             if (null !== $oldExpiresAt) {
-                $pbjx->cancelJobs(["{$nodeRef}.expire"]);
+                $pbjx->cancelJobs(["{$nodeRef}.expire"], ['causator' => $event]);
             }
             return;
         }

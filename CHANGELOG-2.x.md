@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 2.x versions.
 
 
+## v2.1.0
+* Uses `"gdbots/pbj": "^3.1"` with context arg for `Pbjx::sendAt` and `Pbjx::cancelJobs`.
+
+
 ## v2.0.4
 * Fix issue, yes again, with Elastica/Guzzle throwing exception on `Index::exists` instead of returning a boolean.
 

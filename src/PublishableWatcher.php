@@ -33,7 +33,7 @@ class PublishableWatcher implements EventSubscriber
         }
 
         $nodeRef = $pbjxEvent->getNode()->generateNodeRef();
-        $pbjxEvent::getPbjx()->cancelJobs(["{$nodeRef}.publish"]);
+        $pbjxEvent::getPbjx()->cancelJobs(["{$nodeRef}.publish"], ['causator' => $event]);
     }
 
     public function schedule(NodeProjectedEvent $pbjxEvent): void
