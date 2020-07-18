@@ -5,6 +5,7 @@ This changelog references the relevant changes done in 2.x versions.
 ## v2.1.1
 * Add implementations for `gdbots:ncr:command:update-node-labels` and `gdbots:ncr:command:update-node-tags`.
 * Fix bug in `GetNodeRequestHandler` where `$nodeRef` wasn't set when doing a slug lookup.
+* Remove use of mixin/message constants for fields and schema refs as it's too noisy and isn't enough of a help to warrant it.
 
 
 ## v2.1.0
