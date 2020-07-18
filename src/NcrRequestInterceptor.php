@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Gdbots\Ncr;
 
 use Gdbots\Pbj\Message;
-use Gdbots\Pbj\SchemaQName;
 use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Pbjx\Event\GetResponseEvent;
 use Gdbots\Pbjx\Event\PbjxEvent;
@@ -69,9 +68,7 @@ class NcrRequestInterceptor implements EventSubscriber
             return;
         }
 
-        $qname = SchemaQName::fromString($request->get('qname'));
-        $cacheKey = $this->getSlugCacheKey($qname, $request->get('slug'));
-
+        $cacheKey = $this->getSlugCacheKey($request);
         $cacheItem = $this->cache->getItem($cacheKey);
         if (!$cacheItem->isHit()) {
             $this->cacheItems[$cacheKey] = $cacheItem;
@@ -80,7 +77,7 @@ class NcrRequestInterceptor implements EventSubscriber
 
         try {
             $nodeRef = NodeRef::fromString($cacheItem->get());
-            if ($nodeRef->getQName() === $qname) {
+            if ($nodeRef->getQName()->toString() === $request->get('qname')) {
                 $request->set('node_ref', $nodeRef);
             }
         } catch (\Throwable $e) {
@@ -133,14 +130,14 @@ class NcrRequestInterceptor implements EventSubscriber
         }
 
         $nodeRef = NodeRef::fromNode($node);
-        $cacheKey = $this->getSlugCacheKey($nodeRef->getQName(), $request->get('slug'));
+        $cacheKey = $this->getSlugCacheKey($request);
         if (!isset($this->cacheItems[$cacheKey])) {
             // lookup never happend
             return;
         }
 
         $cacheItem = $this->cacheItems[$cacheKey];
-        $cacheItem->set($nodeRef->toString())->expiresAfter($this->getSlugCacheTtl($nodeRef->getQName(), $request));
+        $cacheItem->set($nodeRef->toString())->expiresAfter($this->getSlugCacheTtl($request));
         unset($this->cacheItems[$cacheKey]);
         $this->cache->saveDeferred($cacheItem);
     }
@@ -169,17 +166,16 @@ class NcrRequestInterceptor implements EventSubscriber
         unset($this->pickup[$requestId]);
     }
 
-    protected function getSlugCacheKey(SchemaQName $qname, string $slug): string
+    protected function getSlugCacheKey(Message $request): string
     {
         return str_replace('-', '_', sprintf(
-            'stnr.%s.%s.%s',
-            $qname->getVendor(),
-            $qname->getMessage(),
-            md5($slug)
+            'stnr.%s.%s',
+            str_replace(':', '.', $request->get('qname')),
+            md5($request->get('slug'))
         ));
     }
 
-    protected function getSlugCacheTtl(SchemaQName $qname, Message $request): int
+    protected function getSlugCacheTtl(Message $request): int
     {
         return 300;
     }
