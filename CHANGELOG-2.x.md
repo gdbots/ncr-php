@@ -2,6 +2,11 @@
 This changelog references the relevant changes done in 2.x versions.
 
 
+## v2.1.1
+* Add implementations for `gdbots:ncr:command:update-node-labels` and `gdbots:ncr:command:update-node-tags`.
+* Fix bug in `GetNodeRequestHandler` where `$nodeRef` wasn't set when doing a slug lookup.
+
+
 ## v2.1.0
 * Uses `"gdbots/pbj": "^3.1"` with context arg for `Pbjx::sendAt` and `Pbjx::cancelJobs`.
 

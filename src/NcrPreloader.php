@@ -8,7 +8,6 @@ use Gdbots\Pbj\Util\ArrayUtil;
 use Gdbots\Pbj\WellKnown\MessageRef;
 use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
-use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
 
 /**
  * NcrPreloader provides a way to inform the current request
@@ -76,7 +75,7 @@ final class NcrPreloader
     public function getPublishedNodes(string $namespace = self::DEFAULT_NAMESPACE): array
     {
         return $this->getNodes(function (Message $node) {
-            return NodeStatus::PUBLISHED === $node->fget(NodeV1Mixin::STATUS_FIELD);
+            return NodeStatus::PUBLISHED === $node->fget('status');
         }, $namespace);
     }
 

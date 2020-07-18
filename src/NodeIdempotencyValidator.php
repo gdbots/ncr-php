@@ -10,11 +10,6 @@ use Gdbots\Pbj\Util\SlugUtil;
 use Gdbots\Pbjx\DependencyInjection\PbjxValidator;
 use Gdbots\Pbjx\Event\PbjxEvent;
 use Gdbots\Pbjx\EventSubscriber;
-use Gdbots\Schemas\Iam\Mixin\User\UserV1Mixin;
-use Gdbots\Schemas\Ncr\Command\CreateNodeV1;
-use Gdbots\Schemas\Ncr\Mixin\CreateNode\CreateNodeV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\Sluggable\SluggableV1Mixin;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
 
@@ -26,10 +21,11 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
     public static function getSubscribedEvents()
     {
         return [
-            CreateNodeV1Mixin::SCHEMA_CURIE . '.validate'     => 'validateCreateNode',
-            CreateNodeV1Mixin::SCHEMA_CURIE . '.after_handle' => 'onCreateNodeAfterHandle',
-            CreateNodeV1::SCHEMA_CURIE . '.validate'          => 'validateCreateNode',
-            CreateNodeV1::SCHEMA_CURIE . '.after_handle'      => 'onCreateNodeAfterHandle',
+            'gdbots:ncr:command:create-node.validate'     => 'validateCreateNode',
+            'gdbots:ncr:command:create-node.after_handle' => 'onCreateNodeAfterHandle',
+            // deprecated mixins, will be removed in 3.x
+            'gdbots:ncr:mixin:create-node.validate'       => 'validateCreateNode',
+            'gdbots:ncr:mixin:create-node.after_handle'   => 'onCreateNodeAfterHandle',
         ];
     }
 
@@ -43,12 +39,12 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
     public function validateCreateNode(PbjxEvent $pbjxEvent): void
     {
         $command = $pbjxEvent->getMessage();
-        if (!$command->has(CreateNodeV1::NODE_FIELD)) {
+        if (!$command->has('node')) {
             return;
         }
 
         /** @var Message $node */
-        $node = $command->get(CreateNodeV1::NODE_FIELD);
+        $node = $command->get('node');
         if ($this->shouldIgnoreNode($node)) {
             return;
         }
@@ -80,12 +76,12 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
     public function onCreateNodeAfterHandle(PbjxEvent $pbjxEvent): void
     {
         $command = $pbjxEvent->getMessage();
-        if (!$command->has(CreateNodeV1::NODE_FIELD)) {
+        if (!$command->has('node')) {
             return;
         }
 
         /** @var Message $node */
-        $node = $command->get(CreateNodeV1::NODE_FIELD);
+        $node = $command->get('node');
         if ($this->shouldIgnoreNode($node)) {
             return;
         }
@@ -111,18 +107,16 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
         $qname = $node::schema()->getQName();
         $keys = [];
 
-        if ($node->has(NodeV1Mixin::TITLE_FIELD)) {
-            $keys[$this->getCacheKey($qname, SlugUtil::create($node->get(NodeV1Mixin::TITLE_FIELD)))] = true;
+        if ($node->has('title')) {
+            $keys[$this->getCacheKey($qname, SlugUtil::create($node->get('title')))] = true;
         }
 
-        if ($node->has(SluggableV1Mixin::SLUG_FIELD)) {
-            $keys[$this->getCacheKey($qname, $node->get(SluggableV1Mixin::SLUG_FIELD))] = true;
+        if ($node->has('slug')) {
+            $keys[$this->getCacheKey($qname, $node->get('slug'))] = true;
         }
 
-        if ($node->has(UserV1Mixin::EMAIL_FIELD)
-            && $node::schema()->hasMixin(UserV1Mixin::SCHEMA_CURIE)
-        ) {
-            $keys[$this->getCacheKey($qname, $node->get(UserV1Mixin::EMAIL_FIELD))] = true;
+        if ($node->has('email') && $node::schema()->hasMixin('gdbots:iam:mixin:user')) {
+            $keys[$this->getCacheKey($qname, $node->get('email'))] = true;
         }
 
         return array_keys($keys);

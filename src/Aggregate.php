@@ -14,25 +14,21 @@ use Gdbots\Pbj\WellKnown\MessageRef;
 use Gdbots\Pbj\WellKnown\Microtime;
 use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Pbjx\Pbjx;
-use Gdbots\Schemas\Common\Mixin\Taggable\TaggableV1Mixin;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 use Gdbots\Schemas\Ncr\Event\NodeCreatedV1;
 use Gdbots\Schemas\Ncr\Event\NodeDeletedV1;
 use Gdbots\Schemas\Ncr\Event\NodeExpiredV1;
+use Gdbots\Schemas\Ncr\Event\NodeLabelsUpdatedV1;
 use Gdbots\Schemas\Ncr\Event\NodeLockedV1;
 use Gdbots\Schemas\Ncr\Event\NodeMarkedAsDraftV1;
 use Gdbots\Schemas\Ncr\Event\NodeMarkedAsPendingV1;
 use Gdbots\Schemas\Ncr\Event\NodePublishedV1;
 use Gdbots\Schemas\Ncr\Event\NodeRenamedV1;
 use Gdbots\Schemas\Ncr\Event\NodeScheduledV1;
+use Gdbots\Schemas\Ncr\Event\NodeTagsUpdatedV1;
 use Gdbots\Schemas\Ncr\Event\NodeUnlockedV1;
 use Gdbots\Schemas\Ncr\Event\NodeUnpublishedV1;
 use Gdbots\Schemas\Ncr\Event\NodeUpdatedV1;
-use Gdbots\Schemas\Ncr\Mixin\Expirable\ExpirableV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\Lockable\LockableV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\Publishable\PublishableV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\Sluggable\SluggableV1Mixin;
 use Gdbots\Schemas\Pbjx\StreamId;
 
 class Aggregate
@@ -80,7 +76,7 @@ class Aggregate
     public static function fromNodeRef(NodeRef $nodeRef, Pbjx $pbjx): self
     {
         $node = MessageResolver::resolveQName($nodeRef->getQName())::fromArray([
-            NodeV1Mixin::_ID_FIELD => $nodeRef->getId(),
+            '_id' => $nodeRef->getId(),
         ]);
 
         return new static($node, $pbjx, true);
@@ -89,10 +85,10 @@ class Aggregate
     public static function generateEtag(Message $node): string
     {
         return $node->generateEtag([
-            NodeV1Mixin::ETAG_FIELD,
-            NodeV1Mixin::UPDATED_AT_FIELD,
-            NodeV1Mixin::UPDATER_REF_FIELD,
-            NodeV1Mixin::LAST_EVENT_REF_FIELD,
+            'etag',
+            'updated_at',
+            'updater_ref',
+            'last_event_ref',
         ]);
     }
 
@@ -198,41 +194,40 @@ class Aggregate
 
     public function getEtag(): ?string
     {
-        return $this->node->get(NodeV1Mixin::ETAG_FIELD);
+        return $this->node->get('etag');
     }
 
     public function getLastEventRef(): ?MessageRef
     {
-        return $this->node->get(NodeV1Mixin::LAST_EVENT_REF_FIELD);
+        return $this->node->get('last_event_ref');
     }
 
     public function getLastUpdatedAt(): Microtime
     {
-        return $this->node->get(NodeV1Mixin::UPDATED_AT_FIELD)
-            ?: $this->node->get(NodeV1Mixin::CREATED_AT_FIELD);
+        return $this->node->get('updated_at') ?: $this->node->get('created_at');
     }
 
     public function createNode(Message $command): void
     {
         /** @var Message $node */
-        $node = clone $command->get($command::NODE_FIELD);
+        $node = clone $command->get('node');
         $this->assertNodeRefMatches($node->generateNodeRef());
 
         $event = $this->createNodeCreatedEvent($command);
         $this->copyContext($command, $event);
-        $event->set($event::NODE_FIELD, $node);
+        $event->set('node', $node);
 
         $node
-            ->clear(NodeV1Mixin::UPDATED_AT_FIELD)
-            ->clear(NodeV1Mixin::UPDATER_REF_FIELD)
-            ->set(NodeV1Mixin::CREATED_AT_FIELD, $event->get($event::OCCURRED_AT_FIELD))
-            ->set(NodeV1Mixin::CREATOR_REF_FIELD, $event->get($event::CTX_USER_REF_FIELD))
-            ->set(NodeV1Mixin::LAST_EVENT_REF_FIELD, $event->generateMessageRef());
+            ->clear('updated_at')
+            ->clear('updater_ref')
+            ->set('created_at', $event->get('occurred_at'))
+            ->set('creator_ref', $event->get('ctx_user_ref'))
+            ->set('last_event_ref', $event->generateMessageRef());
 
-        if ($node::schema()->hasMixin(PublishableV1Mixin::SCHEMA_CURIE)) {
-            $node->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::DRAFT());
+        if ($node::schema()->hasMixin('gdbots:ncr:mixin:publishable')) {
+            $node->set('status', NodeStatus::DRAFT());
         } else {
-            $node->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::PUBLISHED());
+            $node->set('status', NodeStatus::PUBLISHED());
         }
 
         $this->recordEvent($event);
@@ -240,21 +235,21 @@ class Aggregate
 
     public function deleteNode(Message $command): void
     {
-        if ($this->node->get(NodeV1Mixin::STATUS_FIELD)->equals(NodeStatus::DELETED())) {
+        if ($this->node->get('status')->equals(NodeStatus::DELETED())) {
             // node already deleted, ignore
             return;
         }
 
         /** @var NodeRef $nodeRef */
-        $nodeRef = $command->get($command::NODE_REF_FIELD);
+        $nodeRef = $command->get('node_ref');
         $this->assertNodeRefMatches($nodeRef);
 
         $event = $this->createNodeDeletedEvent($command);
         $this->copyContext($command, $event);
-        $event->set($event::NODE_REF_FIELD, $this->nodeRef);
+        $event->set('node_ref', $this->nodeRef);
 
-        if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
-            $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
+        if ($this->node->has('slug')) {
+            $event->set('slug', $this->node->get('slug'));
         }
 
         $this->recordEvent($event);
@@ -262,29 +257,29 @@ class Aggregate
 
     public function expireNode(Message $command): void
     {
-        if (!$this->node::schema()->hasMixin(ExpirableV1Mixin::SCHEMA_CURIE)) {
+        if (!$this->node::schema()->hasMixin('gdbots:ncr:mixin:expirable')) {
             throw new InvalidArgumentException(
-                "Node [{$this->nodeRef}] must have [" . ExpirableV1Mixin::SCHEMA_CURIE . "]."
+                "Node [{$this->nodeRef}] must have [gdbots:ncr:mixin:expirable]."
             );
         }
 
         /** @var NodeStatus $currStatus */
-        $currStatus = $this->node->get(NodeV1Mixin::STATUS_FIELD);
+        $currStatus = $this->node->get('status');
         if ($currStatus->equals(NodeStatus::DELETED()) || $currStatus->equals(NodeStatus::EXPIRED())) {
             // already expired or soft-deleted nodes can be ignored
             return;
         }
 
         /** @var NodeRef $nodeRef */
-        $nodeRef = $command->get($command::NODE_REF_FIELD);
+        $nodeRef = $command->get('node_ref');
         $this->assertNodeRefMatches($nodeRef);
 
         $event = $this->createNodeExpiredEvent($command);
         $this->copyContext($command, $event);
-        $event->set($event::NODE_REF_FIELD, $this->nodeRef);
+        $event->set('node_ref', $this->nodeRef);
 
-        if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
-            $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
+        if ($this->node->has('slug')) {
+            $event->set('slug', $this->node->get('slug'));
         }
 
         $this->recordEvent($event);
@@ -292,16 +287,16 @@ class Aggregate
 
     public function lockNode(Message $command): void
     {
-        if (!$this->node::schema()->hasMixin(LockableV1Mixin::SCHEMA_CURIE)) {
+        if (!$this->node::schema()->hasMixin('gdbots:ncr:mixin:lockable')) {
             throw new InvalidArgumentException(
-                "Node [{$this->nodeRef}] must have [" . LockableV1Mixin::SCHEMA_CURIE . "]."
+                "Node [{$this->nodeRef}] must have [gdbots:ncr:mixin:lockable]."
             );
         }
 
-        if ($this->node->get(LockableV1Mixin::IS_LOCKED_FIELD)) {
-            if ($command->has($command::CTX_USER_REF_FIELD)) {
-                $userNodeRef = NodeRef::fromMessageRef($command->get($command::CTX_USER_REF_FIELD));
-                if ((string)$this->node->get(LockableV1Mixin::LOCKED_BY_REF_FIELD) === (string)$userNodeRef) {
+        if ($this->node->get('is_locked')) {
+            if ($command->has('ctx_user_ref')) {
+                $userNodeRef = NodeRef::fromMessageRef($command->get('ctx_user_ref'));
+                if ((string)$this->node->get('locked_by_ref') === (string)$userNodeRef) {
                     // if it's the same user we can ignore it because they already own the lock
                     return;
                 }
@@ -311,15 +306,15 @@ class Aggregate
         }
 
         /** @var NodeRef $nodeRef */
-        $nodeRef = $command->get($command::NODE_REF_FIELD);
+        $nodeRef = $command->get('node_ref');
         $this->assertNodeRefMatches($nodeRef);
 
         $event = $this->createNodeLockedEvent($command);
         $this->copyContext($command, $event);
-        $event->set($event::NODE_REF_FIELD, $this->nodeRef);
+        $event->set('node_ref', $this->nodeRef);
 
-        if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
-            $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
+        if ($this->node->has('slug')) {
+            $event->set('slug', $this->node->get('slug'));
         }
 
         $this->recordEvent($event);
@@ -327,27 +322,27 @@ class Aggregate
 
     public function markNodeAsDraft(Message $command): void
     {
-        if (!$this->node::schema()->hasMixin(PublishableV1Mixin::SCHEMA_CURIE)) {
+        if (!$this->node::schema()->hasMixin('gdbots:ncr:mixin:publishable')) {
             throw new InvalidArgumentException(
-                "Node [{$this->nodeRef}] must have [" . PublishableV1Mixin::SCHEMA_CURIE . "]."
+                "Node [{$this->nodeRef}] must have [gdbots:ncr:mixin:publishable]."
             );
         }
 
-        if ($this->node->get(NodeV1Mixin::STATUS_FIELD)->equals(NodeStatus::DRAFT())) {
+        if ($this->node->get('status')->equals(NodeStatus::DRAFT())) {
             // node already draft, ignore
             return;
         }
 
         /** @var NodeRef $nodeRef */
-        $nodeRef = $command->get($command::NODE_REF_FIELD);
+        $nodeRef = $command->get('node_ref');
         $this->assertNodeRefMatches($nodeRef);
 
         $event = $this->createNodeMarkedAsDraftEvent($command);
         $this->copyContext($command, $event);
-        $event->set($event::NODE_REF_FIELD, $this->nodeRef);
+        $event->set('node_ref', $this->nodeRef);
 
-        if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
-            $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
+        if ($this->node->has('slug')) {
+            $event->set('slug', $this->node->get('slug'));
         }
 
         $this->recordEvent($event);
@@ -355,27 +350,27 @@ class Aggregate
 
     public function markNodeAsPending(Message $command): void
     {
-        if (!$this->node::schema()->hasMixin(PublishableV1Mixin::SCHEMA_CURIE)) {
+        if (!$this->node::schema()->hasMixin('gdbots:ncr:mixin:publishable')) {
             throw new InvalidArgumentException(
-                "Node [{$this->nodeRef}] must have [" . PublishableV1Mixin::SCHEMA_CURIE . "]."
+                "Node [{$this->nodeRef}] must have [gdbots:ncr:mixin:publishable]."
             );
         }
 
-        if ($this->node->get(NodeV1Mixin::STATUS_FIELD)->equals(NodeStatus::PENDING())) {
+        if ($this->node->get('status')->equals(NodeStatus::PENDING())) {
             // node already pending, ignore
             return;
         }
 
         /** @var NodeRef $nodeRef */
-        $nodeRef = $command->get($command::NODE_REF_FIELD);
+        $nodeRef = $command->get('node_ref');
         $this->assertNodeRefMatches($nodeRef);
 
         $event = $this->createNodeMarkedAsPendingEvent($command);
         $this->copyContext($command, $event);
-        $event->set($event::NODE_REF_FIELD, $this->nodeRef);
+        $event->set('node_ref', $this->nodeRef);
 
-        if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
-            $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
+        if ($this->node->has('slug')) {
+            $event->set('slug', $this->node->get('slug'));
         }
 
         $this->recordEvent($event);
@@ -383,18 +378,18 @@ class Aggregate
 
     public function publishNode(Message $command, ?\DateTimeZone $localTimeZone = null): void
     {
-        if (!$this->node::schema()->hasMixin(PublishableV1Mixin::SCHEMA_CURIE)) {
+        if (!$this->node::schema()->hasMixin('gdbots:ncr:mixin:publishable')) {
             throw new InvalidArgumentException(
-                "Node [{$this->nodeRef}] must have [" . PublishableV1Mixin::SCHEMA_CURIE . "]."
+                "Node [{$this->nodeRef}] must have [gdbots:ncr:mixin:publishable]."
             );
         }
 
         /** @var NodeRef $nodeRef */
-        $nodeRef = $command->get($command::NODE_REF_FIELD);
+        $nodeRef = $command->get('node_ref');
         $this->assertNodeRefMatches($nodeRef);
 
         /** @var \DateTimeInterface $publishAt */
-        $publishAt = $command->get($command::PUBLISH_AT_FIELD) ?: $command->get($command::OCCURRED_AT_FIELD)->toDateTime();
+        $publishAt = $command->get('publish_at') ?: $command->get('occurred_at')->toDateTime();
         /*
          * If the node will publish within 15 seconds then we'll
          * just publish it now rather than schedule it.
@@ -402,30 +397,28 @@ class Aggregate
         $now = time() + 15;
 
         /** @var NodeStatus $currStatus */
-        $currStatus = $this->node->get(NodeV1Mixin::STATUS_FIELD);
-        $currPublishedAt = $this->node->has(PublishableV1Mixin::PUBLISHED_AT_FIELD)
-            ? $this->node->get(PublishableV1Mixin::PUBLISHED_AT_FIELD)->getTimestamp()
-            : null;
+        $currStatus = $this->node->get('status');
+        $currPublishedAt = $this->node->has('published_at') ? $this->node->get('published_at')->getTimestamp() : null;
 
         if ($now >= $publishAt->getTimestamp()) {
             if ($currStatus->equals(NodeStatus::PUBLISHED()) && $currPublishedAt === $publishAt->getTimestamp()) {
                 return;
             }
             $event = $this->createNodePublishedEvent($command);
-            $event->set($event::PUBLISHED_AT_FIELD, $publishAt);
+            $event->set('published_at', $publishAt);
         } else {
             if ($currStatus->equals(NodeStatus::SCHEDULED()) && $currPublishedAt === $publishAt->getTimestamp()) {
                 return;
             }
             $event = $this->createNodeScheduledEvent($command);
-            $event->set($event::PUBLISH_AT_FIELD, $publishAt);
+            $event->set('publish_at', $publishAt);
         }
 
         $this->copyContext($command, $event);
-        $event->set($event::NODE_REF_FIELD, $this->nodeRef);
+        $event->set('node_ref', $this->nodeRef);
 
-        if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
-            $slug = $this->node->get(SluggableV1Mixin::SLUG_FIELD);
+        if ($this->node->has('slug')) {
+            $slug = $this->node->get('slug');
             if (null !== $localTimeZone && SlugUtil::containsDate($slug)) {
                 $date = $publishAt instanceof \DateTimeImmutable
                     ? \DateTime::createFromImmutable($publishAt)
@@ -433,7 +426,7 @@ class Aggregate
                 $date->setTimezone($localTimeZone);
                 $slug = SlugUtil::addDate($slug, $date);
             }
-            $event->set($event::SLUG_FIELD, $slug);
+            $event->set('slug', $slug);
         }
 
         $this->recordEvent($event);
@@ -441,55 +434,55 @@ class Aggregate
 
     public function renameNode(Message $command): void
     {
-        if (!$this->node::schema()->hasMixin(SluggableV1Mixin::SCHEMA_CURIE)) {
+        if (!$this->node::schema()->hasMixin('gdbots:ncr:mixin:sluggable')) {
             throw new InvalidArgumentException(
-                "Node [{$this->nodeRef}] must have [" . SluggableV1Mixin::SCHEMA_CURIE . "]."
+                "Node [{$this->nodeRef}] must have [gdbots:ncr:mixin:sluggable]."
             );
         }
 
-        if ($this->node->get(SluggableV1Mixin::SLUG_FIELD) === $command->get($command::NEW_SLUG_FIELD)) {
+        if ($this->node->get('slug') === $command->get('new_slug')) {
             // ignore a pointless rename
             return;
         }
 
         /** @var NodeRef $nodeRef */
-        $nodeRef = $command->get($command::NODE_REF_FIELD);
+        $nodeRef = $command->get('node_ref');
         $this->assertNodeRefMatches($nodeRef);
 
         $event = $this->createNodeRenamedEvent($command);
         $this->copyContext($command, $event);
         $event
-            ->set($event::NODE_REF_FIELD, $nodeRef)
-            ->set($event::NEW_SLUG_FIELD, $command->get($command::NEW_SLUG_FIELD))
-            ->set($event::OLD_SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD))
-            ->set($event::NODE_STATUS_FIELD, $this->node->get(NodeV1Mixin::STATUS_FIELD));
+            ->set('node_ref', $nodeRef)
+            ->set('new_slug', $command->get('new_slug'))
+            ->set('old_slug', $this->node->get('slug'))
+            ->set('node_status', $this->node->get('status'));
 
         $this->recordEvent($event);
     }
 
     public function unlockNode(Message $command): void
     {
-        if (!$this->node::schema()->hasMixin(LockableV1Mixin::SCHEMA_CURIE)) {
+        if (!$this->node::schema()->hasMixin('gdbots:ncr:mixin:lockable')) {
             throw new InvalidArgumentException(
-                "Node [{$this->nodeRef}] must have [" . LockableV1Mixin::SCHEMA_CURIE . "]."
+                "Node [{$this->nodeRef}] must have [gdbots:ncr:mixin:lockable]."
             );
         }
 
-        if (!$this->node->get(LockableV1Mixin::IS_LOCKED_FIELD)) {
+        if (!$this->node->get('is_locked')) {
             // node already unlocked, ignore
             return;
         }
 
         /** @var NodeRef $nodeRef */
-        $nodeRef = $command->get($command::NODE_REF_FIELD);
+        $nodeRef = $command->get('node_ref');
         $this->assertNodeRefMatches($nodeRef);
 
         $event = $this->createNodeUnlockedEvent($command);
         $this->copyContext($command, $event);
-        $event->set($event::NODE_REF_FIELD, $this->nodeRef);
+        $event->set('node_ref', $this->nodeRef);
 
-        if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
-            $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
+        if ($this->node->has('slug')) {
+            $event->set('slug', $this->node->get('slug'));
         }
 
         $this->recordEvent($event);
@@ -497,27 +490,27 @@ class Aggregate
 
     public function unpublishNode(Message $command): void
     {
-        if (!$this->node::schema()->hasMixin(PublishableV1Mixin::SCHEMA_CURIE)) {
+        if (!$this->node::schema()->hasMixin('gdbots:ncr:mixin:publishable')) {
             throw new InvalidArgumentException(
-                "Node [{$this->nodeRef}] must have [" . PublishableV1Mixin::SCHEMA_CURIE . "]."
+                "Node [{$this->nodeRef}] must have [gdbots:ncr:mixin:publishable]."
             );
         }
 
-        if (!$this->node->get(NodeV1Mixin::STATUS_FIELD)->equals(NodeStatus::PUBLISHED())) {
+        if (!$this->node->get('status')->equals(NodeStatus::PUBLISHED())) {
             // node already not published, ignore
             return;
         }
 
         /** @var NodeRef $nodeRef */
-        $nodeRef = $command->get($command::NODE_REF_FIELD);
+        $nodeRef = $command->get('node_ref');
         $this->assertNodeRefMatches($nodeRef);
 
         $event = $this->createNodeUnpublishedEvent($command);
         $this->copyContext($command, $event);
-        $event->set($event::NODE_REF_FIELD, $this->nodeRef);
+        $event->set('node_ref', $this->nodeRef);
 
-        if ($this->node->has(SluggableV1Mixin::SLUG_FIELD)) {
-            $event->set($event::SLUG_FIELD, $this->node->get(SluggableV1Mixin::SLUG_FIELD));
+        if ($this->node->has('slug')) {
+            $event->set('slug', $this->node->get('slug'));
         }
 
         $this->recordEvent($event);
@@ -526,26 +519,26 @@ class Aggregate
     public function updateNode(Message $command): void
     {
         /** @var NodeRef $nodeRef */
-        $nodeRef = $command->get($command::NODE_REF_FIELD);
+        $nodeRef = $command->get('node_ref');
         $this->assertNodeRefMatches($nodeRef);
 
         /** @var Message $newNode */
-        $newNode = clone $command->get($command::NEW_NODE_FIELD);
+        $newNode = clone $command->get('new_node');
         $this->assertNodeRefMatches($newNode->generateNodeRef());
 
         $oldNode = (clone $this->node)->freeze();
         $event = $this->createNodeUpdatedEvent($command);
         $this->copyContext($command, $event);
         $event
-            ->set($event::NODE_REF_FIELD, $this->nodeRef)
-            ->set($event::OLD_NODE_FIELD, $oldNode)
-            ->set($event::NEW_NODE_FIELD, $newNode);
+            ->set('node_ref', $this->nodeRef)
+            ->set('old_node', $oldNode)
+            ->set('new_node', $newNode);
 
         $schema = $newNode::schema();
 
-        if ($command->has($event::PATHS_FIELD)) {
-            $paths = $command->get($event::PATHS_FIELD);
-            $event->addToSet($event::PATHS_FIELD, $paths);
+        if ($command->has('paths')) {
+            $paths = $command->get('paths');
+            $event->addToSet('paths', $paths);
             $paths = array_flip($paths);
             foreach ($schema->getFields() as $field) {
                 $fieldName = $field->getName();
@@ -560,36 +553,111 @@ class Aggregate
         }
 
         $newNode
-            ->set(NodeV1Mixin::UPDATED_AT_FIELD, $event->get($event::OCCURRED_AT_FIELD))
-            ->set(NodeV1Mixin::UPDATER_REF_FIELD, $event->get($event::CTX_USER_REF_FIELD))
-            ->set(NodeV1Mixin::LAST_EVENT_REF_FIELD, $event->generateMessageRef())
+            ->set('updated_at', $event->get('occurred_at'))
+            ->set('updater_ref', $event->get('ctx_user_ref'))
+            ->set('last_event_ref', $event->generateMessageRef())
             // status SHOULD NOT change during an update, use the appropriate
             // command to change a status (delete, publish, etc.)
-            ->set(NodeV1Mixin::STATUS_FIELD, $oldNode->get(NodeV1Mixin::STATUS_FIELD))
+            ->set('status', $oldNode->get('status'))
             // created_at and creator_ref MUST NOT change
-            ->set(NodeV1Mixin::CREATED_AT_FIELD, $oldNode->get(NodeV1Mixin::CREATED_AT_FIELD))
-            ->set(NodeV1Mixin::CREATOR_REF_FIELD, $oldNode->get(NodeV1Mixin::CREATOR_REF_FIELD));
+            ->set('created_at', $oldNode->get('created_at'))
+            ->set('creator_ref', $oldNode->get('creator_ref'));
+
+        // labels SHOULD NOT change during an update, use "update-node-labels"
+        if ($schema->hasMixin('gdbots:common:mixin:labelable')) {
+            $newNode->setWithoutValidation('labels', $oldNode->fget('labels'));
+        }
 
         // published_at SHOULD NOT change during an update, use "[un]publish-node"
-        if ($schema->hasMixin(PublishableV1Mixin::SCHEMA_CURIE)) {
-            $newNode->set(PublishableV1Mixin::PUBLISHED_AT_FIELD, $oldNode->get(PublishableV1Mixin::PUBLISHED_AT_FIELD));
+        if ($schema->hasMixin('gdbots:ncr:mixin:publishable')) {
+            $newNode->set('published_at', $oldNode->get('published_at'));
         }
 
         // slug SHOULD NOT change during an update, use "rename-node"
-        if ($schema->hasMixin(SluggableV1Mixin::SCHEMA_CURIE)) {
-            $newNode->set(SluggableV1Mixin::SLUG_FIELD, $oldNode->get(SluggableV1Mixin::SLUG_FIELD));
+        if ($schema->hasMixin('gdbots:ncr:mixin:sluggable')) {
+            $newNode->set('slug', $oldNode->get('slug'));
         }
 
         // is_locked and locked_by_ref SHOULD NOT change during an update, use "[un]lock-node"
-        if ($schema->hasMixin(LockableV1Mixin::SCHEMA_CURIE)) {
+        if ($schema->hasMixin('gdbots:ncr:mixin:lockable')) {
             $newNode
-                ->set(LockableV1Mixin::IS_LOCKED_FIELD, $oldNode->get(LockableV1Mixin::IS_LOCKED_FIELD))
-                ->set(LockableV1Mixin::LOCKED_BY_REF_FIELD, $oldNode->get(LockableV1Mixin::LOCKED_BY_REF_FIELD));
+                ->set('is_locked', $oldNode->get('is_locked'))
+                ->set('locked_by_ref', $oldNode->get('locked_by_ref'));
         }
 
         // if a node is being updated and it's deleted, restore the default status
-        if (NodeStatus::DELETED()->equals($newNode->get(NodeV1Mixin::STATUS_FIELD))) {
-            $newNode->clear(NodeV1Mixin::STATUS_FIELD);
+        if (NodeStatus::DELETED()->equals($newNode->get('status'))) {
+            $newNode->clear('status');
+        }
+
+        $this->recordEvent($event);
+    }
+
+    public function updateNodeLabels(Message $command): void
+    {
+        if (!$this->node::schema()->hasMixin('gdbots:common:mixin:labelable')) {
+            throw new InvalidArgumentException(
+                "Node [{$this->nodeRef}] must have [gdbots:common:mixin:labelable]."
+            );
+        }
+
+        /** @var NodeRef $nodeRef */
+        $nodeRef = $command->get('node_ref');
+        $this->assertNodeRefMatches($nodeRef);
+
+        $added = array_values(array_filter(
+            $command->get('add_labels', []),
+            fn(string $label) => !$this->node->isInSet('labels', $label)
+        ));
+
+        $removed = array_values(array_filter(
+            $command->get('remove_labels', []),
+            fn(string $label) => $this->node->isInSet('labels', $label)
+        ));
+
+        if (empty($added) && empty($removed)) {
+            return;
+        }
+
+        $event = NodeLabelsUpdatedV1::create();
+        $this->copyContext($command, $event);
+        $event
+            ->set('node_ref', $this->nodeRef)
+            ->addToSet('labels_added', $added)
+            ->addToSet('labels_removed', $removed);
+
+        $this->recordEvent($event);
+    }
+
+    public function updateNodeTags(Message $command): void
+    {
+        if (!$this->node::schema()->hasMixin('gdbots:common:mixin:taggable')) {
+            throw new InvalidArgumentException(
+                "Node [{$this->nodeRef}] must have [gdbots:common:mixin:taggable]."
+            );
+        }
+
+        /** @var NodeRef $nodeRef */
+        $nodeRef = $command->get('node_ref');
+        $this->assertNodeRefMatches($nodeRef);
+
+        $removed = array_values(array_filter(
+            $command->get('remove_tags', []),
+            fn(string $tag) => $this->node->isInMap('tags', $tag)
+        ));
+
+        if (!$command->has('add_tags') && empty($removed)) {
+            return;
+        }
+
+        $event = NodeTagsUpdatedV1::create();
+        $this->copyContext($command, $event);
+        $event
+            ->set('node_ref', $this->nodeRef)
+            ->addToSet('tags_removed', $removed);
+
+        foreach ($command->get('add_tags') as $k => $v) {
+            $event->addToMap('tags_added', $k, $v);
         }
 
         $this->recordEvent($event);
@@ -597,23 +665,30 @@ class Aggregate
 
     protected function applyNodeCreated(Message $event): void
     {
-        $this->node = clone $event->get(NodeCreatedV1::NODE_FIELD);
+        $this->node = clone $event->get('node');
     }
 
     protected function applyNodeDeleted(Message $event): void
     {
-        $this->node->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::DELETED());
+        $this->node->set('status', NodeStatus::DELETED());
     }
 
     protected function applyNodeExpired(Message $event): void
     {
-        $this->node->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::EXPIRED());
+        $this->node->set('status', NodeStatus::EXPIRED());
+    }
+
+    protected function applyNodeLabelsUpdated(Message $event): void
+    {
+        $this->node
+            ->removeFromSet('labels', $event->get('labels_removed', []))
+            ->addToSet('labels', $event->get('labels_added', []));
     }
 
     protected function applyNodeLocked(Message $event): void
     {
-        if ($event->has(NodeLockedV1::CTX_USER_REF_FIELD)) {
-            $lockedByRef = NodeRef::fromMessageRef($event->get(NodeLockedV1::CTX_USER_REF_FIELD));
+        if ($event->has('ctx_user_ref')) {
+            $lockedByRef = NodeRef::fromMessageRef($event->get('ctx_user_ref'));
         } else {
             /*
              * todo: make "bots" a first class citizen in iam services
@@ -626,85 +701,96 @@ class Aggregate
         }
 
         $this->node
-            ->set(LockableV1Mixin::IS_LOCKED_FIELD, true)
-            ->set(LockableV1Mixin::LOCKED_BY_REF_FIELD, $lockedByRef);
+            ->set('is_locked', true)
+            ->set('locked_by_ref', $lockedByRef);
     }
 
     protected function applyNodeMarkedAsDraft(Message $event): void
     {
         $this->node
-            ->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::DRAFT())
-            ->clear(PublishableV1Mixin::PUBLISHED_AT_FIELD);
+            ->set('status', NodeStatus::DRAFT())
+            ->clear('published_at');
     }
 
     protected function applyNodeMarkedAsPending(Message $event): void
     {
         $this->node
-            ->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::PENDING())
-            ->clear(PublishableV1Mixin::PUBLISHED_AT_FIELD);
+            ->set('status', NodeStatus::PENDING())
+            ->clear('published_at');
     }
 
     protected function applyNodePublished(Message $event): void
     {
         $this->node
-            ->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::PUBLISHED())
-            ->set(PublishableV1Mixin::PUBLISHED_AT_FIELD, $event->get(NodePublishedV1::PUBLISHED_AT_FIELD));
+            ->set('status', NodeStatus::PUBLISHED())
+            ->set('published_at', $event->get('published_at'));
 
-        if ($event->has(NodePublishedV1::SLUG_FIELD)) {
-            $this->node->set(SluggableV1Mixin::SLUG_FIELD, $event->get(NodePublishedV1::SLUG_FIELD));
+        if ($event->has('slug')) {
+            $this->node->set('slug', $event->get('slug'));
         }
     }
 
     protected function applyNodeRenamed(Message $event): void
     {
-        $this->node->set(SluggableV1Mixin::SLUG_FIELD, $event->get(NodeRenamedV1::NEW_SLUG_FIELD));
+        $this->node->set('slug', $event->get('new_slug'));
     }
 
     protected function applyNodeScheduled(Message $event): void
     {
         $this->node
-            ->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::SCHEDULED())
-            ->set(PublishableV1Mixin::PUBLISHED_AT_FIELD, $event->get(NodeScheduledV1::PUBLISH_AT_FIELD));
+            ->set('status', NodeStatus::SCHEDULED())
+            ->set('published_at', $event->get('publish_at'));
 
-        if ($event->has(NodeScheduledV1::SLUG_FIELD)) {
-            $this->node->set(SluggableV1Mixin::SLUG_FIELD, $event->get(NodeScheduledV1::SLUG_FIELD));
+        if ($event->has('slug')) {
+            $this->node->set('slug', $event->get('slug'));
+        }
+    }
+
+    protected function applyNodeTagsUpdated(Message $event): void
+    {
+        foreach ($event->get('tags_removed', []) as $tag) {
+            $this->node->removeFromMap('tags', $tag);
+        }
+
+        foreach ($event->get('tags_added', []) as $k => $v) {
+            $this->node->addToMap('tags', $k, $v);
         }
     }
 
     protected function applyNodeUnlocked(Message $event): void
     {
         $this->node
-            ->set(LockableV1Mixin::IS_LOCKED_FIELD, false)
-            ->clear(LockableV1Mixin::LOCKED_BY_REF_FIELD);
+            ->set('is_locked', false)
+            ->clear('locked_by_ref');
     }
 
     protected function applyNodeUnpublished(Message $event): void
     {
         $this->node
-            ->set(NodeV1Mixin::STATUS_FIELD, NodeStatus::DRAFT())
-            ->clear(PublishableV1Mixin::PUBLISHED_AT_FIELD);
+            ->set('status', NodeStatus::DRAFT())
+            ->clear('published_at');
     }
 
     protected function applyNodeUpdated(Message $event): void
     {
-        $this->node = clone $event->get(NodeUpdatedV1::NEW_NODE_FIELD);
+        $this->node = clone $event->get('new_node');
     }
 
     protected function enrichNodeCreated(Message $event): void
     {
         /** @var Message $node */
-        $node = $event->get(NodeCreatedV1::NODE_FIELD);
-        $node->set(NodeV1Mixin::ETAG_FIELD, static::generateEtag($node));
+        $node = $event->get('node');
+        $node->set('etag', static::generateEtag($node));
     }
 
     protected function enrichNodeUpdated(Message $event): void
     {
         /** @var Message $node */
-        $node = $event->get(NodeUpdatedV1::NEW_NODE_FIELD);
-        $node->set(NodeV1Mixin::ETAG_FIELD, static::generateEtag($node));
+        $node = $event->get('new_node');
+        $node->set('etag', static::generateEtag($node));
         $event
-            ->set(NodeUpdatedV1::OLD_ETAG_FIELD, $this->node->get(NodeV1Mixin::ETAG_FIELD))
-            ->set(NodeUpdatedV1::NEW_ETAG_FIELD, $node->get(NodeV1Mixin::ETAG_FIELD));
+            ->set('old_etag', $this->node->get('etag'))
+            ->set('new_etag', $node->get('etag'));
     }
 
     protected function assertNodeRefMatches(NodeRef $nodeRef): void
@@ -728,39 +814,37 @@ class Aggregate
         $this->syncAllEvents = false;
         $eventRef = $event->generateMessageRef();
 
-        if ($this->node->has(NodeV1Mixin::LAST_EVENT_REF_FIELD)
-            && $eventRef->equals($this->node->get(NodeV1Mixin::LAST_EVENT_REF_FIELD))
-        ) {
+        if ($this->node->has('last_event_ref') && $eventRef->equals($this->node->get('last_event_ref'))) {
             // the apply* method already performed the updates
             // to updated and etag fields
             return;
         }
 
         $this->node
-            ->set(NodeV1Mixin::UPDATED_AT_FIELD, $event->get($event::OCCURRED_AT_FIELD))
-            ->set(NodeV1Mixin::UPDATER_REF_FIELD, $event->get($event::CTX_USER_REF_FIELD))
-            ->set(NodeV1Mixin::LAST_EVENT_REF_FIELD, $eventRef)
-            ->set(NodeV1Mixin::ETAG_FIELD, static::generateEtag($this->node));
+            ->set('updated_at', $event->get('occurred_at'))
+            ->set('updater_ref', $event->get('ctx_user_ref'))
+            ->set('last_event_ref', $eventRef)
+            ->set('etag', static::generateEtag($this->node));
     }
 
     protected function copyContext(Message $command, Message $event): void
     {
         $this->pbjx->copyContext($command, $event);
-        if ($event::schema()->hasMixin(TaggableV1Mixin::SCHEMA_CURIE)) {
-            foreach ($command->get($event::TAGS_FIELD, []) as $k => $v) {
-                $event->addToMap($event::TAGS_FIELD, $k, $v);
+        if ($event::schema()->hasMixin('gdbots:common:mixin:taggable')) {
+            foreach ($command->get('tags', []) as $k => $v) {
+                $event->addToMap('tags', $k, $v);
             }
         }
     }
 
     protected function shouldRecordEvent(Message $event): bool
     {
-        if (!$event->has(NodeUpdatedV1::NEW_ETAG_FIELD)) {
+        if (!$event->has('new_etag')) {
             return true;
         }
 
-        $oldEtag = $event->get(NodeUpdatedV1::OLD_ETAG_FIELD);
-        $newEtag = $event->get(NodeUpdatedV1::NEW_ETAG_FIELD);
+        $oldEtag = $event->get('old_etag');
+        $newEtag = $event->get('new_etag');
         return $oldEtag !== $newEtag;
     }
 

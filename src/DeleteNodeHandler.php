@@ -8,8 +8,6 @@ use Gdbots\Pbj\MessageResolver;
 use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Pbjx\CommandHandler;
 use Gdbots\Pbjx\Pbjx;
-use Gdbots\Schemas\Ncr\Command\DeleteNodeV1;
-use Gdbots\Schemas\Ncr\Mixin\DeleteNode\DeleteNodeV1Mixin;
 
 class DeleteNodeHandler implements CommandHandler
 {
@@ -18,8 +16,8 @@ class DeleteNodeHandler implements CommandHandler
     public static function handlesCuries(): array
     {
         // deprecated mixins, will be removed in 3.x
-        $curies = MessageResolver::findAllUsingMixin(DeleteNodeV1Mixin::SCHEMA_CURIE_MAJOR, false);
-        $curies[] = DeleteNodeV1::SCHEMA_CURIE;
+        $curies = MessageResolver::findAllUsingMixin('gdbots:ncr:mixin:delete-node:v1', false);
+        $curies[] = 'gdbots:ncr:command:delete-node';
         return $curies;
     }
 
@@ -31,7 +29,7 @@ class DeleteNodeHandler implements CommandHandler
     public function handleCommand(Message $command, Pbjx $pbjx): void
     {
         /** @var NodeRef $nodeRef */
-        $nodeRef = $command->get(DeleteNodeV1::NODE_REF_FIELD);
+        $nodeRef = $command->get('node_ref');
         $context = ['causator' => $command];
 
         $node = $this->ncr->getNode($nodeRef, true, $context);

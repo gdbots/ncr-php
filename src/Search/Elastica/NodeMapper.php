@@ -6,7 +6,6 @@ namespace Gdbots\Ncr\Search\Elastica;
 use Elastica\Document;
 use Gdbots\Pbj\Message;
 use Gdbots\Pbj\Util\DateUtil;
-use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
 
 class NodeMapper
 {
@@ -22,7 +21,7 @@ class NodeMapper
     {
         $document->set(
             IndexManager::CREATED_AT_ISO_FIELD_NAME,
-            $node->get(NodeV1Mixin::CREATED_AT_FIELD)->toDateTime()->format(DateUtil::ISO8601_ZULU)
+            $node->get('created_at')->toDateTime()->format(DateUtil::ISO8601_ZULU)
         );
     }
 }

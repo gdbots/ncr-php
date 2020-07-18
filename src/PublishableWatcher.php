@@ -7,21 +7,19 @@ use Gdbots\Ncr\Event\NodeProjectedEvent;
 use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Pbjx\EventSubscriber;
 use Gdbots\Schemas\Ncr\Command\PublishNodeV1;
-use Gdbots\Schemas\Ncr\Event\NodeScheduledV1;
-use Gdbots\Schemas\Ncr\Mixin\Publishable\PublishableV1Mixin;
 
 class PublishableWatcher implements EventSubscriber
 {
     public static function getSubscribedEvents()
     {
         return [
-            PublishableV1Mixin::SCHEMA_CURIE . '.deleted'           => 'cancel',
-            PublishableV1Mixin::SCHEMA_CURIE . '.expired'           => 'cancel',
-            PublishableV1Mixin::SCHEMA_CURIE . '.marked-as-draft'   => 'cancel',
-            PublishableV1Mixin::SCHEMA_CURIE . '.marked-as-pending' => 'cancel',
-            PublishableV1Mixin::SCHEMA_CURIE . '.published'         => 'cancel',
-            PublishableV1Mixin::SCHEMA_CURIE . '.scheduled'         => 'schedule',
-            PublishableV1Mixin::SCHEMA_CURIE . '.unpublished'       => 'cancel',
+            'gdbots:ncr:mixin:publishable.deleted'           => 'cancel',
+            'gdbots:ncr:mixin:publishable.expired'           => 'cancel',
+            'gdbots:ncr:mixin:publishable.marked-as-draft'   => 'cancel',
+            'gdbots:ncr:mixin:publishable.marked-as-pending' => 'cancel',
+            'gdbots:ncr:mixin:publishable.published'         => 'cancel',
+            'gdbots:ncr:mixin:publishable.scheduled'         => 'schedule',
+            'gdbots:ncr:mixin:publishable.unpublished'       => 'cancel',
         ];
     }
 
@@ -47,13 +45,13 @@ class PublishableWatcher implements EventSubscriber
         $node = $pbjxEvent->getNode();
 
         /** @var NodeRef $nodeRef */
-        $nodeRef = $event->get(NodeScheduledV1::NODE_REF_FIELD) ?: $node->generateNodeRef();
+        $nodeRef = $event->get('node_ref') ?: $node->generateNodeRef();
         /** @var \DateTimeInterface $publishAt */
-        $publishAt = $event->get(NodeScheduledV1::PUBLISH_AT_FIELD);
+        $publishAt = $event->get('publish_at');
 
         $command = PublishNodeV1::create()
-            ->set(PublishNodeV1::NODE_REF_FIELD, $nodeRef)
-            ->set(PublishNodeV1::PUBLISH_AT_FIELD, $publishAt);
+            ->set('node_ref', $nodeRef)
+            ->set('publish_at', $publishAt);
 
         $timestamp = $publishAt->getTimestamp();
         if ($timestamp <= time()) {

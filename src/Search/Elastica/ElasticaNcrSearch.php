@@ -19,9 +19,6 @@ use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Pbjx\Event\EnrichContextEvent;
 use Gdbots\Pbjx\PbjxEvents;
 use Gdbots\QueryParser\ParsedQuery;
-use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\SearchNodesRequest\SearchNodesRequestV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\SearchNodesResponse\SearchNodesResponseV1Mixin;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -109,11 +106,11 @@ TEXT;
                 $indexName = $this->indexManager->getIndexName($qname, $context);
                 $document = $this->marshaler->marshal($node)
                     ->setId($nodeRef->toString())
-                    ->remove(NodeV1Mixin::_ID_FIELD) // the "_id" field must not exist in the source as well
+                    ->remove('_id') // the "_id" field must not exist in the source as well
                     ->set(MappingBuilder::TYPE_FIELD, $nodeRef->getLabel())
                     ->set(
                         IndexManager::CREATED_AT_ISO_FIELD_NAME,
-                        $node->get(NodeV1Mixin::CREATED_AT_FIELD)->toDateTime()->format(DateUtil::ISO8601_ZULU)
+                        $node->get('created_at')->toDateTime()->format(DateUtil::ISO8601_ZULU)
                     )
                     ->setIndex($indexName)
                     ->setRefresh($refresh);
@@ -231,8 +228,8 @@ TEXT;
             }
         }
 
-        $page = $request->has(SearchNodesRequestV1Mixin::CURSOR_FIELD) ? 1 : $request->get(SearchNodesRequestV1Mixin::PAGE_FIELD);
-        $perPage = $request->get(SearchNodesRequestV1Mixin::COUNT_FIELD);
+        $page = $request->has('cursor') ? 1 : $request->get('page');
+        $perPage = $request->get('count');
         $offset = ($page - 1) * $perPage;
         $offset = NumberUtil::bound($offset, 0, 10000);
         $options = [
@@ -253,14 +250,14 @@ TEXT;
                     'exception'  => $e,
                     'pbj_schema' => $request->schema()->getId()->toString(),
                     'pbj'        => $request->toArray(),
-                    'query'      => $request->get(SearchNodesRequestV1Mixin::Q_FIELD),
+                    'query'      => $request->get('q'),
                 ]
             );
 
             throw new SearchOperationFailed(
                 sprintf(
                     'ElasticSearch query [%s] failed with message: %s',
-                    $request->get(SearchNodesRequestV1Mixin::Q_FIELD),
+                    $request->get('q'),
                     ClassUtil::getShortName($e) . '::' . $e->getMessage()
                 ),
                 Code::INTERNAL,
@@ -286,11 +283,11 @@ TEXT;
         $this->marshaler->skipValidation(false);
 
         $response
-            ->set(SearchNodesResponseV1Mixin::TOTAL_FIELD, $results->getTotalHits())
-            ->set(SearchNodesResponseV1Mixin::HAS_MORE_FIELD, ($offset + $perPage) < $results->getTotalHits() && $offset < 10000)
-            ->set(SearchNodesResponseV1Mixin::TIME_TAKEN_FIELD, (int)($results->getResponse()->getQueryTime() * 1000))
-            ->set(SearchNodesResponseV1Mixin::MAX_SCORE_FIELD, (float)$results->getMaxScore())
-            ->addToList(SearchNodesResponseV1Mixin::NODES_FIELD, $nodes);
+            ->set('total', $results->getTotalHits())
+            ->set('has_more', ($offset + $perPage) < $results->getTotalHits() && $offset < 10000)
+            ->set('time_taken', (int)($results->getResponse()->getQueryTime() * 1000))
+            ->set('max_score', (float)$results->getMaxScore())
+            ->addToList('nodes', $nodes);
     }
 
     /**
