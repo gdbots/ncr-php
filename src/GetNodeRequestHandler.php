@@ -9,7 +9,6 @@ use Gdbots\Pbj\SchemaQName;
 use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Pbjx\RequestHandler;
-use Gdbots\Schemas\Ncr\Request\GetNodeRequestV1;
 use Gdbots\Schemas\Ncr\Request\GetNodeResponseV1;
 
 // todo: add handling for when node hasn't been projected yet
@@ -20,7 +19,7 @@ class GetNodeRequestHandler implements RequestHandler
     public static function handlesCuries(): array
     {
         return [
-            GetNodeRequestV1::SCHEMA_CURIE,
+            'gdbots:ncr:request:get-node-request',
         ];
     }
 
@@ -31,21 +30,17 @@ class GetNodeRequestHandler implements RequestHandler
 
     public function handleRequest(Message $request, Pbjx $pbjx): Message
     {
-        /** @var NodeRef $nodeRef */
-        $nodeRef = $request->get(GetNodeRequestV1::NODE_REF_FIELD);
-        $consistent = $request->get(GetNodeRequestV1::CONSISTENT_READ_FIELD);
+        $consistent = $request->get('consistent_read');
         $response = $this->createGetNodeResponse($request, $pbjx);
         $context = ['causator' => $request];
 
-        if ($request->has(GetNodeRequestV1::NODE_REF_FIELD)) {
-            $node = $this->ncr->getNode(
-                $request->get(GetNodeRequestV1::NODE_REF_FIELD),
-                $consistent,
-                $context
-            );
-        } elseif ($request->has(GetNodeRequestV1::SLUG_FIELD)) {
-            $qname = SchemaQName::fromString($request->get(GetNodeRequestV1::QNAME_FIELD));
-            $query = IndexQueryBuilder::create($qname, 'slug', $request->get(GetNodeRequestV1::SLUG_FIELD))
+        if ($request->has('node_ref')) {
+            /** @var NodeRef $nodeRef */
+            $nodeRef = $request->get('node_ref');
+            $node = $this->ncr->getNode($nodeRef, $consistent, $context);
+        } elseif ($request->has('slug')) {
+            $qname = SchemaQName::fromString($request->get('qname'));
+            $query = IndexQueryBuilder::create($qname, 'slug', $request->get('slug'))
                 ->setCount(1)
                 ->build();
             $result = $this->ncr->findNodeRefs($query, $context);
@@ -54,6 +49,7 @@ class GetNodeRequestHandler implements RequestHandler
             }
 
             $node = $this->ncr->getNode($result->getNodeRefs()[0], $consistent, $context);
+            $nodeRef = $node->generateNodeRef();
         } else {
             throw new NodeNotFound('No method to locate node.');
         }
@@ -64,7 +60,7 @@ class GetNodeRequestHandler implements RequestHandler
             $node = $aggregate->getNode();
         }
 
-        return $response->set($response::NODE_FIELD, $node);
+        return $response->set('node', $node);
     }
 
     protected function createGetNodeResponse(Message $request, Pbjx $pbjx): Message

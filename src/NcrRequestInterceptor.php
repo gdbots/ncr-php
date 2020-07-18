@@ -3,24 +3,19 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
-use Gdbots\Pbj\SchemaQName;
+use Gdbots\Pbj\Message;
 use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Pbjx\Event\GetResponseEvent;
 use Gdbots\Pbjx\Event\PbjxEvent;
 use Gdbots\Pbjx\Event\ResponseCreatedEvent;
 use Gdbots\Pbjx\EventSubscriber;
-use Gdbots\Schemas\Ncr\Mixin\GetNodeBatchRequest\GetNodeBatchRequestV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\GetNodeBatchResponse\GetNodeBatchResponseV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\GetNodeRequest\GetNodeRequestV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\GetNodeResponse\GetNodeResponseV1Mixin;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
 
-final class NcrRequestInterceptor implements EventSubscriber
+class NcrRequestInterceptor implements EventSubscriber
 {
-    private const SLUG_TTL = 300;
-    private CacheItemPoolInterface $cache;
-    private NcrCache $ncrCache;
+    protected CacheItemPoolInterface $cache;
+    protected NcrCache $ncrCache;
 
     /**
      * If a request for nodes contains items already available in NcrCache
@@ -29,7 +24,7 @@ final class NcrRequestInterceptor implements EventSubscriber
      *
      * @var array
      */
-    private array $pickup = [];
+    protected array $pickup = [];
 
     /**
      * When get node requests occur with slugs we will attempt
@@ -38,15 +33,15 @@ final class NcrRequestInterceptor implements EventSubscriber
      *
      * @var CacheItemInterface[]
      */
-    private array $cacheItems = [];
+    protected array $cacheItems = [];
 
     public static function getSubscribedEvents()
     {
         return [
-            GetNodeRequestV1Mixin::SCHEMA_CURIE . '.enrich'             => 'enrichGetNodeRequest',
-            GetNodeBatchRequestV1Mixin::SCHEMA_CURIE . '.before_handle' => 'onGetNodeBatchRequestBeforeHandle',
-            GetNodeResponseV1Mixin::SCHEMA_CURIE . '.created'           => 'onGetNodeResponseCreated',
-            GetNodeBatchResponseV1Mixin::SCHEMA_CURIE . '.created'      => 'onGetNodeBatchResponseCreated',
+            'gdbots:ncr:mixin:get-node-request.enrich'              => 'enrichGetNodeRequest',
+            'gdbots:ncr:mixin:get-node-batch-request.before_handle' => 'onGetNodeBatchRequestBeforeHandle',
+            'gdbots:ncr:mixin:get-node-response.created'            => 'onGetNodeResponseCreated',
+            'gdbots:ncr:mixin:get-node-batch-response.created'      => 'onGetNodeBatchResponseCreated',
         ];
     }
 
@@ -65,17 +60,15 @@ final class NcrRequestInterceptor implements EventSubscriber
     public function enrichGetNodeRequest(PbjxEvent $pbjxEvent): void
     {
         $request = $pbjxEvent->getMessage();
-        if ($request->has(GetNodeRequestV1Mixin::NODE_REF_FIELD)
-            || $request->get(GetNodeRequestV1Mixin::CONSISTENT_READ_FIELD)
-            || !$request->has(GetNodeRequestV1Mixin::QNAME_FIELD)
-            || !$request->has(GetNodeRequestV1Mixin::SLUG_FIELD)
+        if ($request->has('node_ref')
+            || $request->get('consistent_read')
+            || !$request->has('qname')
+            || !$request->has('slug')
         ) {
             return;
         }
 
-        $qname = SchemaQName::fromString($request->get(GetNodeRequestV1Mixin::QNAME_FIELD));
-        $cacheKey = $this->getSlugCacheKey($qname, $request->get(GetNodeRequestV1Mixin::SLUG_FIELD));
-
+        $cacheKey = $this->getSlugCacheKey($request);
         $cacheItem = $this->cache->getItem($cacheKey);
         if (!$cacheItem->isHit()) {
             $this->cacheItems[$cacheKey] = $cacheItem;
@@ -84,8 +77,8 @@ final class NcrRequestInterceptor implements EventSubscriber
 
         try {
             $nodeRef = NodeRef::fromString($cacheItem->get());
-            if ($nodeRef->getQName() === $qname) {
-                $request->set(GetNodeRequestV1Mixin::NODE_REF_FIELD, $nodeRef);
+            if ($nodeRef->getQName()->toString() === $request->get('qname')) {
+                $request->set('node_ref', $nodeRef);
             }
         } catch (\Throwable $e) {
         }
@@ -94,16 +87,14 @@ final class NcrRequestInterceptor implements EventSubscriber
     public function onGetNodeBatchRequestBeforeHandle(GetResponseEvent $pbjxEvent): void
     {
         $request = $pbjxEvent->getRequest();
-        if ($request->get(GetNodeBatchRequestV1Mixin::CONSISTENT_READ_FIELD)
-            || !$request->has(GetNodeBatchRequestV1Mixin::NODE_REFS_FIELD)
-        ) {
+        if ($request->get('consistent_read') || !$request->has('node_refs')) {
             return;
         }
 
         $ncrCachedNodeRefs = [];
 
         /** @var NodeRef $nodeRef */
-        foreach ($request->get(GetNodeBatchRequestV1Mixin::NODE_REFS_FIELD) as $nodeRef) {
+        foreach ($request->get('node_refs') as $nodeRef) {
             if ($this->ncrCache->hasNode($nodeRef)) {
                 $ncrCachedNodeRefs[] = $nodeRef;
             }
@@ -113,42 +104,40 @@ final class NcrRequestInterceptor implements EventSubscriber
             return;
         }
 
-        $request->removeFromSet(GetNodeBatchRequestV1Mixin::NODE_REFS_FIELD, $ncrCachedNodeRefs);
-        $this->pickup[(string)$request->get($request::REQUEST_ID_FIELD)] = $ncrCachedNodeRefs;
+        $request->removeFromSet('node_refs', $ncrCachedNodeRefs);
+        $this->pickup[(string)$request->get('request_id')] = $ncrCachedNodeRefs;
     }
 
     public function onGetNodeResponseCreated(ResponseCreatedEvent $pbjxEvent): void
     {
         $response = $pbjxEvent->getResponse();
-        if (!$response->has(GetNodeResponseV1Mixin::NODE_FIELD)) {
+        if (!$response->has('node')) {
             return;
         }
 
-        $node = $response->get(GetNodeResponseV1Mixin::NODE_FIELD);
+        $node = $response->get('node');
         $this->ncrCache->addNode($node);
 
         $request = $pbjxEvent->getRequest();
-        if (!$request->has(GetNodeRequestV1Mixin::QNAME_FIELD)
-            || !$request->has(GetNodeRequestV1Mixin::SLUG_FIELD)
-        ) {
+        if (!$request->has('qname') || !$request->has('slug')) {
             // was not a slug lookup
             return;
         }
 
-        if ($node->get(GetNodeRequestV1Mixin::SLUG_FIELD) !== $request->get(GetNodeRequestV1Mixin::SLUG_FIELD)) {
+        if ($node->get('slug') !== $request->get('slug')) {
             // for some reason, the node we got ain't the one we want
             return;
         }
 
         $nodeRef = NodeRef::fromNode($node);
-        $cacheKey = $this->getSlugCacheKey($nodeRef->getQName(), $request->get(GetNodeRequestV1Mixin::SLUG_FIELD));
+        $cacheKey = $this->getSlugCacheKey($request);
         if (!isset($this->cacheItems[$cacheKey])) {
             // lookup never happend
             return;
         }
 
         $cacheItem = $this->cacheItems[$cacheKey];
-        $cacheItem->set($nodeRef->toString())->expiresAfter(self::SLUG_TTL);
+        $cacheItem->set($nodeRef->toString())->expiresAfter($this->getSlugCacheTtl($request));
         unset($this->cacheItems[$cacheKey]);
         $this->cache->saveDeferred($cacheItem);
     }
@@ -156,11 +145,11 @@ final class NcrRequestInterceptor implements EventSubscriber
     public function onGetNodeBatchResponseCreated(ResponseCreatedEvent $pbjxEvent): void
     {
         $response = $pbjxEvent->getResponse();
-        if ($response->has(GetNodeBatchResponseV1Mixin::NODES_FIELD)) {
-            $this->ncrCache->addNodes($response->get(GetNodeBatchResponseV1Mixin::NODES_FIELD));
+        if ($response->has('nodes')) {
+            $this->ncrCache->addNodes($response->get('nodes'));
         }
 
-        $requestId = $response->get($response::CTX_REQUEST_REF_FIELD)->getId();
+        $requestId = $response->get('ctx_request_ref')->getId();
         if (!isset($this->pickup[$requestId])) {
             return;
         }
@@ -168,26 +157,26 @@ final class NcrRequestInterceptor implements EventSubscriber
         /** @var NodeRef $nodeRef */
         foreach ($this->pickup[$requestId] as $nodeRef) {
             try {
-                $response->addToMap(
-                    GetNodeBatchResponseV1Mixin::NODES_FIELD,
-                    $nodeRef->toString(),
-                    $this->ncrCache->getNode($nodeRef)
-                );
+                $response->addToMap('nodes', $nodeRef->toString(), $this->ncrCache->getNode($nodeRef));
             } catch (\Throwable $e) {
-                $response->addToSet(GetNodeBatchResponseV1Mixin::MISSING_NODE_REFS_FIELD, [$nodeRef]);
+                $response->addToSet('missing_node_refs', [$nodeRef]);
             }
         }
 
         unset($this->pickup[$requestId]);
     }
 
-    private function getSlugCacheKey(SchemaQName $qname, string $slug): string
+    protected function getSlugCacheKey(Message $request): string
     {
         return str_replace('-', '_', sprintf(
-            'stnr.%s.%s.%s',
-            $qname->getVendor(),
-            $qname->getMessage(),
-            md5($slug)
+            'stnr.%s.%s',
+            str_replace(':', '.', $request->get('qname')),
+            md5($request->get('slug'))
         ));
+    }
+
+    protected function getSlugCacheTtl(Message $request): int
+    {
+        return 300;
     }
 }

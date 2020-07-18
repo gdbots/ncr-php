@@ -11,7 +11,6 @@ use Gdbots\Pbj\MessageResolver;
 use Gdbots\Pbj\SchemaQName;
 use Gdbots\Pbj\Util\ClassUtil;
 use Gdbots\Pbj\Util\NumberUtil;
-use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
 use Gdbots\Schemas\Pbjx\Enum\Code;
 
 class IndexManager
@@ -256,13 +255,13 @@ class IndexManager
     protected function createMapping(): Mapping
     {
         $builder = $this->getMappingBuilder();
-        foreach (MessageResolver::findAllUsingMixin(NodeV1Mixin::SCHEMA_CURIE_MAJOR) as $curie) {
+        foreach (MessageResolver::findAllUsingMixin('gdbots:ncr:mixin:node:v1') as $curie) {
             $builder->addSchema(MessageResolver::resolveCurie($curie)::schema());
         }
 
         $mapping = $builder->build();
         $properties = $mapping->getProperties();
-        unset($properties[NodeV1Mixin::_ID_FIELD]);
+        unset($properties['_id']);
         $properties[self::CREATED_AT_ISO_FIELD_NAME] = MappingBuilder::TYPES['date'];
         $mapping->setProperties($properties);
 

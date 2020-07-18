@@ -16,9 +16,6 @@ use Gdbots\QueryParser\Node\Field;
 use Gdbots\QueryParser\Node\Numbr;
 use Gdbots\QueryParser\Node\Word;
 use Gdbots\QueryParser\ParsedQuery;
-use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\Publishable\PublishableV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\SearchNodesRequest\SearchNodesRequestV1Mixin;
 
 class QueryFactory
 {
@@ -63,23 +60,23 @@ class QueryFactory
 
         $dateFilters = [
             [
-                'query'    => SearchNodesRequestV1Mixin::CREATED_AFTER_FIELD,
-                'field'    => NodeV1Mixin::CREATED_AT_FIELD,
+                'query'    => 'created_after',
+                'field'    => 'created_at',
                 'operator' => ComparisonOperator::GT(),
             ],
             [
-                'query'    => SearchNodesRequestV1Mixin::CREATED_BEFORE_FIELD,
-                'field'    => NodeV1Mixin::CREATED_AT_FIELD,
+                'query'    => 'created_before',
+                'field'    => 'created_at',
                 'operator' => ComparisonOperator::LT(),
             ],
             [
-                'query'    => SearchNodesRequestV1Mixin::UPDATED_AFTER_FIELD,
-                'field'    => NodeV1Mixin::UPDATED_AT_FIELD,
+                'query'    => 'updated_after',
+                'field'    => 'updated_at',
                 'operator' => ComparisonOperator::GT(),
             ],
             [
-                'query'    => SearchNodesRequestV1Mixin::UPDATED_BEFORE_FIELD,
-                'field'    => NodeV1Mixin::UPDATED_AT_FIELD,
+                'query'    => 'updated_before',
+                'field'    => 'updated_at',
                 'operator' => ComparisonOperator::LT(),
             ],
         ];
@@ -102,14 +99,14 @@ class QueryFactory
 
     protected function applyStatus(Message $request, ParsedQuery $parsedQuery): void
     {
-        if (!$request->has(SearchNodesRequestV1Mixin::STATUS_FIELD)) {
+        if (!$request->has('status')) {
             return;
         }
 
         $required = BoolOperator::REQUIRED();
         $parsedQuery->addNode(new Field(
-            NodeV1Mixin::STATUS_FIELD,
-            new Word((string)$request->get(SearchNodesRequestV1Mixin::STATUS_FIELD), $required),
+            'status',
+            new Word((string)$request->get('status'), $required),
             $required
         ));
     }
@@ -128,13 +125,13 @@ class QueryFactory
     {
         $dateFilters = [
             [
-                'query'    => SearchNodesRequestV1Mixin::PUBLISHED_AFTER_FIELD,
-                'field'    => PublishableV1Mixin::PUBLISHED_AT_FIELD,
+                'query'    => 'published_after',
+                'field'    => 'published_at',
                 'operator' => ComparisonOperator::GT,
             ],
             [
-                'query'    => SearchNodesRequestV1Mixin::PUBLISHED_BEFORE_FIELD,
-                'field'    => PublishableV1Mixin::PUBLISHED_AT_FIELD,
+                'query'    => 'published_before',
+                'field'    => 'published_at',
                 'operator' => ComparisonOperator::LT,
             ],
         ];
@@ -177,11 +174,11 @@ class QueryFactory
      */
     protected function filterStatuses(Message $request, Query\BoolQuery $query): void
     {
-        if (!$request->has(SearchNodesRequestV1Mixin::STATUSES_FIELD)) {
+        if (!$request->has('statuses')) {
             return;
         }
 
-        $statuses = array_map('strval', $request->get(SearchNodesRequestV1Mixin::STATUSES_FIELD));
-        $query->addFilter(new Query\Terms(NodeV1Mixin::STATUS_FIELD, $statuses));
+        $statuses = array_map('strval', $request->get('statuses'));
+        $query->addFilter(new Query\Terms('status', $statuses));
     }
 }

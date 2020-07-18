@@ -13,7 +13,6 @@ use Gdbots\QueryParser\Node\Field;
 use Gdbots\QueryParser\Node\Word;
 use Gdbots\QueryParser\ParsedQuery;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
-use Gdbots\Schemas\Ncr\Mixin\SearchNodesRequest\SearchNodesRequestV1Mixin;
 
 abstract class AbstractSearchNodesRequestHandler implements RequestHandler
 {
@@ -28,7 +27,7 @@ abstract class AbstractSearchNodesRequestHandler implements RequestHandler
     {
         $response = $this->createSearchNodesResponse($request, $pbjx);
         $parsedQuery = ParsedQuery::fromArray(json_decode(
-            $request->get(SearchNodesRequestV1Mixin::PARSED_QUERY_JSON_FIELD, '{}'),
+            $request->get('parsed_query_json', '{}'),
             true
         ));
 
@@ -36,19 +35,12 @@ abstract class AbstractSearchNodesRequestHandler implements RequestHandler
 
         // if status is not specified in some way, default to not
         // showing any deleted nodes.
-        if (!$request->has(SearchNodesRequestV1Mixin::STATUS_FIELD)
-            && !$request->has(SearchNodesRequestV1Mixin::STATUSES_FIELD)
-            && !$request->isInSet(
-                SearchNodesRequestV1Mixin::FIELDS_USED_FIELD,
-                SearchNodesRequestV1Mixin::STATUS_FIELD
-            )
+        if (!$request->has('status')
+            && !$request->has('statuses')
+            && !$request->isInSet('fields_used', 'status')
         ) {
             $parsedQuery->addNode(
-                new Field(
-                    SearchNodesRequestV1Mixin::STATUS_FIELD,
-                    new Word(NodeStatus::DELETED, $prohibited),
-                    $prohibited
-                )
+                new Field('status', new Word(NodeStatus::DELETED, $prohibited), $prohibited)
             );
         }
 

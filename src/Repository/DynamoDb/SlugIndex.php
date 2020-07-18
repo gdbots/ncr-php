@@ -5,8 +5,6 @@ namespace Gdbots\Ncr\Repository\DynamoDb;
 
 use Gdbots\Pbj\Message;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
-use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\Sluggable\SluggableV1Mixin;
 
 final class SlugIndex extends AbstractIndex
 {
@@ -22,7 +20,7 @@ final class SlugIndex extends AbstractIndex
 
     public function getRangeKeyName(): ?string
     {
-        return NodeV1Mixin::CREATED_AT_FIELD;
+        return 'created_at';
     }
 
     public function getKeyAttributes(): array
@@ -37,8 +35,8 @@ final class SlugIndex extends AbstractIndex
     {
         return [
             'created_at' => ['AttributeName' => $this->getRangeKeyName(), 'AttributeType' => 'N'],
-            'status'     => ['AttributeName' => NodeV1Mixin::STATUS_FIELD, 'AttributeType' => 'S'],
-            'etag'       => ['AttributeName' => NodeV1Mixin::ETAG_FIELD, 'AttributeType' => 'S'],
+            'status'     => ['AttributeName' => 'status', 'AttributeType' => 'S'],
+            'etag'       => ['AttributeName' => 'etag', 'AttributeType' => 'S'],
         ];
     }
 
@@ -46,19 +44,19 @@ final class SlugIndex extends AbstractIndex
     {
         return [
             'ProjectionType'   => 'INCLUDE',
-            'NonKeyAttributes' => [NodeV1Mixin::STATUS_FIELD, NodeV1Mixin::ETAG_FIELD],
+            'NonKeyAttributes' => ['status', 'etag'],
         ];
     }
 
     public function beforePutItem(array &$item, Message $node): void
     {
-        if (!$node->has(SluggableV1Mixin::SLUG_FIELD)
-            || $node->get(NodeV1Mixin::STATUS_FIELD)->equals(NodeStatus::DELETED())
-            || !$node::schema()->hasMixin(SluggableV1Mixin::SCHEMA_CURIE)
+        if (!$node->has('slug')
+            || $node->fget('status') === NodeStatus::DELETED
+            || !$node::schema()->hasMixin('gdbots:ncr:mixin:sluggable')
         ) {
             return;
         }
 
-        $item[$this->getHashKeyName()] = ['S' => (string)$node->get(SluggableV1Mixin::SLUG_FIELD)];
+        $item[$this->getHashKeyName()] = ['S' => (string)$node->get('slug')];
     }
 }

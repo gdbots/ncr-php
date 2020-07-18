@@ -38,7 +38,7 @@ final class NcrLazyLoader
             return false;
         }
 
-        return $this->getNodeBatchRequest->isInSet(GetNodeBatchRequestV1::NODE_REFS_FIELD, $nodeRef);
+        return $this->getNodeBatchRequest->isInSet('node_refs', $nodeRef);
     }
 
     /**
@@ -52,7 +52,7 @@ final class NcrLazyLoader
             return [];
         }
 
-        return $this->getNodeBatchRequest->get(GetNodeBatchRequestV1::NODE_REFS_FIELD, []);
+        return $this->getNodeBatchRequest->get('node_refs', []);
     }
 
     /**
@@ -117,7 +117,7 @@ final class NcrLazyLoader
             $this->getNodeBatchRequest = GetNodeBatchRequestV1::create();
         }
 
-        $this->getNodeBatchRequest->addToSet(GetNodeBatchRequestV1::NODE_REFS_FIELD, $nodeRefs);
+        $this->getNodeBatchRequest->addToSet('node_refs', $nodeRefs);
     }
 
     /**
@@ -131,7 +131,7 @@ final class NcrLazyLoader
             return;
         }
 
-        $this->getNodeBatchRequest->removeFromSet(GetNodeBatchRequestV1::NODE_REFS_FIELD, $nodeRefs);
+        $this->getNodeBatchRequest->removeFromSet('node_refs', $nodeRefs);
     }
 
     /**
@@ -152,14 +152,14 @@ final class NcrLazyLoader
             return;
         }
 
-        if (!$this->getNodeBatchRequest->has(GetNodeBatchRequestV1::NODE_REFS_FIELD)) {
+        if (!$this->getNodeBatchRequest->has('node_refs')) {
             return;
         }
 
         try {
             $request = $this->getNodeBatchRequest;
             $this->getNodeBatchRequest = null;
-            $request->set($request::CTX_CAUSATOR_REF_FIELD, $request->generateMessageRef());
+            $request->set('ctx_causator_ref', $request->generateMessageRef());
             $this->pbjx->request($request);
         } catch (\Throwable $e) {
             $this->logger->error(

@@ -10,46 +10,22 @@ use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Pbjx\DependencyInjection\PbjxProjector;
 use Gdbots\Pbjx\EventSubscriber;
 use Gdbots\Pbjx\Pbjx;
-use Gdbots\Schemas\Ncr\Event\NodeCreatedV1;
-use Gdbots\Schemas\Ncr\Event\NodeDeletedV1;
-use Gdbots\Schemas\Ncr\Event\NodeExpiredV1;
-use Gdbots\Schemas\Ncr\Event\NodeLockedV1;
-use Gdbots\Schemas\Ncr\Event\NodeMarkedAsDraftV1;
-use Gdbots\Schemas\Ncr\Event\NodeMarkedAsPendingV1;
-use Gdbots\Schemas\Ncr\Event\NodePublishedV1;
-use Gdbots\Schemas\Ncr\Event\NodeRenamedV1;
-use Gdbots\Schemas\Ncr\Event\NodeScheduledV1;
-use Gdbots\Schemas\Ncr\Event\NodeUnlockedV1;
-use Gdbots\Schemas\Ncr\Event\NodeUnpublishedV1;
-use Gdbots\Schemas\Ncr\Event\NodeUpdatedV1;
-use Gdbots\Schemas\Ncr\Mixin\NodeCreated\NodeCreatedV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\NodeDeleted\NodeDeletedV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\NodeExpired\NodeExpiredV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\NodeLocked\NodeLockedV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\NodeMarkedAsDraft\NodeMarkedAsDraftV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\NodeMarkedAsPending\NodeMarkedAsPendingV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\NodePublished\NodePublishedV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\NodeRenamed\NodeRenamedV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\NodeScheduled\NodeScheduledV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\NodeUnlocked\NodeUnlockedV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\NodeUnpublished\NodeUnpublishedV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\NodeUpdated\NodeUpdatedV1Mixin;
 
 class NcrProjector implements EventSubscriber, PbjxProjector
 {
     protected const DEPRECATED_MIXINS_TO_SUFFIX = [
-        NodeCreatedV1Mixin::SCHEMA_CURIE         => 'created',
-        NodeDeletedV1Mixin::SCHEMA_CURIE         => 'deleted',
-        NodeExpiredV1Mixin::SCHEMA_CURIE         => 'expired',
-        NodeLockedV1Mixin::SCHEMA_CURIE          => 'locked',
-        NodeMarkedAsDraftV1Mixin::SCHEMA_CURIE   => 'marked-as-draft',
-        NodeMarkedAsPendingV1Mixin::SCHEMA_CURIE => 'marked-as-pending',
-        NodePublishedV1Mixin::SCHEMA_CURIE       => 'published',
-        NodeRenamedV1Mixin::SCHEMA_CURIE         => 'renamed',
-        NodeScheduledV1Mixin::SCHEMA_CURIE       => 'scheduled',
-        NodeUnlockedV1Mixin::SCHEMA_CURIE        => 'unlocked',
-        NodeUnpublishedV1Mixin::SCHEMA_CURIE     => 'unpublished',
-        NodeUpdatedV1Mixin::SCHEMA_CURIE         => 'updated',
+        'gdbots:ncr:mixin:node-created'           => 'created',
+        'gdbots:ncr:mixin:node-deleted'           => 'deleted',
+        'gdbots:ncr:mixin:node-expired'           => 'expired',
+        'gdbots:ncr:mixin:node-locked'            => 'locked',
+        'gdbots:ncr:mixin:node-marked-as-draft'   => 'marked-as-draft',
+        'gdbots:ncr:mixin:node-marked-as-pending' => 'marked-as-pending',
+        'gdbots:ncr:mixin:node-published'         => 'published',
+        'gdbots:ncr:mixin:node-renamed'           => 'renamed',
+        'gdbots:ncr:mixin:node-scheduled'         => 'scheduled',
+        'gdbots:ncr:mixin:node-unlocked'          => 'unlocked',
+        'gdbots:ncr:mixin:node-unpublished'       => 'unpublished',
+        'gdbots:ncr:mixin:node-updated'           => 'updated',
     ];
 
     protected Ncr $ncr;
@@ -59,32 +35,34 @@ class NcrProjector implements EventSubscriber, PbjxProjector
     public static function getSubscribedEvents()
     {
         return [
-            NodeCreatedV1::SCHEMA_CURIE              => 'onNodeCreated',
-            NodeDeletedV1::SCHEMA_CURIE              => 'onNodeDeleted',
-            NodeExpiredV1::SCHEMA_CURIE              => 'onNodeEvent',
-            NodeLockedV1::SCHEMA_CURIE               => 'onNodeEvent',
-            NodeMarkedAsDraftV1::SCHEMA_CURIE        => 'onNodeEvent',
-            NodeMarkedAsPendingV1::SCHEMA_CURIE      => 'onNodeEvent',
-            NodePublishedV1::SCHEMA_CURIE            => 'onNodeEvent',
-            NodeRenamedV1::SCHEMA_CURIE              => 'onNodeEvent',
-            NodeScheduledV1::SCHEMA_CURIE            => 'onNodeEvent',
-            NodeUnlockedV1::SCHEMA_CURIE             => 'onNodeEvent',
-            NodeUnpublishedV1::SCHEMA_CURIE          => 'onNodeEvent',
-            NodeUpdatedV1::SCHEMA_CURIE              => 'onNodeUpdated',
+            'gdbots:ncr:event:node-created'           => 'onNodeCreated',
+            'gdbots:ncr:event:node-deleted'           => 'onNodeDeleted',
+            'gdbots:ncr:event:node-expired'           => 'onNodeEvent',
+            'gdbots:ncr:event:node-labels-updated'    => 'onNodeEvent',
+            'gdbots:ncr:event:node-locked'            => 'onNodeEvent',
+            'gdbots:ncr:event:node-marked-as-draft'   => 'onNodeEvent',
+            'gdbots:ncr:event:node-marked-as-pending' => 'onNodeEvent',
+            'gdbots:ncr:event:node-published'         => 'onNodeEvent',
+            'gdbots:ncr:event:node-renamed'           => 'onNodeEvent',
+            'gdbots:ncr:event:node-scheduled'         => 'onNodeEvent',
+            'gdbots:ncr:event:node-tags-updated'      => 'onNodeEvent',
+            'gdbots:ncr:event:node-unlocked'          => 'onNodeEvent',
+            'gdbots:ncr:event:node-unpublished'       => 'onNodeEvent',
+            'gdbots:ncr:event:node-updated'           => 'onNodeUpdated',
 
             // deprecated mixins, will be removed in 3.x
-            NodeCreatedV1Mixin::SCHEMA_CURIE         => 'onNodeCreated',
-            NodeDeletedV1Mixin::SCHEMA_CURIE         => 'onNodeDeleted',
-            NodeExpiredV1Mixin::SCHEMA_CURIE         => 'onNodeEvent',
-            NodeLockedV1Mixin::SCHEMA_CURIE          => 'onNodeEvent',
-            NodeMarkedAsDraftV1Mixin::SCHEMA_CURIE   => 'onNodeEvent',
-            NodeMarkedAsPendingV1Mixin::SCHEMA_CURIE => 'onNodeEvent',
-            NodePublishedV1Mixin::SCHEMA_CURIE       => 'onNodeEvent',
-            NodeRenamedV1Mixin::SCHEMA_CURIE         => 'onNodeEvent',
-            NodeScheduledV1Mixin::SCHEMA_CURIE       => 'onNodeEvent',
-            NodeUnlockedV1Mixin::SCHEMA_CURIE        => 'onNodeEvent',
-            NodeUnpublishedV1Mixin::SCHEMA_CURIE     => 'onNodeEvent',
-            NodeUpdatedV1Mixin::SCHEMA_CURIE         => 'onNodeUpdated',
+            'gdbots:ncr:mixin:node-created'           => 'onNodeCreated',
+            'gdbots:ncr:mixin:node-deleted'           => 'onNodeDeleted',
+            'gdbots:ncr:mixin:node-expired'           => 'onNodeEvent',
+            'gdbots:ncr:mixin:node-locked'            => 'onNodeEvent',
+            'gdbots:ncr:mixin:node-marked-as-draft'   => 'onNodeEvent',
+            'gdbots:ncr:mixin:node-marked-as-pending' => 'onNodeEvent',
+            'gdbots:ncr:mixin:node-published'         => 'onNodeEvent',
+            'gdbots:ncr:mixin:node-renamed'           => 'onNodeEvent',
+            'gdbots:ncr:mixin:node-scheduled'         => 'onNodeEvent',
+            'gdbots:ncr:mixin:node-unlocked'          => 'onNodeEvent',
+            'gdbots:ncr:mixin:node-unpublished'       => 'onNodeEvent',
+            'gdbots:ncr:mixin:node-updated'           => 'onNodeUpdated',
         ];
     }
 
@@ -101,7 +79,7 @@ class NcrProjector implements EventSubscriber, PbjxProjector
             return;
         }
 
-        $this->projectNodeRef($event->get($event::NODE_REF_FIELD), $event, $pbjx);
+        $this->projectNodeRef($event->get('node_ref'), $event, $pbjx);
     }
 
     public function onNodeCreated(Message $event, Pbjx $pbjx): void
@@ -110,7 +88,7 @@ class NcrProjector implements EventSubscriber, PbjxProjector
             return;
         }
 
-        $this->projectNode($event->get(NodeCreatedV1::NODE_FIELD), $event, $pbjx);
+        $this->projectNode($event->get('node'), $event, $pbjx);
     }
 
     public function onNodeDeleted(Message $event, Pbjx $pbjx): void
@@ -120,7 +98,7 @@ class NcrProjector implements EventSubscriber, PbjxProjector
         }
 
         /** @var NodeRef $nodeRef */
-        $nodeRef = $event->get(NodeDeletedV1::NODE_REF_FIELD);
+        $nodeRef = $event->get('node_ref');
         $context = ['causator' => $event];
 
         try {
@@ -149,7 +127,7 @@ class NcrProjector implements EventSubscriber, PbjxProjector
             return;
         }
 
-        $this->projectNode($event->get(NodeUpdatedV1::NEW_NODE_FIELD), $event, $pbjx);
+        $this->projectNode($event->get('new_node'), $event, $pbjx);
     }
 
     protected function projectNodeRef(NodeRef $nodeRef, Message $event, Pbjx $pbjx): void

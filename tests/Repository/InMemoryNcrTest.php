@@ -59,20 +59,20 @@ class InMemoryNcrTest extends TestCase
     public function testPutNodeWithValidExpectedEtag(): void
     {
         $expectedEtag = 'test';
-        $expectedNode = UserV1::create()->set(UserV1::ETAG_FIELD, $expectedEtag);
+        $expectedNode = UserV1::create()->set('etag', $expectedEtag);
         $this->ncr->putNode($expectedNode);
         $nodeRef = NodeRef::fromNode($expectedNode);
 
         $nextNode = $this->ncr->getNode($nodeRef);
         $this->ncr->putNode($nextNode, $expectedEtag);
-        $this->assertSame($expectedNode->get(UserV1::ETAG_FIELD), $nextNode->get(UserV1::ETAG_FIELD));
+        $this->assertSame($expectedNode->get('etag'), $nextNode->get('etag'));
     }
 
     public function testPutNodeWithInvalidExpectedEtag1()
     {
         $this->expectException(OptimisticCheckFailed::class);
         $expectedEtag = 'test';
-        $expectedNode = UserV1::create()->set(UserV1::ETAG_FIELD, $expectedEtag);
+        $expectedNode = UserV1::create()->set('etag', $expectedEtag);
         $this->ncr->putNode($expectedNode);
         $nodeRef = NodeRef::fromNode($expectedNode);
 
@@ -85,7 +85,7 @@ class InMemoryNcrTest extends TestCase
     {
         $this->expectException(OptimisticCheckFailed::class);
         $expectedEtag = 'test';
-        $expectedNode = UserV1::create()->set(UserV1::ETAG_FIELD, $expectedEtag);
+        $expectedNode = UserV1::create()->set('etag', $expectedEtag);
         $this->ncr->putNode($expectedNode);
         $nodeRef = NodeRef::fromNode($expectedNode);
 

@@ -9,20 +9,17 @@ use Gdbots\Pbjx\EventSubscriber;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Schemas\Ncr\Command\ExpireNodeV1;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
-use Gdbots\Schemas\Ncr\Event\NodeUpdatedV1;
-use Gdbots\Schemas\Ncr\Mixin\Expirable\ExpirableV1Mixin;
-use Gdbots\Schemas\Ncr\Mixin\Node\NodeV1Mixin;
 
 class ExpirableWatcher implements EventSubscriber
 {
     public static function getSubscribedEvents()
     {
         return [
-            ExpirableV1Mixin::SCHEMA_CURIE . '.created'     => 'schedule',
-            ExpirableV1Mixin::SCHEMA_CURIE . '.deleted'     => 'cancel',
-            ExpirableV1Mixin::SCHEMA_CURIE . '.expired'     => 'cancel',
-            ExpirableV1Mixin::SCHEMA_CURIE . '.unpublished' => 'cancel',
-            ExpirableV1Mixin::SCHEMA_CURIE . '.updated'     => 'reschedule',
+            'gdbots:ncr:mixin:expirable.created'     => 'schedule',
+            'gdbots:ncr:mixin:expirable.deleted'     => 'cancel',
+            'gdbots:ncr:mixin:expirable.expired'     => 'cancel',
+            'gdbots:ncr:mixin:expirable.unpublished' => 'cancel',
+            'gdbots:ncr:mixin:expirable.updated'     => 'reschedule',
         ];
     }
 
@@ -57,10 +54,10 @@ class ExpirableWatcher implements EventSubscriber
         $pbjx = $pbjxEvent::getPbjx();
         $newNode = $pbjxEvent->getNode();
         /** @var Message $oldNode */
-        $oldNode = $event->get(NodeUpdatedV1::OLD_NODE_FIELD);
-        $nodeRef = $event->get(NodeUpdatedV1::NODE_REF_FIELD) ?: $newNode->generateNodeRef();
-        $oldExpiresAt = $oldNode ? $oldNode->fget(ExpirableV1Mixin::EXPIRES_AT_FIELD) : null;
-        $newExpiresAt = $newNode->fget(ExpirableV1Mixin::EXPIRES_AT_FIELD);
+        $oldNode = $event->get('old_node');
+        $nodeRef = $event->get('node_ref') ?: $newNode->generateNodeRef();
+        $oldExpiresAt = $oldNode ? $oldNode->fget('expires_at') : null;
+        $newExpiresAt = $newNode->fget('expires_at');
 
         if ($oldExpiresAt === $newExpiresAt) {
             return;
@@ -78,18 +75,18 @@ class ExpirableWatcher implements EventSubscriber
 
     protected function createJob(Message $node, Message $event, Pbjx $pbjx): void
     {
-        if (!$node->has(ExpirableV1Mixin::EXPIRES_AT_FIELD)) {
+        if (!$node->has('expires_at')) {
             return;
         }
 
         $nodeRef = $node->generateNodeRef();
-        $command = ExpireNodeV1::create()->set(ExpireNodeV1::NODE_REF_FIELD, $nodeRef);
+        $command = ExpireNodeV1::create()->set('node_ref', $nodeRef);
         /** @var \DateTimeInterface $expiresAt */
-        $expiresAt = $node->get(ExpirableV1Mixin::EXPIRES_AT_FIELD);
+        $expiresAt = $node->get('expires_at');
         $timestamp = $expiresAt->getTimestamp();
 
         if ($timestamp <= time()) {
-            if (NodeStatus::EXPIRED()->equals($node->get(NodeV1Mixin::STATUS_FIELD))) {
+            if (NodeStatus::EXPIRED()->equals($node->get('status'))) {
                 return;
             }
             $timestamp = strtotime('+5 seconds');
