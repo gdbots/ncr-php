@@ -42,14 +42,33 @@ abstract class UpdateNodeLabelsNodeHandler extends AbstractNodeCommandHandler
     {
         $nodeRef = $command->get('node_ref');
         $node = $this->ncr->getNode($nodeRef);
+
+        if (!$this->node::schema()->hasMixin('gdbots:common:mixin:labelable')) {
+            return;
+        }
+
+        $added = array_values(array_filter(
+            $command->get('add_labels', []),
+            fn(string $label) => !$this->node->isInSet('labels', $label)
+        ));
+
+        $removed = array_values(array_filter(
+            $command->get('remove_labels', []),
+            fn(string $label) => $this->node->isInSet('labels', $label)
+        ));
+
+        if (empty($added) && empty($removed)) {
+            return;
+        }
         
         $event = NodeLabelsUpdatedV1::create();
+        $pbjx->copyContext($command, $event);
         $event->set('node_ref', $nodeRef);
-        $event->set('labels_added', $command->get('add_labels'));
-        $event->set('labels_removed', $command->get('remove_labels'));
+        $event->set('labels_added', $added);
+        $event->set('labels_removed', $removed);
 
         $streamId = StreamId::fromString(sprintf('%s.history:%s', $nodeRef->getLabel(), $nodeRef->getId()));
-        $pbj->getEventStore()->putEvents($streamId, [$event]);
+        $pbjx->getEventStore()->putEvents($streamId, [$event]);
     }
 
 }

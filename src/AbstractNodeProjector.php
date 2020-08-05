@@ -11,6 +11,7 @@ use Gdbots\Pbj\SchemaCurie;
 use Gdbots\Pbjx\DependencyInjection\PbjxProjector;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
+use Gdbots\Schemas\Ncr\Event\NodeLabelsUpdated;
 use Gdbots\Schemas\Ncr\Mixin\Expirable\Expirable;
 use Gdbots\Schemas\Ncr\Mixin\ExpireNode\ExpireNode;
 use Gdbots\Schemas\Ncr\Mixin\Indexed\Indexed;
@@ -379,6 +380,19 @@ abstract class AbstractNodeProjector implements PbjxProjector
         if ($newNode instanceof Expirable) {
             $this->cancelOrCreateExpireNodeJob($newNode, $event, $pbjx, $oldNode);
         }
+    }
+
+    /**
+     * @param NodeUpdated $event
+     * @param Pbjx        $pbjx
+     */
+    protected function handleNodeLabelsUpdated(NodeLabelsUpdated $command, $pbjx): void
+    {
+        $nodeRef = $command->get('node_ref');
+        /** @var Node $node */
+        $node = $node = $this->ncr->getNode($nodeRef);
+        $this->ncr->putNode($node, null, $this->createNcrContext($command));
+        $this->indexNode($node, $command, $pbjx);
     }
 
     /**
