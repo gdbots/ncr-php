@@ -391,8 +391,33 @@ abstract class AbstractNodeProjector implements PbjxProjector
         $nodeRef = $command->get('node_ref');
         /** @var Node $node */
         $node = $node = $this->ncr->getNode($nodeRef);
-        $this->ncr->putNode($node, null, $this->createNcrContext($command));
-        $this->updateAndIndexNode($node, $command, $pbjx);
+
+        if (!$node::schema()->hasMixin('gdbots:common:mixin:labelable')) {
+            return;
+        }
+
+        $added = array_values(array_filter(
+            $command->get('labels_added', []),
+            fn(string $label) => !$node->isInSet('labels', $label)
+        ));
+
+        $removed = array_values(array_filter(
+            $command->get('labels_removed', []),
+            fn(string $label) => $node->isInSet('labels', $label)
+        ));
+
+        if (empty($added) && empty($removed)) {
+            return;
+        }
+
+        $event = NodeLabelsUpdated::create();
+        $pbjx->copyContext($command, $event);
+        $event->set('node_ref', $nodeRef);
+        $event->set('labels_added', $added);
+        $event->set('labels_removed', $removed);
+
+        $this->ncr->putNode($node, null, $this->createNcrContext($event));
+        $this->updateAndIndexNode($node, $event, $pbjx);
     }
 
     /**
