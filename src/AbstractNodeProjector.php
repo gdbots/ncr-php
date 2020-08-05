@@ -383,10 +383,10 @@ abstract class AbstractNodeProjector implements PbjxProjector
     }
 
     /**
-     * @param NodeUpdated $event
+     * @param Message     $event
      * @param Pbjx        $pbjx
      */
-    protected function handleNodeLabelsUpdated(NodeLabelsUpdated $event, $pbjx): void
+    protected function handleNodeLabelsUpdated(Message $event, $pbjx): void
     {
         $nodeRef = $event->get('node_ref');
         /** @var Node $node */
