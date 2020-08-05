@@ -12,7 +12,7 @@
   "require-dev": {
     "phpunit/phpunit": "^6.4",
     "aws/aws-sdk-php": "^3.45",
-    "gdbots/acme-schemas": "^1.1",
+    "gdbots/acme-schemas": "dev-gbots-labels as 1.0.x-dev",
     "ruflin/elastica": "^5.3",
     "symfony/cache": "^4.1"
   },
