@@ -392,7 +392,7 @@ abstract class AbstractNodeProjector implements PbjxProjector
         /** @var Node $node */
         $node = $node = $this->ncr->getNode($nodeRef);
         $this->ncr->putNode($node, null, $this->createNcrContext($command));
-        $this->indexNode($node, $command, $pbjx);
+        $this->updateAndIndexNode($node, $command, $pbjx);
     }
 
     /**
