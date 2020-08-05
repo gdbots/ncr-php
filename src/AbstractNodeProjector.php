@@ -6,6 +6,7 @@ namespace Gdbots\Ncr;
 use Gdbots\Ncr\Enricher\NodeEtagEnricher;
 use Gdbots\Ncr\Event\BeforePutNodeEvent;
 use Gdbots\Ncr\Exception\NodeNotFound;
+use Gdbots\Pbj\Message;
 use Gdbots\Pbj\MessageResolver;
 use Gdbots\Pbj\SchemaCurie;
 use Gdbots\Pbjx\DependencyInjection\PbjxProjector;
