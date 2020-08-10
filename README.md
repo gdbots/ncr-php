@@ -2,8 +2,6 @@ ncr-php
 =============
 
 [![Build Status](https://api.travis-ci.org/gdbots/ncr-php.svg)](https://travis-ci.org/gdbots/ncr-php)
-[![Code Climate](https://codeclimate.com/github/gdbots/ncr-php/badges/gpa.svg)](https://codeclimate.com/github/gdbots/ncr-php)
-[![Test Coverage](https://codeclimate.com/github/gdbots/ncr-php/badges/coverage.svg)](https://codeclimate.com/github/gdbots/ncr-php/coverage)
 
 Node Content Repository for php.  Using this library assumes that you've already created and compiled your own pbj classes using the [Pbjc](https://github.com/gdbots/pbjc-php) and are making use of the __"gdbots:ncr:mixin:*"__ mixins from [gdbots/schemas](https://github.com/gdbots/schemas).
 
@@ -19,13 +17,13 @@ This library doesn't provide you with a graph database implementation.  It's con
 # NodeRef
 A NodeRef is a qualified identifier to a node/vertex.  It is less verbose than a `MessageRef` as it is implied that node labels must be unique within a given vendor namespace and therefore can be represented in a more compact manner.
 
-> __NodeRef Format:__ vendor:label:id  
+> __NodeRef Format:__ vendor:label:id
 > The __"vendor:label"__ portion is a `SchemaQName`
 
 __Examples:__
 
-> acme:article:41e4532f-2f58-4b9d-afc8-e9c2cbcb4aba  
-> twitter:tweet:789234931599835136  
+> acme:article:41e4532f-2f58-4b9d-afc8-e9c2cbcb4aba
+> twitter:tweet:789234931599835136
 > youtube:video:EG0wQRsXLi4
 
 Nodes do not actually have a `node_ref` field, they have an `_id` field.  The `NodeRef` is derived by taking the `SchemaQName` of the node's schema along with its `_id`.  The `NodeRef` is an immutable value object which is used in various places without needing to actually have the node instance.

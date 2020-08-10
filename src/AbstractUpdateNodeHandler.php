@@ -64,6 +64,12 @@ abstract class AbstractUpdateNodeHandler extends AbstractNodeCommandHandler
             ->set('creator_ref', $oldNode->get('creator_ref'));
 
         $schema = $newNode::schema();
+        if ($schema->hasMixin('gdbots:common:mixin:labelable')) {
+            // labels SHOULD NOT change during an update, use "update-node-labels"
+            $newNode->clear('labels');
+            $newNode->addToSet('labels', $oldNode->get('labels', []));
+        }
+
         if ($schema->hasMixin('gdbots:ncr:mixin:publishable')) {
             // published_at SHOULD NOT change during an update, use "[un]publish-node"
             $newNode->set('published_at', $oldNode->get('published_at'));

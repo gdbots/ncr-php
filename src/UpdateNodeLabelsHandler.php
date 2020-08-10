@@ -3,25 +3,18 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr;
 
-use Gdbots\Ncr\Ncr;
-use Gdbots\Pbj\Message;
-use Gdbots\Pbj\MessageResolver;
-use Gdbots\Pbj\SchemaCurie;
-use Gdbots\Pbjx\CommandHandler;
 use Gdbots\Pbjx\Pbjx;
-use Gdbots\Schemas\Ncr\NodeRef;
-use Gdbots\Schemas\Pbjx\StreamId;
 use Gdbots\Schemas\Ncr\Command\UpdateNodeLabelsV1;
 use Gdbots\Schemas\Ncr\Event\NodeLabelsUpdatedV1;
+use Gdbots\Schemas\Ncr\Mixin\Node\Node;
+use Gdbots\Schemas\Ncr\NodeRef;
+use Gdbots\Schemas\Pbjx\Mixin\Command\Command;
 
-abstract class UpdateNodeLabelsNodeHandler extends AbstractNodeCommandHandler
+class UpdateNodeLabelsHandler extends AbstractNodeCommandHandler
 {
     /** @var Ncr */
     protected $ncr;
 
-    /**
-     * @param Ncr    $ncr
-     */
     public function __construct(Ncr $ncr)
     {
         $this->ncr = $ncr;
@@ -34,41 +27,42 @@ abstract class UpdateNodeLabelsNodeHandler extends AbstractNodeCommandHandler
         ];
     }
 
-    /**
-     * @param Message $command
-     * @param Pbjx        $pbjx
-     */
-    public function handleCommand(Message $command, Pbjx $pbjx): void
+    public function handleCommand(Command $command, Pbjx $pbjx): void
     {
+        /** @var NodeRef $nodeRef */
         $nodeRef = $command->get('node_ref');
-        $node = $this->ncr->getNode($nodeRef);
-
-        if (!$this->node::schema()->hasMixin('gdbots:common:mixin:labelable')) {
-            return;
-        }
+        $node = $this->ncr->getNode($nodeRef, true, $this->createNcrContext($command));
+        $this->assertIsNodeSupported($node);
 
         $added = array_values(array_filter(
             $command->get('add_labels', []),
-            fn(string $label) => !$this->node->isInSet('labels', $label)
+            function (string $label) use ($node) {
+                return !$node->isInSet('labels', $label);
+            }
         ));
 
         $removed = array_values(array_filter(
             $command->get('remove_labels', []),
-            fn(string $label) => $this->node->isInSet('labels', $label)
+            function (string $label) use ($node) {
+                return $node->isInSet('labels', $label);
+            }
         ));
 
         if (empty($added) && empty($removed)) {
             return;
         }
-        
+
         $event = NodeLabelsUpdatedV1::create();
         $pbjx->copyContext($command, $event);
         $event->set('node_ref', $nodeRef);
         $event->set('labels_added', $added);
         $event->set('labels_removed', $removed);
 
-        $streamId = StreamId::fromString(sprintf('%s.history:%s', $nodeRef->getLabel(), $nodeRef->getId()));
-        $pbjx->getEventStore()->putEvents($streamId, [$event]);
+        $this->putEvents($command, $pbjx, $this->createStreamId($nodeRef, $command, $event), [$event]);
     }
 
+    protected function isNodeSupported(Node $node): bool
+    {
+        return $node::schema()->hasMixin('gdbots:common:mixin:labelable');
+    }
 }
