@@ -384,23 +384,6 @@ abstract class AbstractNodeProjector implements PbjxProjector
     }
 
     /**
-     * @param Message     $event
-     * @param Pbjx        $pbjx
-     */
-    protected function handleNodeLabelsUpdated(Message $event, $pbjx): void
-    {
-        $nodeRef = $event->get('node_ref');
-        /** @var Node $node */
-        $node = $node = $this->ncr->getNode($nodeRef);
-        $node
-            ->removeFromSet('labels', $event->get('labels_removed', []))
-            ->addToSet('labels', $event->get('labels_added', []));
-
-        $this->ncr->putNode($node, null, $this->createNcrContext($event));
-        $this->updateAndIndexNode($node, $event, $pbjx);
-    }
-
-    /**
      * @param Expirable $newNode
      * @param Event     $event
      * @param Pbjx      $pbjx
