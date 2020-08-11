@@ -128,19 +128,29 @@ class IndexManager
         }
 
         try {
-            if (!$index->exists()) {
-                $settings['analysis'] = [
-                    'analyzer'   => $mapper->getCustomAnalyzers(),
-                    'normalizer' => $mapper->getCustomNormalizers(),
-                ];
+            $settings['analysis'] = [
+                'analyzer'   => $mapper->getCustomAnalyzers(),
+                'normalizer' => $mapper->getCustomAnalyzers(),
+            ];
 
-                $index->create($settings);
-            }
+            $index->create($settings);
         } catch (\Throwable $e) {
+            if (strpos($e->getMessage(), 'resource_already_exists_exception')
+                || strpos($e->getMessage(), 'already exists')
+            ) {
+                try {
+                    $client->connect();
+                    $index->setMapping($mapper->getMapping($qname));
+                    return $index;
+                } catch (\Throwable $e2) {
+                    $e = $e2;
+                }
+            }
+
             throw new SearchOperationFailed(
                 sprintf(
                     '%s while creating index [%s] for qname [%s].',
-                    ClassUtils::getShortName($e),
+                    ClassUtil::getShortName($e),
                     $index->getName(),
                     $qname
                 ),
