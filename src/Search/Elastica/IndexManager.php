@@ -150,7 +150,7 @@ class IndexManager
             throw new SearchOperationFailed(
                 sprintf(
                     '%s while creating index [%s] for qname [%s].',
-                    ClassUtil::getShortName($e),
+                    ClassUtils::getShortName($e),
                     $index->getName(),
                     $qname
                 ),
