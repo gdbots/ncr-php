@@ -139,7 +139,7 @@ class IndexManager
                 || strpos($e->getMessage(), 'already exists')
             ) {
                 try {
-                    $mapping = $this->getNodeMapper($qname)->getMapping($qname);
+                    $mapping = $mapper->getMapping($qname);
                     $mapping->setType($type);
                     $mapping->send();
                     return $index;
