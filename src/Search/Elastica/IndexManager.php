@@ -114,16 +114,18 @@ class IndexManager
             try {
                 $index->delete();
             } catch (\Throwable $e) {
-                throw new SearchOperationFailed(
-                    sprintf(
-                        '%s while deleting index [%s] for qname [%s].',
-                        ClassUtils::getShortName($e),
-                        $index->getName(),
-                        $qname
-                    ),
-                    Code::INTERNAL,
-                    $e
-                );
+                if (false === strpos($e->getMessage(), 'no such index')) {
+                    throw new SearchOperationFailed(
+                        sprintf(
+                            '%s while deleting index [%s] for qname [%s].',
+                            ClassUtils::getShortName($e),
+                            $index->getName(),
+                            $qname
+                        ),
+                        Code::INTERNAL,
+                        $e
+                    );
+                }
             }
         }
 
