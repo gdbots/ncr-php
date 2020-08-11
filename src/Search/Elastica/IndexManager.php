@@ -139,8 +139,9 @@ class IndexManager
                 || strpos($e->getMessage(), 'already exists')
             ) {
                 try {
-                    $client->connect();
-                    $index->setMapping($mapper->getMapping($qname));
+                    $mapping = $this->getNodeMapper($qname)->getMapping($qname);
+                    $mapping->setType($type);
+                    $mapping->send();
                     return $index;
                 } catch (\Throwable $e2) {
                     $e = $e2;
