@@ -114,40 +114,31 @@ class IndexManager
             try {
                 $index->delete();
             } catch (\Throwable $e) {
-                throw new SearchOperationFailed(
-                    sprintf(
-                        '%s while deleting index [%s] for qname [%s].',
-                        ClassUtils::getShortName($e),
-                        $index->getName(),
-                        $qname
-                    ),
-                    Code::INTERNAL,
-                    $e
-                );
+                if (false === strpos($e->getMessage(), 'no such index')) {
+                    throw new SearchOperationFailed(
+                        sprintf(
+                            '%s while deleting index [%s] for qname [%s].',
+                            ClassUtils::getShortName($e),
+                            $index->getName(),
+                            $qname
+                        ),
+                        Code::INTERNAL,
+                        $e
+                    );
+                }
             }
         }
 
         try {
-            $settings['analysis'] = [
-                'analyzer'   => $mapper->getCustomAnalyzers(),
-                'normalizer' => $mapper->getCustomAnalyzers(),
-            ];
+            if (!$index->exists()) {
+                $settings['analysis'] = [
+                    'analyzer'   => $mapper->getCustomAnalyzers(),
+                    'normalizer' => $mapper->getCustomNormalizers(),
+                ];
 
-            $index->create($settings);
-        } catch (\Throwable $e) {
-            if (strpos($e->getMessage(), 'resource_already_exists_exception')
-                || strpos($e->getMessage(), 'already exists')
-            ) {
-                try {
-                    $mapping = $mapper->getMapping($qname);
-                    $mapping->setType($type);
-                    $mapping->send();
-                    return $index;
-                } catch (\Throwable $e2) {
-                    $e = $e2;
-                }
+                $index->create($settings);
             }
-
+        } catch (\Throwable $e) {
             throw new SearchOperationFailed(
                 sprintf(
                     '%s while creating index [%s] for qname [%s].',

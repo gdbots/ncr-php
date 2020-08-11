@@ -3,7 +3,7 @@ This changelog references the relevant changes done in 1.x versions.
 
 
 ## v1.0.14
-* Fix issue with Elastica/Guzzle throwing exception on `Index::exists` instead of returning a boolean.
+* Fix issue with `IndexManager::createIndex` Elastica/Guzzle throwing exception on `Index::delete` that doesn't exist.
 
 
 ## v1.0.13
