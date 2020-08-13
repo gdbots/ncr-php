@@ -55,8 +55,8 @@ class UpdateNodeLabelsHandler extends AbstractNodeCommandHandler
         $event = NodeLabelsUpdatedV1::create();
         $pbjx->copyContext($command, $event);
         $event->set('node_ref', $nodeRef);
-        $event->set('labels_added', $added);
-        $event->set('labels_removed', $removed);
+        $event->addToSet('labels_added', $added);
+        $event->addToSet('labels_removed', $removed);
 
         $this->putEvents($command, $pbjx, $this->createStreamId($nodeRef, $command, $event), [$event]);
     }
