@@ -656,7 +656,7 @@ class Aggregate
             ->set('node_ref', $this->nodeRef)
             ->addToSet('tags_removed', $removed);
 
-        foreach ($command->get('add_tags') as $k => $v) {
+        foreach ($command->get('add_tags', []) as $k => $v) {
             $event->addToMap('tags_added', $k, $v);
         }
 
