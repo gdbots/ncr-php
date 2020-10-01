@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 2.x versions.
 
 
+## v2.1.2
+* Fix bug in `Aggregate` where `updateNodeTags` fails if `add_tags` is missing on the command.
+
+
 ## v2.1.1
 * Add implementations for `gdbots:ncr:command:update-node-labels` and `gdbots:ncr:command:update-node-tags`.
 * Fix bug in `GetNodeRequestHandler` where `$nodeRef` wasn't set when doing a slug lookup.
