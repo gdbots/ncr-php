@@ -9,6 +9,7 @@ use Gdbots\Ncr\Aggregate;
 use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Schemas\Ncr\Command\CreateNodeV1;
 use Gdbots\Schemas\Ncr\Command\DeleteNodeV1;
+use Gdbots\Schemas\Ncr\Command\ExpireNodeV1;
 use Gdbots\Schemas\Ncr\Command\LockNodeV1;
 use Gdbots\Schemas\Ncr\Command\MarkNodeAsDraftV1;
 use Gdbots\Schemas\Ncr\Command\MarkNodeAsPendingV1;
@@ -22,6 +23,7 @@ use Gdbots\Schemas\Ncr\Command\UpdateNodeV1;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 use Gdbots\Schemas\Ncr\Event\NodeCreatedV1;
 use Gdbots\Schemas\Ncr\Event\NodeDeletedV1;
+use Gdbots\Schemas\Ncr\Event\NodeExpiredV1;
 use Gdbots\Schemas\Ncr\Event\NodeLabelsUpdatedV1;
 use Gdbots\Schemas\Ncr\Event\NodeLockedV1;
 use Gdbots\Schemas\Ncr\Event\NodeMarkedAsDraftV1;
@@ -36,9 +38,6 @@ use Gdbots\Schemas\Pbjx\StreamId;
 
 final class AggregateTest extends AbstractPbjxTest
 {
-    // todo: beef up assertions even moar
-    // todo: testExpireNode?
-
     public function testCreateNode(): void
     {
         $node = UserV1::create();
@@ -159,6 +158,19 @@ final class AggregateTest extends AbstractPbjxTest
         $aggregate->commit();
         foreach ($this->pbjx->getEventStore()->pipeAllEvents() as [$event, $streamId]) {
             $this->assertInstanceOf(NodeUnpublishedV1::class, $event);
+            $this->assertTrue(StreamId::fromNodeRef($nodeRef)->equals($streamId));
+        }
+    }
+
+    public function testExpireNode(): void
+    {
+        $node = FormV1::create();
+        $nodeRef = NodeRef::fromNode($node);
+        $aggregate = Aggregate::fromNode($node, $this->pbjx);
+        $aggregate->expireNode(ExpireNodeV1::create()->set('node_ref',  $nodeRef));
+        $aggregate->commit();
+        foreach ($this->pbjx->getEventStore()->pipeAllEvents() as [$event, $streamId]) {
+            $this->assertInstanceOf(NodeExpiredV1::class, $event);
             $this->assertTrue(StreamId::fromNodeRef($nodeRef)->equals($streamId));
         }
     }
