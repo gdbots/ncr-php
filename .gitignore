@@ -14,6 +14,7 @@ autoload.php
 composer.lock
 composer.phar
 phpunit.xml
+.phpunit.result.cache
 .buildpath
 *.iml
 .idea/

@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 2.x versions.
 
 
+## v2.1.3
+* When requesting a consistent read with `gdbots:ncr:request:get-node-request` and the node isn't in the Ncr yet, then use the aggregate.
+
+
 ## v2.1.2
 * Fix bug in `Aggregate` where `updateNodeTags` fails if `add_tags` is missing on the command.
 

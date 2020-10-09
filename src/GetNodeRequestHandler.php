@@ -11,7 +11,6 @@ use Gdbots\Pbjx\Pbjx;
 use Gdbots\Pbjx\RequestHandler;
 use Gdbots\Schemas\Ncr\Request\GetNodeResponseV1;
 
-// todo: add handling for when node hasn't been projected yet
 class GetNodeRequestHandler implements RequestHandler
 {
     protected Ncr $ncr;
@@ -37,7 +36,20 @@ class GetNodeRequestHandler implements RequestHandler
         if ($request->has('node_ref')) {
             /** @var NodeRef $nodeRef */
             $nodeRef = $request->get('node_ref');
-            $node = $this->ncr->getNode($nodeRef, $consistent, $context);
+
+            try {
+                $node = $this->ncr->getNode($nodeRef, $consistent, $context);
+            } catch (NodeNotFound $nf) {
+                if (!$consistent) {
+                    throw $nf;
+                }
+
+                $aggregate = AggregateResolver::resolve($nodeRef->getQName())::fromNodeRef($nodeRef, $pbjx);
+                $aggregate->sync($context);
+                return $response->set('node', $aggregate->getNode());
+            } catch (\Throwable $e) {
+                throw $e;
+            }
         } elseif ($request->has('slug')) {
             $qname = SchemaQName::fromString($request->get('qname'));
             $query = IndexQueryBuilder::create($qname, 'slug', $request->get('slug'))
