@@ -112,7 +112,7 @@ abstract class AbstractUpdateNodeHandler extends AbstractNodeCommandHandler
             } else if ($field->isAList()) {
                 $newNode->addToList($fieldName, $oldNode->get($fieldName));
             } else if ($field->isAMap()) {
-                foreach ($oldNode->get($field) as $key => $value) {
+                foreach ($oldNode->get($fieldName) as $key => $value) {
                     $newNode->addToMap($fieldName, $key, $value);
                 }
             }
