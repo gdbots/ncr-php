@@ -96,6 +96,28 @@ abstract class AbstractUpdateNodeHandler extends AbstractNodeCommandHandler
             $event->addToSet('paths', $command->get('paths'));
         }
 
+        foreach ($newNode::schema()->getFields() as $field) {
+            $fieldName = $field->getName();
+            if (in_array($fieldName, $command->get('paths', []))) {
+                continue;
+            }
+            $newNode->clear($fieldName);
+            if (!$oldNode->has($fieldName)) {
+                continue;
+            }
+            if ($field->isASingleValue()) {
+                $newNode->set($fieldName, $oldNode->get($fieldName));
+            } else if ($field->isASet()) {
+                $newNode->addToSet($fieldName, $oldNode->get($fieldName));
+            } else if ($field->isAList()) {
+                $newNode->addToList($fieldName, $oldNode->get($fieldName));
+            } else if ($field->isAMap()) {
+                foreach ($oldNode->get($field) as $key => $value) {
+                    $newNode->addToMap($fieldName, $key, $value);
+                }
+            }
+        }
+
         $event
             ->set('node_ref', $nodeRef)
             ->set('old_node', $oldNode)
