@@ -52,6 +52,26 @@ abstract class AbstractUpdateNodeHandler extends AbstractNodeCommandHandler
             );
         }
 
+        $schema = $newNode::schema();
+        if ($command->has('paths')) {
+            $event->addToSet('paths', $command->get('paths'));
+            $oldNodeArray = $oldNode->toArray();
+            $newNodeArray = $newNode->toArray();
+            $paths = array_flip($command->get('paths'));
+            foreach ($schema->getFields() as $field) {
+                $fieldName = $field->getName();
+                if (isset($paths[$fieldName])) {
+                    continue;
+                }
+                unset($newNodeArray[$fieldName]);
+                if (!isset($oldNodeArray[$fieldName])) {
+                    continue;
+                }
+                $newNodeArray[$fieldName] = $oldNodeArray[$fieldName];
+            }
+            $newNode = $newNode::fromArray($newNodeArray);
+        }
+
         $newNode
             ->set('updated_at', $event->get('occurred_at'))
             ->set('updater_ref', $event->get('ctx_user_ref'))
@@ -63,7 +83,6 @@ abstract class AbstractUpdateNodeHandler extends AbstractNodeCommandHandler
             ->set('created_at', $oldNode->get('created_at'))
             ->set('creator_ref', $oldNode->get('creator_ref'));
 
-        $schema = $newNode::schema();
         if ($schema->hasMixin('gdbots:common:mixin:labelable')) {
             // labels SHOULD NOT change during an update, use "update-node-labels"
             $newNode->clear('labels');
@@ -90,10 +109,6 @@ abstract class AbstractUpdateNodeHandler extends AbstractNodeCommandHandler
         // if a node is being updated and it's deleted, restore the default status
         if (NodeStatus::DELETED()->equals($newNode->get('status'))) {
             $newNode->clear('status');
-        }
-
-        if ($command->has('paths')) {
-            $event->addToSet('paths', $command->get('paths'));
         }
 
         $event

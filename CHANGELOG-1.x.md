@@ -1,6 +1,11 @@
 # CHANGELOG for 1.x
 This changelog references the relevant changes done in 1.x versions.
 
+
+## v1.0.16
+* In `AbstractNodeUpdateHandler` only update the given paths if the paths field is populated.
+
+
 ## v1.0.15
 * Fix `UpdateNodeLabelsHandler::handleCommand` setters.
 
