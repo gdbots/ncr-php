@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Gdbots\Ncr;
 
 use Gdbots\Ncr\Exception\InvalidArgumentException;
-use Gdbots\Pbj\AbstractMessage;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
@@ -109,7 +108,7 @@ abstract class AbstractUpdateNodeHandler extends AbstractNodeCommandHandler
                 }
                 $newNodeArray[$fieldName] = $oldNodeArray[$fieldName];
             }
-            $newNode = AbstractMessage::fromArray($newNodeArray);
+            $newNode = $newNode::fromArray($newNodeArray);
         }
 
         $event
