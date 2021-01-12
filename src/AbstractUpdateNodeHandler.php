@@ -99,8 +99,9 @@ abstract class AbstractUpdateNodeHandler extends AbstractNodeCommandHandler
 
         $oldNodeArray = $oldNode->toArray();
         $newNodeArray = $newNode->toArray();
+        $paths = $command->get('paths', []);
         foreach (array_keys($newNodeArray) as $fieldName) {
-            if (in_array($fieldName, $command->get('paths', []))) {
+            if (in_array($fieldName, $paths)) {
                 continue;
             }
             unset($newNodeArray[$fieldName]);
