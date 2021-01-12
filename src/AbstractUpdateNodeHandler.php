@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Gdbots\Ncr;
 
 use Gdbots\Ncr\Exception\InvalidArgumentException;
+use Gdbots\Pbj\AbstractMessage;
 use Gdbots\Pbjx\Pbjx;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 use Gdbots\Schemas\Ncr\Mixin\Node\Node;
@@ -96,27 +97,19 @@ abstract class AbstractUpdateNodeHandler extends AbstractNodeCommandHandler
             $event->addToSet('paths', $command->get('paths'));
         }
 
-        foreach ($newNode::schema()->getFields() as $field) {
-            $fieldName = $field->getName();
+        $oldNodeArray = $oldNode->toArray();
+        $newNodeArray = $newNode->toArray();
+        foreach (array_keys($newNodeArray) as $fieldName) {
             if (in_array($fieldName, $command->get('paths', []))) {
                 continue;
             }
-            $newNode->clear($fieldName);
-            if (!$oldNode->has($fieldName)) {
+            unset($newNodeArray[$fieldName]);
+            if (!isset($oldNodeArray[$fieldName])) {
                 continue;
             }
-            if ($field->isASingleValue()) {
-                $newNode->set($fieldName, $oldNode->get($fieldName));
-            } else if ($field->isASet()) {
-                $newNode->addToSet($fieldName, $oldNode->get($fieldName));
-            } else if ($field->isAList()) {
-                $newNode->addToList($fieldName, $oldNode->get($fieldName));
-            } else if ($field->isAMap()) {
-                foreach ($oldNode->get($fieldName) as $key => $value) {
-                    $newNode->addToMap($fieldName, $key, $value);
-                }
-            }
+            $newNodeArray[$fieldName] = $oldNodeArray[$fieldName];
         }
+        $newNode = AbstractMessage::fromArray($newNodeArray);
 
         $event
             ->set('node_ref', $nodeRef)
