@@ -223,9 +223,9 @@ TEXT;
         if (empty($qnames)) {
             $search->addIndex($this->indexManager->getIndexPrefix($context) . '*');
         } else {
-            foreach ($qnames as $qname) {
-                $search->addIndex($this->indexManager->getIndexName($qname, $context));
-            }
+            $search->addIndices(array_unique(
+                array_map(fn(SchemaQName $qname) => $this->indexManager->getIndexName($qname, $context), $qnames)
+            ));
         }
 
         $page = $request->has('cursor') ? 1 : $request->get('page');
