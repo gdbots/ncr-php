@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 2.x versions.
 
 
+## v2.1.5
+* Do not set event slug unless schema has that field in `Aggregate::[un]lockNode`.
+
+
 ## v2.1.4
 * Ensure only unique index names are used in `ElasticaNcrSearch::searchNodes`.
 

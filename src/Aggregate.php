@@ -313,7 +313,7 @@ class Aggregate
         $this->copyContext($command, $event);
         $event->set('node_ref', $this->nodeRef);
 
-        if ($this->node->has('slug')) {
+        if ($this->node->has('slug') && $event::schema()->hasField('slug')) {
             $event->set('slug', $this->node->get('slug'));
         }
 
@@ -481,7 +481,7 @@ class Aggregate
         $this->copyContext($command, $event);
         $event->set('node_ref', $this->nodeRef);
 
-        if ($this->node->has('slug')) {
+        if ($this->node->has('slug') && $event::schema()->hasField('slug')) {
             $event->set('slug', $this->node->get('slug'));
         }
 
