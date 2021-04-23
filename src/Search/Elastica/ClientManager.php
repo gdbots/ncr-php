@@ -4,11 +4,15 @@ declare(strict_types=1);
 namespace Gdbots\Ncr\Search\Elastica;
 
 use Elastica\Client;
+use Elastica\Connection;
 use Gdbots\Ncr\Exception\InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 
 class ClientManager
 {
+    protected const MAX_CLI_CONNECT_ATTEMPTS = 100;
+    protected const MAX_CONNECT_ATTEMPTS = 5;
+
     /**
      * An array of clusters keyed by a name.  This factory will create the elastica
      * client for a given cluster using the settings in the key.
@@ -34,17 +38,20 @@ class ClientManager
      *
      * @var array
      */
-    private array $clusters;
+    protected array $clusters;
 
-    private ?LoggerInterface $logger;
+    protected ?LoggerInterface $logger;
 
     /** @var Client[] */
-    private array $clients = [];
+    protected array $clients = [];
+
+    protected bool $isCli = false;
 
     public function __construct(array $clusters, ?LoggerInterface $logger = null)
     {
         $this->clusters = $clusters;
         $this->logger = $logger;
+        $this->isCli = php_sapi_name() === 'cli';
     }
 
     /**
@@ -56,7 +63,7 @@ class ClientManager
      *
      * @return Client
      */
-    final public function getClient(string $cluster = 'default'): Client
+    public function getClient(string $cluster = 'default'): Client
     {
         if (isset($this->clients[$cluster])) {
             return $this->clients[$cluster];
@@ -86,6 +93,19 @@ class ClientManager
             unset($config['round_robin']);
         }
 
+        $config['clusterName'] = $cluster;
+        $config['connectAttempts'] = 0;
+
+        if (!isset($config['maxConnectAttempts'])) {
+            $config['maxConnectAttempts'] = $this->isCli
+                ? static::MAX_CLI_CONNECT_ATTEMPTS
+                : static::MAX_CONNECT_ATTEMPTS;
+        }
+
+        if (!isset($config['connectTimeout'])) {
+            $config['connectTimeout'] = 1;
+        }
+
         $config = $this->configureCluster($cluster, $config);
         $servers = $config['servers'];
         $configuredServers = [];
@@ -96,10 +116,10 @@ class ClientManager
         }
 
         $config['servers'] = $configuredServers;
-        return $this->clients[$cluster] = new Client($config, null, $config['log'] ? $this->logger : null);
+        return $this->clients[$cluster] = new Client($config, [$this, 'onConnectionFailure'], $config['log'] ? $this->logger : null);
     }
 
-    final public function hasCluster(string $cluster): bool
+    public function hasCluster(string $cluster): bool
     {
         return isset($this->clusters[$cluster]);
     }
@@ -109,9 +129,23 @@ class ClientManager
      *
      * @return string[]
      */
-    final public function getAvailableClusters(): array
+    public function getAvailableClusters(): array
     {
         return array_keys($this->clusters);
+    }
+
+    public function onConnectionFailure(Connection $connection, \Throwable $e, Client $client): void
+    {
+        $attempts = $client->getConfigValue('connectAttempts') + 1;
+        $client->setConfigValue('connectAttempts', $attempts);
+        $maxAttempts = $client->getConfigValue('maxConnectAttempts');
+
+        if ($attempts > $maxAttempts) {
+            return;
+        }
+
+        usleep(mt_rand(10, 100) * 1000);
+        $connection->setEnabled(true);
     }
 
     protected function configureCluster(string $cluster, array $config): array
