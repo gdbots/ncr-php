@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 2.x versions.
 
 
+## v2.1.7
+* Add `preference=_local` to ElasticaNcrSearch options and add function `enrichSearchOptions` so it can be customized.
+
+
 ## v2.1.6
 * Add (re)connect timeout handling in elastica client and transport since it's not yet configurable in elastica itself.
 

@@ -232,12 +232,13 @@ TEXT;
         $perPage = $request->get('count');
         $offset = ($page - 1) * $perPage;
         $offset = NumberUtil::bound($offset, 0, 10000);
-        $options = [
+        $options = $this->enrichSearchOptions([
             Search::OPTION_TIMEOUT                   => $this->timeout,
             Search::OPTION_FROM                      => $offset,
             Search::OPTION_SIZE                      => $perPage,
+            Search::OPTION_PREFERENCE                => '_local',
             Search::OPTION_SEARCH_IGNORE_UNAVAILABLE => true,
-        ];
+        ], $request, $qnames, $context);
 
         try {
             $results = $search
@@ -328,6 +329,11 @@ TEXT;
         $context = $this->dispatcher->dispatch($event, PbjxEvents::ENRICH_CONTEXT)->all();
         $context['already_enriched'] = true;
         return $context;
+    }
+
+    protected function enrichSearchOptions(array $options, Message $request, array $qnames, array $context): array
+    {
+        return $options;
     }
 
     final protected function getQueryFactory(): QueryFactory
