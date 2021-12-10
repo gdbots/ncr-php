@@ -18,12 +18,12 @@ class NodeIdempotencyValidator implements EventSubscriber, PbjxValidator
     protected CacheItemPoolInterface $cache;
     protected array $ttl;
 
-    public static function getSubscribedEvents()
+    public static function getSubscribedEvents(): array
     {
         return [
             'gdbots:ncr:command:create-node.validate'     => 'validateCreateNode',
             'gdbots:ncr:command:create-node.after_handle' => 'onCreateNodeAfterHandle',
-            // deprecated mixins, will be removed in 3.x
+            // deprecated mixins, will be removed in 4.x.
             'gdbots:ncr:mixin:create-node.validate'       => 'validateCreateNode',
             'gdbots:ncr:mixin:create-node.after_handle'   => 'onCreateNodeAfterHandle',
         ];

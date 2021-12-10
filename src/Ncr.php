@@ -66,9 +66,9 @@ interface Ncr
     public function getNodes(array $nodeRefs, bool $consistent = false, array $context = []): array;
 
     /**
-     * @param Message $node         The Node to put into the NCR.
-     * @param string  $expectedEtag Used to perform optimistic concurrency check.
-     * @param array   $context      Data that helps the NCR decide where to read/write data from.
+     * @param Message     $node         The Node to put into the NCR.
+     * @param string|null $expectedEtag Used to perform optimistic concurrency check.
+     * @param array       $context      Data that helps the NCR decide where to read/write data from.
      *
      * @throws OptimisticCheckFailed
      * @throws GdbotsNcrException

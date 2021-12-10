@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Gdbots\Ncr;
 
 use Gdbots\Pbj\Message;
-use Gdbots\Pbj\Util\ArrayUtil;
 use Gdbots\Pbj\WellKnown\MessageRef;
 use Gdbots\Pbj\WellKnown\NodeRef;
 use Gdbots\Schemas\Ncr\Enum\NodeStatus;
@@ -43,8 +42,8 @@ final class NcrPreloader
     }
 
     /**
-     * @param callable $filter - A function with signature "func(Message $node, NodeRef $nodeRef): bool"
-     * @param string   $namespace
+     * @param callable|null $filter - A function with signature "func(Message $node, NodeRef $nodeRef): bool"
+     * @param string        $namespace
      *
      * @return Message[]
      */
@@ -75,7 +74,7 @@ final class NcrPreloader
     public function getPublishedNodes(string $namespace = self::DEFAULT_NAMESPACE): array
     {
         return $this->getNodes(function (Message $node) {
-            return NodeStatus::PUBLISHED === $node->fget('status');
+            return NodeStatus::PUBLISHED->value === $node->fget('status');
         }, $namespace);
     }
 
@@ -136,7 +135,7 @@ final class NcrPreloader
     {
         $nodeRefs = [];
 
-        if (!ArrayUtil::isAssoc($paths)) {
+        if (array_is_list($paths)) {
             $paths = array_flip($paths);
         }
 
@@ -180,7 +179,7 @@ final class NcrPreloader
     /**
      * Clears the preloaded node refs.
      *
-     * @param string $namespace
+     * @param string|null $namespace
      */
     public function clear(?string $namespace = self::DEFAULT_NAMESPACE): void
     {

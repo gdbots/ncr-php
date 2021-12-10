@@ -225,9 +225,9 @@ class Aggregate
             ->set('last_event_ref', $event->generateMessageRef());
 
         if ($node::schema()->hasMixin('gdbots:ncr:mixin:publishable')) {
-            $node->set('status', NodeStatus::DRAFT());
+            $node->set('status', NodeStatus::DRAFT);
         } else {
-            $node->set('status', NodeStatus::PUBLISHED());
+            $node->set('status', NodeStatus::PUBLISHED);
         }
 
         $this->recordEvent($event);
@@ -235,7 +235,7 @@ class Aggregate
 
     public function deleteNode(Message $command): void
     {
-        if ($this->node->get('status')->equals(NodeStatus::DELETED())) {
+        if ($this->node->get('status') === NodeStatus::DELETED) {
             // node already deleted, ignore
             return;
         }
@@ -265,7 +265,7 @@ class Aggregate
 
         /** @var NodeStatus $currStatus */
         $currStatus = $this->node->get('status');
-        if ($currStatus->equals(NodeStatus::DELETED()) || $currStatus->equals(NodeStatus::EXPIRED())) {
+        if ($currStatus === NodeStatus::DELETED || $currStatus === NodeStatus::EXPIRED) {
             // already expired or soft-deleted nodes can be ignored
             return;
         }
@@ -328,7 +328,7 @@ class Aggregate
             );
         }
 
-        if ($this->node->get('status')->equals(NodeStatus::DRAFT())) {
+        if ($this->node->get('status') === NodeStatus::DRAFT) {
             // node already draft, ignore
             return;
         }
@@ -356,7 +356,7 @@ class Aggregate
             );
         }
 
-        if ($this->node->get('status')->equals(NodeStatus::PENDING())) {
+        if ($this->node->get('status') === NodeStatus::PENDING) {
             // node already pending, ignore
             return;
         }
@@ -401,13 +401,13 @@ class Aggregate
         $currPublishedAt = $this->node->has('published_at') ? $this->node->get('published_at')->getTimestamp() : null;
 
         if ($now >= $publishAt->getTimestamp()) {
-            if ($currStatus->equals(NodeStatus::PUBLISHED()) && $currPublishedAt === $publishAt->getTimestamp()) {
+            if ($currStatus === NodeStatus::PUBLISHED && $currPublishedAt === $publishAt->getTimestamp()) {
                 return;
             }
             $event = $this->createNodePublishedEvent($command);
             $event->set('published_at', $publishAt);
         } else {
-            if ($currStatus->equals(NodeStatus::SCHEDULED()) && $currPublishedAt === $publishAt->getTimestamp()) {
+            if ($currStatus === NodeStatus::SCHEDULED && $currPublishedAt === $publishAt->getTimestamp()) {
                 return;
             }
             $event = $this->createNodeScheduledEvent($command);
@@ -496,7 +496,7 @@ class Aggregate
             );
         }
 
-        if (!$this->node->get('status')->equals(NodeStatus::PUBLISHED())) {
+        if ($this->node->get('status') !== NodeStatus::PUBLISHED) {
             // node already not published, ignore
             return;
         }
@@ -586,7 +586,7 @@ class Aggregate
         }
 
         // if a node is being updated and it's deleted, restore the default status
-        if (NodeStatus::DELETED()->equals($newNode->get('status'))) {
+        if (NodeStatus::DELETED === $newNode->get('status')) {
             $newNode->clear('status');
         }
 
@@ -670,12 +670,12 @@ class Aggregate
 
     protected function applyNodeDeleted(Message $event): void
     {
-        $this->node->set('status', NodeStatus::DELETED());
+        $this->node->set('status', NodeStatus::DELETED);
     }
 
     protected function applyNodeExpired(Message $event): void
     {
-        $this->node->set('status', NodeStatus::EXPIRED());
+        $this->node->set('status', NodeStatus::EXPIRED);
     }
 
     protected function applyNodeLabelsUpdated(Message $event): void
@@ -708,21 +708,21 @@ class Aggregate
     protected function applyNodeMarkedAsDraft(Message $event): void
     {
         $this->node
-            ->set('status', NodeStatus::DRAFT())
+            ->set('status', NodeStatus::DRAFT)
             ->clear('published_at');
     }
 
     protected function applyNodeMarkedAsPending(Message $event): void
     {
         $this->node
-            ->set('status', NodeStatus::PENDING())
+            ->set('status', NodeStatus::PENDING)
             ->clear('published_at');
     }
 
     protected function applyNodePublished(Message $event): void
     {
         $this->node
-            ->set('status', NodeStatus::PUBLISHED())
+            ->set('status', NodeStatus::PUBLISHED)
             ->set('published_at', $event->get('published_at'));
 
         if ($event->has('slug')) {
@@ -738,7 +738,7 @@ class Aggregate
     protected function applyNodeScheduled(Message $event): void
     {
         $this->node
-            ->set('status', NodeStatus::SCHEDULED())
+            ->set('status', NodeStatus::SCHEDULED)
             ->set('published_at', $event->get('publish_at'));
 
         if ($event->has('slug')) {
@@ -767,7 +767,7 @@ class Aggregate
     protected function applyNodeUnpublished(Message $event): void
     {
         $this->node
-            ->set('status', NodeStatus::DRAFT())
+            ->set('status', NodeStatus::DRAFT)
             ->clear('published_at');
     }
 
@@ -866,13 +866,13 @@ class Aggregate
 
     /**
      * This is for legacy uses of command/event mixins for common
-     * ncr operations. It will be removed in 3.x.
+     * ncr operations. It will be removed in 4.x.
      *
      * @param Message $command
      *
      * @return Message
      *
-     * @deprecated Will be removed in 3.x.
+     * @deprecated Will be removed in 4.x.
      */
     protected function createNodeCreatedEvent(Message $command): Message
     {
@@ -881,13 +881,13 @@ class Aggregate
 
     /**
      * This is for legacy uses of command/event mixins for common
-     * ncr operations. It will be removed in 3.x.
+     * ncr operations. It will be removed in 4.x.
      *
      * @param Message $command
      *
      * @return Message
      *
-     * @deprecated Will be removed in 3.x.
+     * @deprecated Will be removed in 4.x.
      */
     protected function createNodeDeletedEvent(Message $command): Message
     {
@@ -896,13 +896,13 @@ class Aggregate
 
     /**
      * This is for legacy uses of command/event mixins for common
-     * ncr operations. It will be removed in 3.x.
+     * ncr operations. It will be removed in 4.x.
      *
      * @param Message $command
      *
      * @return Message
      *
-     * @deprecated Will be removed in 3.x.
+     * @deprecated Will be removed in 4.x.
      */
     protected function createNodeExpiredEvent(Message $command): Message
     {
@@ -911,13 +911,13 @@ class Aggregate
 
     /**
      * This is for legacy uses of command/event mixins for common
-     * ncr operations. It will be removed in 3.x.
+     * ncr operations. It will be removed in 4.x.
      *
      * @param Message $command
      *
      * @return Message
      *
-     * @deprecated Will be removed in 3.x.
+     * @deprecated Will be removed in 4.x.
      */
     protected function createNodeLockedEvent(Message $command): Message
     {
@@ -926,13 +926,13 @@ class Aggregate
 
     /**
      * This is for legacy uses of command/event mixins for common
-     * ncr operations. It will be removed in 3.x.
+     * ncr operations. It will be removed in 4.x.
      *
      * @param Message $command
      *
      * @return Message
      *
-     * @deprecated Will be removed in 3.x.
+     * @deprecated Will be removed in 4.x.
      */
     protected function createNodeMarkedAsDraftEvent(Message $command): Message
     {
@@ -941,13 +941,13 @@ class Aggregate
 
     /**
      * This is for legacy uses of command/event mixins for common
-     * ncr operations. It will be removed in 3.x.
+     * ncr operations. It will be removed in 4.x.
      *
      * @param Message $command
      *
      * @return Message
      *
-     * @deprecated Will be removed in 3.x.
+     * @deprecated Will be removed in 4.x.
      */
     protected function createNodeMarkedAsPendingEvent(Message $command): Message
     {
@@ -956,13 +956,13 @@ class Aggregate
 
     /**
      * This is for legacy uses of command/event mixins for common
-     * ncr operations. It will be removed in 3.x.
+     * ncr operations. It will be removed in 4.x.
      *
      * @param Message $command
      *
      * @return Message
      *
-     * @deprecated Will be removed in 3.x.
+     * @deprecated Will be removed in 4.x.
      */
     protected function createNodePublishedEvent(Message $command): Message
     {
@@ -971,13 +971,13 @@ class Aggregate
 
     /**
      * This is for legacy uses of command/event mixins for common
-     * ncr operations. It will be removed in 3.x.
+     * ncr operations. It will be removed in 4.x.
      *
      * @param Message $command
      *
      * @return Message
      *
-     * @deprecated Will be removed in 3.x.
+     * @deprecated Will be removed in 4.x.
      */
     protected function createNodeRenamedEvent(Message $command): Message
     {
@@ -986,13 +986,13 @@ class Aggregate
 
     /**
      * This is for legacy uses of command/event mixins for common
-     * ncr operations. It will be removed in 3.x.
+     * ncr operations. It will be removed in 4.x.
      *
      * @param Message $command
      *
      * @return Message
      *
-     * @deprecated Will be removed in 3.x.
+     * @deprecated Will be removed in 4.x.
      */
     protected function createNodeScheduledEvent(Message $command): Message
     {
@@ -1001,13 +1001,13 @@ class Aggregate
 
     /**
      * This is for legacy uses of command/event mixins for common
-     * ncr operations. It will be removed in 3.x.
+     * ncr operations. It will be removed in 4.x.
      *
      * @param Message $command
      *
      * @return Message
      *
-     * @deprecated Will be removed in 3.x.
+     * @deprecated Will be removed in 4.x.
      */
     protected function createNodeUnlockedEvent(Message $command): Message
     {
@@ -1016,13 +1016,13 @@ class Aggregate
 
     /**
      * This is for legacy uses of command/event mixins for common
-     * ncr operations. It will be removed in 3.x.
+     * ncr operations. It will be removed in 4.x.
      *
      * @param Message $command
      *
      * @return Message
      *
-     * @deprecated Will be removed in 3.x.
+     * @deprecated Will be removed in 4.x.
      */
     protected function createNodeUnpublishedEvent(Message $command): Message
     {
@@ -1031,13 +1031,13 @@ class Aggregate
 
     /**
      * This is for legacy uses of command/event mixins for common
-     * ncr operations. It will be removed in 3.x.
+     * ncr operations. It will be removed in 4.x.
      *
      * @param Message $command
      *
      * @return Message
      *
-     * @deprecated Will be removed in 3.x.
+     * @deprecated Will be removed in 4.x.
      */
     protected function createNodeUpdatedEvent(Message $command): Message
     {

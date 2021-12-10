@@ -38,7 +38,9 @@ class QueryFactory
             $query = $this->forSearchNodesRequest($request, $parsedQuery, $qnames);
         }
 
-        return Query::create($query);
+        $query = Query::create($query);
+        $query->setTrackTotalHits($request->get('track_total_hits'));
+        return $query;
     }
 
     protected function forSearchNodesRequest(Message $request, ParsedQuery $parsedQuery, array $qnames): AbstractQuery
@@ -56,28 +58,28 @@ class QueryFactory
 
     protected function applyDateFilters(Message $request, ParsedQuery $parsedQuery): void
     {
-        $required = BoolOperator::REQUIRED();
+        $required = BoolOperator::REQUIRED;
 
         $dateFilters = [
             [
                 'query'    => 'created_after',
                 'field'    => 'created_at',
-                'operator' => ComparisonOperator::GT(),
+                'operator' => ComparisonOperator::GT,
             ],
             [
                 'query'    => 'created_before',
                 'field'    => 'created_at',
-                'operator' => ComparisonOperator::LT(),
+                'operator' => ComparisonOperator::LT,
             ],
             [
                 'query'    => 'updated_after',
                 'field'    => 'updated_at',
-                'operator' => ComparisonOperator::GT(),
+                'operator' => ComparisonOperator::GT,
             ],
             [
                 'query'    => 'updated_before',
                 'field'    => 'updated_at',
-                'operator' => ComparisonOperator::LT(),
+                'operator' => ComparisonOperator::LT,
             ],
         ];
 
@@ -103,7 +105,7 @@ class QueryFactory
             return;
         }
 
-        $required = BoolOperator::REQUIRED();
+        $required = BoolOperator::REQUIRED;
         $parsedQuery->addNode(new Field(
             'status',
             new Word((string)$request->get('status'), $required),
@@ -139,7 +141,7 @@ class QueryFactory
         foreach ($dateFilters as $f) {
             if ($request->has($f['query'])) {
                 $query->addFilter(new Query\Range($f['field'], [
-                    $f['operator'] => $request->get($f['query'])->format(DateUtil::ISO8601_ZULU),
+                    $f['operator']->value => $request->get($f['query'])->format(DateUtil::ISO8601_ZULU),
                 ]));
             }
         }

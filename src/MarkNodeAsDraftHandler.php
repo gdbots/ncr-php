@@ -15,7 +15,7 @@ class MarkNodeAsDraftHandler implements CommandHandler
 
     public static function handlesCuries(): array
     {
-        // deprecated mixins, will be removed in 3.x
+        // deprecated mixins, will be removed in 4.x.
         $curies = MessageResolver::findAllUsingMixin('gdbots:ncr:mixin:mark-node-as-draft:v1', false);
         $curies[] = 'gdbots:ncr:command:mark-node-as-draft';
         return $curies;

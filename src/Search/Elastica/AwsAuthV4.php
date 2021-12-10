@@ -8,11 +8,11 @@ use Aws\Credentials\Credentials;
 use Aws\Signature\SignatureV4;
 use Elastica\Connection;
 use Elastica\Transport\Guzzle;
-use GuzzleHttp;
 use GuzzleHttp\Client;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\RequestOptions;
+use GuzzleHttp\Utils;
 use Psr\Http\Message\RequestInterface;
 
 /**
@@ -32,7 +32,7 @@ class AwsAuthV4 extends Guzzle
     protected function _getGuzzleClient(bool $persistent = true): Client
     {
         if (!$persistent || !self::$_guzzleClientConnection) {
-            $stack = HandlerStack::create(GuzzleHttp\choose_handler());
+            $stack = HandlerStack::create(Utils::chooseHandler());
             $stack->push($this->getConnectTimeoutMiddleware(), 'connect_timeout');
             $stack->push($this->getSigningMiddleware(), 'sign');
 

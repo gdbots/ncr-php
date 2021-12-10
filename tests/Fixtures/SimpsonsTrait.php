@@ -57,7 +57,7 @@ trait SimpsonsTrait
             [
                 'name'     => 'return just homer',
                 'filters'  => [
-                    new IndexQueryFilter('title', IndexQueryFilterOperator::EQUAL_TO(), 'homer'),
+                    new IndexQueryFilter('title', IndexQueryFilterOperator::EQUAL_TO, 'homer'),
                 ],
                 'expected' => [
                     NodeRef::fromString('gdbots:fake-node:homer'),
@@ -67,7 +67,7 @@ trait SimpsonsTrait
             [
                 'name'     => 'return homer\'s kids',
                 'filters'  => [
-                    new IndexQueryFilter('is_child', IndexQueryFilterOperator::EQUAL_TO(), true),
+                    new IndexQueryFilter('is_child', IndexQueryFilterOperator::EQUAL_TO, true),
                 ],
                 'expected' => [
                     NodeRef::fromString('gdbots:fake-node:bart'),
@@ -79,7 +79,7 @@ trait SimpsonsTrait
             [
                 'name'     => 'return homer\'s wife',
                 'filters'  => [
-                    new IndexQueryFilter('relation', IndexQueryFilterOperator::EQUAL_TO(), 'wife'),
+                    new IndexQueryFilter('relation', IndexQueryFilterOperator::EQUAL_TO, 'wife'),
                 ],
                 'expected' => [
                     NodeRef::fromString('gdbots:fake-node:marge'),
@@ -89,7 +89,7 @@ trait SimpsonsTrait
             [
                 'name'     => 'return homer\'s daughters',
                 'filters'  => [
-                    new IndexQueryFilter('relation', IndexQueryFilterOperator::EQUAL_TO(), 'daughter'),
+                    new IndexQueryFilter('relation', IndexQueryFilterOperator::EQUAL_TO, 'daughter'),
                 ],
                 'expected' => [
                     NodeRef::fromString('gdbots:fake-node:lisa'),
@@ -100,9 +100,9 @@ trait SimpsonsTrait
             [
                 'name'     => 'return simpsons younger than homer',
                 'filters'  => [
-                    new IndexQueryFilter('status', IndexQueryFilterOperator::EQUAL_TO(), 'draft'),
-                    new IndexQueryFilter('age', IndexQueryFilterOperator::LESS_THAN(), 39),
-                    new IndexQueryFilter('relation', IndexQueryFilterOperator::NOT_EQUAL_TO(), 'none'),
+                    new IndexQueryFilter('status', IndexQueryFilterOperator::EQUAL_TO, 'draft'),
+                    new IndexQueryFilter('age', IndexQueryFilterOperator::LESS_THAN, 39),
+                    new IndexQueryFilter('relation', IndexQueryFilterOperator::NOT_EQUAL_TO, 'none'),
                 ],
                 'expected' => [
                     NodeRef::fromString('gdbots:fake-node:marge'),
@@ -115,8 +115,8 @@ trait SimpsonsTrait
             [
                 'name'     => 'return everyone younger than homer',
                 'filters'  => [
-                    new IndexQueryFilter('status', IndexQueryFilterOperator::EQUAL_TO(), 'draft'),
-                    new IndexQueryFilter('age', IndexQueryFilterOperator::LESS_THAN(), 39),
+                    new IndexQueryFilter('status', IndexQueryFilterOperator::EQUAL_TO, 'draft'),
+                    new IndexQueryFilter('age', IndexQueryFilterOperator::LESS_THAN, 39),
                 ],
                 'expected' => [
                     NodeRef::fromString('gdbots:fake-node:marge'),
@@ -130,9 +130,9 @@ trait SimpsonsTrait
             [
                 'name'     => 'return simpsons younger or as old as than homer',
                 'filters'  => [
-                    new IndexQueryFilter('status', IndexQueryFilterOperator::EQUAL_TO(), 'draft'),
-                    new IndexQueryFilter('age', IndexQueryFilterOperator::LESS_THAN_OR_EQUAL_TO(), 39),
-                    new IndexQueryFilter('relation', IndexQueryFilterOperator::NOT_EQUAL_TO(), 'none'),
+                    new IndexQueryFilter('status', IndexQueryFilterOperator::EQUAL_TO, 'draft'),
+                    new IndexQueryFilter('age', IndexQueryFilterOperator::LESS_THAN_OR_EQUAL_TO, 39),
+                    new IndexQueryFilter('relation', IndexQueryFilterOperator::NOT_EQUAL_TO, 'none'),
                 ],
                 'expected' => [
                     NodeRef::fromString('gdbots:fake-node:homer'),
@@ -146,9 +146,9 @@ trait SimpsonsTrait
             [
                 'name'     => 'return simpsons older than homer',
                 'filters'  => [
-                    new IndexQueryFilter('status', IndexQueryFilterOperator::EQUAL_TO(), 'draft'),
-                    new IndexQueryFilter('age', IndexQueryFilterOperator::GREATER_THAN(), 39),
-                    new IndexQueryFilter('relation', IndexQueryFilterOperator::NOT_EQUAL_TO(), 'none'),
+                    new IndexQueryFilter('status', IndexQueryFilterOperator::EQUAL_TO, 'draft'),
+                    new IndexQueryFilter('age', IndexQueryFilterOperator::GREATER_THAN, 39),
+                    new IndexQueryFilter('relation', IndexQueryFilterOperator::NOT_EQUAL_TO, 'none'),
                 ],
                 'expected' => [
                     NodeRef::fromString('gdbots:fake-node:abraham'),
@@ -158,9 +158,9 @@ trait SimpsonsTrait
             [
                 'name'     => 'return simpsons older or as old as than homer',
                 'filters'  => [
-                    new IndexQueryFilter('status', IndexQueryFilterOperator::EQUAL_TO(), 'draft'),
-                    new IndexQueryFilter('age', IndexQueryFilterOperator::GREATER_THAN_OR_EQUAL_TO(), 39),
-                    new IndexQueryFilter('relation', IndexQueryFilterOperator::NOT_EQUAL_TO(), 'none'),
+                    new IndexQueryFilter('status', IndexQueryFilterOperator::EQUAL_TO, 'draft'),
+                    new IndexQueryFilter('age', IndexQueryFilterOperator::GREATER_THAN_OR_EQUAL_TO, 39),
+                    new IndexQueryFilter('relation', IndexQueryFilterOperator::NOT_EQUAL_TO, 'none'),
                 ],
                 'expected' => [
                     NodeRef::fromString('gdbots:fake-node:homer'),
@@ -171,9 +171,9 @@ trait SimpsonsTrait
             [
                 'name'     => 'return homer\'s son',
                 'filters'  => [
-                    new IndexQueryFilter('relation', IndexQueryFilterOperator::EQUAL_TO(), 'son'),
-                    new IndexQueryFilter('is_child', IndexQueryFilterOperator::EQUAL_TO(), true),
-                    new IndexQueryFilter('relation', IndexQueryFilterOperator::NOT_EQUAL_TO(), 'none'),
+                    new IndexQueryFilter('relation', IndexQueryFilterOperator::EQUAL_TO, 'son'),
+                    new IndexQueryFilter('is_child', IndexQueryFilterOperator::EQUAL_TO, true),
+                    new IndexQueryFilter('relation', IndexQueryFilterOperator::NOT_EQUAL_TO, 'none'),
                 ],
                 'expected' => [
                     NodeRef::fromString('gdbots:fake-node:bart'),

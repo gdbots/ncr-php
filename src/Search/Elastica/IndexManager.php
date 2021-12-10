@@ -131,7 +131,7 @@ class IndexManager
                         $index->getName(),
                         $qname
                     ),
-                    Code::INTERNAL,
+                    Code::INTERNAL->value,
                     $e
                 );
             }
@@ -166,7 +166,7 @@ class IndexManager
                     $index->getName(),
                     $qname
                 ),
-                Code::INTERNAL,
+                Code::INTERNAL->value,
                 $e
             );
         }

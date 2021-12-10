@@ -12,7 +12,7 @@ use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 
 class ExpirableWatcher implements EventSubscriber
 {
-    public static function getSubscribedEvents()
+    public static function getSubscribedEvents(): array
     {
         return [
             'gdbots:ncr:mixin:expirable.created'     => 'schedule',
@@ -56,7 +56,7 @@ class ExpirableWatcher implements EventSubscriber
         /** @var Message $oldNode */
         $oldNode = $event->get('old_node');
         $nodeRef = $event->get('node_ref') ?: $newNode->generateNodeRef();
-        $oldExpiresAt = $oldNode ? $oldNode->fget('expires_at') : null;
+        $oldExpiresAt = $oldNode?->fget('expires_at');
         $newExpiresAt = $newNode->fget('expires_at');
 
         if ($oldExpiresAt === $newExpiresAt) {
@@ -86,7 +86,7 @@ class ExpirableWatcher implements EventSubscriber
         $timestamp = $expiresAt->getTimestamp();
 
         if ($timestamp <= time()) {
-            if (NodeStatus::EXPIRED()->equals($node->get('status'))) {
+            if (NodeStatus::EXPIRED === $node->get('status')) {
                 return;
             }
             $timestamp = strtotime('+5 seconds');

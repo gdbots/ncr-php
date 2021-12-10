@@ -17,13 +17,13 @@ use Gdbots\Schemas\Pbjx\StreamId;
 
 class UniqueNodeValidator implements EventSubscriber, PbjxValidator
 {
-    public static function getSubscribedEvents()
+    public static function getSubscribedEvents(): array
     {
         return [
             'gdbots:ncr:command:create-node.validate' => 'validateCreateNode',
             'gdbots:ncr:command:rename-node.validate' => 'validateRenameNode',
             'gdbots:ncr:command:update-node.validate' => 'validateUpdateNode',
-            // deprecated mixins, will be removed in 3.x
+            // deprecated mixins, will be removed in 4.x.
             'gdbots:ncr:mixin:create-node.validate'   => 'validateCreateNode',
             'gdbots:ncr:mixin:rename-node.validate'   => 'validateRenameNode',
             'gdbots:ncr:mixin:update-node.validate'   => 'validateUpdateNode',
@@ -91,7 +91,7 @@ class UniqueNodeValidator implements EventSubscriber, PbjxValidator
 
             $response = $pbjx->copyContext($command, $request)->request($request);
         } catch (RequestHandlingFailed $e) {
-            if (Code::NOT_FOUND === $e->getCode()) {
+            if (Code::NOT_FOUND->value === $e->getCode()) {
                 // this is what we want
                 return;
             }

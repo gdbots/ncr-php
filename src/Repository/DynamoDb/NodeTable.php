@@ -106,7 +106,7 @@ class NodeTable
                     $tableName,
                     $client->getRegion()
                 ),
-                Code::INTERNAL,
+                Code::INTERNAL->value,
                 $e
             );
         }
@@ -135,7 +135,7 @@ class NodeTable
                     $tableName,
                     $client->getRegion()
                 ),
-                Code::INTERNAL,
+                Code::INTERNAL->value,
                 $e
             );
         }

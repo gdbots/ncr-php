@@ -3,34 +3,19 @@ declare(strict_types=1);
 
 namespace Gdbots\Ncr\Enum;
 
-use Gdbots\Pbj\Enum;
-
-/**
- * @method static IndexQueryFilterOperator EQUAL_TO()
- * @method static IndexQueryFilterOperator NOT_EQUAL_TO()
- * @method static IndexQueryFilterOperator GREATER_THAN()
- * @method static IndexQueryFilterOperator GREATER_THAN_OR_EQUAL_TO()
- * @method static IndexQueryFilterOperator LESS_THAN()
- * @method static IndexQueryFilterOperator LESS_THAN_OR_EQUAL_TO()
- *
- * // future update
- * method static IndexQueryFilterOperator EXISTS()
- * method static IndexQueryFilterOperator IN()
- * method static IndexQueryFilterOperator CONTAINS()
- * method static IndexQueryFilterOperator NOT_CONTAINS()
- */
-final class IndexQueryFilterOperator extends Enum
+enum IndexQueryFilterOperator: string
 {
-    const EQUAL_TO = 'eq';
-    const NOT_EQUAL_TO = 'ne';
-    const GREATER_THAN = 'gt';
-    const GREATER_THAN_OR_EQUAL_TO = 'gte';
-    const LESS_THAN = 'lt';
-    const LESS_THAN_OR_EQUAL_TO = 'lte';
+    case EQUAL_TO = 'eq';
+    case NOT_EQUAL_TO = 'ne';
+    case GREATER_THAN = 'gt';
+    case GREATER_THAN_OR_EQUAL_TO = 'gte';
+    case LESS_THAN = 'lt';
+    case LESS_THAN_OR_EQUAL_TO = 'lte';
+    // future updates?
     /*
-    const EXISTS = 'exists';
-    const IN = 'in';
-    const CONTAINS = 'contains';
-    const NOT_CONTAINS = 'not_contains';
+    case EXISTS = 'exists';
+    case IN = 'in';
+    case CONTAINS = 'contains';
+    case NOT_CONTAINS = 'not_contains';
     */
 }

@@ -32,7 +32,7 @@ class NcrProjector implements EventSubscriber, PbjxProjector
     protected NcrSearch $ncrSearch;
     protected bool $enabled;
 
-    public static function getSubscribedEvents()
+    public static function getSubscribedEvents(): array
     {
         return [
             'gdbots:ncr:event:node-created'           => 'onNodeCreated',
@@ -50,7 +50,7 @@ class NcrProjector implements EventSubscriber, PbjxProjector
             'gdbots:ncr:event:node-unpublished'       => 'onNodeEvent',
             'gdbots:ncr:event:node-updated'           => 'onNodeUpdated',
 
-            // deprecated mixins, will be removed in 3.x
+            // deprecated mixins, will be removed in 4.x.
             'gdbots:ncr:mixin:node-created'           => 'onNodeCreated',
             'gdbots:ncr:mixin:node-deleted'           => 'onNodeDeleted',
             'gdbots:ncr:mixin:node-expired'           => 'onNodeEvent',
@@ -151,8 +151,8 @@ class NcrProjector implements EventSubscriber, PbjxProjector
     protected function afterNodeProjected(Message $node, Message $event, Pbjx $pbjx): void
     {
         $pbjxEvent = new NodeProjectedEvent($node, $event);
-        $pbjx->trigger($node, 'projected', $pbjxEvent, false);
-        $pbjx->trigger($node, $this->createProjectedEventSuffix($node, $event), $pbjxEvent, false);
+        $pbjx->trigger($node, 'projected', $pbjxEvent, false, false);
+        $pbjx->trigger($node, $this->createProjectedEventSuffix($node, $event), $pbjxEvent, false, false);
     }
 
     protected function createProjectedEventSuffix(Message $node, Message $event): string

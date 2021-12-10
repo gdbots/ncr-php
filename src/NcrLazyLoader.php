@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Gdbots\Ncr;
 
 use Gdbots\Pbj\Message;
-use Gdbots\Pbj\Util\ArrayUtil;
 use Gdbots\Pbj\Util\ClassUtil;
 use Gdbots\Pbj\WellKnown\MessageRef;
 use Gdbots\Pbj\WellKnown\NodeRef;
@@ -68,7 +67,7 @@ final class NcrLazyLoader
     {
         $nodeRefs = [];
 
-        if (!ArrayUtil::isAssoc($paths)) {
+        if (array_is_list($paths)) {
             $paths = array_flip($paths);
         }
 

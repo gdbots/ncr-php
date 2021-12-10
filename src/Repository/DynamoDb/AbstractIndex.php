@@ -134,7 +134,7 @@ abstract class AbstractIndex implements GlobalSecondaryIndex
 
     private function getDynamoDbOperator(IndexQueryFilterOperator $operator): string
     {
-        switch ($operator->getValue()) {
+        switch ($operator) {
             case IndexQueryFilterOperator::NOT_EQUAL_TO:
                 return '<>';
 

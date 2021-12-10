@@ -138,7 +138,7 @@ TEXT;
          * like all other filters because it has no native way to provide an index.
          */
         $filters = $query->getFilters();
-        $filters[] = new IndexQueryFilter($query->getAlias(), IndexQueryFilterOperator::EQUAL_TO(), $query->getValue());
+        $filters[] = new IndexQueryFilter($query->getAlias(), IndexQueryFilterOperator::EQUAL_TO, $query->getValue());
         $nodes = $this->filterProcessor->filter($this->nodes, $filters);
 
         $nodeRefs = [];

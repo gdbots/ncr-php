@@ -62,7 +62,7 @@ final class IndexQuery implements \JsonSerializable
      * @param string             $alias
      * @param string             $value
      * @param int                $count
-     * @param string             $cursor
+     * @param string|null        $cursor
      * @param bool               $sortAsc
      * @param IndexQueryFilter[] $filters
      */
@@ -171,7 +171,7 @@ final class IndexQuery implements \JsonSerializable
         ];
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         return $this->toArray();
     }
