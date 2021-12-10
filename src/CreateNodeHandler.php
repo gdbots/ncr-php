@@ -12,7 +12,7 @@ class CreateNodeHandler implements CommandHandler
 {
     public static function handlesCuries(): array
     {
-        // deprecated mixins, will be removed in 3.x
+        // deprecated mixins, will be removed in 4.x.
         $curies = MessageResolver::findAllUsingMixin('gdbots:ncr:mixin:create-node:v1', false);
         $curies[] = 'gdbots:ncr:command:create-node';
         return $curies;

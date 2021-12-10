@@ -10,7 +10,7 @@ use Gdbots\Schemas\Ncr\Command\PublishNodeV1;
 
 class PublishableWatcher implements EventSubscriber
 {
-    public static function getSubscribedEvents()
+    public static function getSubscribedEvents(): array
     {
         return [
             'gdbots:ncr:mixin:publishable.deleted'           => 'cancel',

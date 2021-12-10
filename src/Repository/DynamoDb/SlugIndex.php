@@ -51,7 +51,7 @@ final class SlugIndex extends AbstractIndex
     public function beforePutItem(array &$item, Message $node): void
     {
         if (!$node->has('slug')
-            || $node->fget('status') === NodeStatus::DELETED
+            || $node->fget('status') === NodeStatus::DELETED->value
             || !$node::schema()->hasMixin('gdbots:ncr:mixin:sluggable')
         ) {
             return;

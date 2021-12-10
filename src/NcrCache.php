@@ -120,9 +120,9 @@ final class NcrCache
      * within the provided fields. e.g. derefNodes(article, ['category_refs', 'image_ref'])
      * would return the category and image nodes associated with the article.
      *
-     * @param Message $node   The node containing the references.
-     * @param array   $fields Array of field names containing references you want to dereference to nodes.
-     * @param string  $return The field name to return from those nodes, or null to get the entire node.
+     * @param Message     $node   The node containing the references.
+     * @param array       $fields Array of field names containing references you want to dereference to nodes.
+     * @param string|null $return The field name to return from those nodes, or null to get the entire node.
      *
      * @return array
      */

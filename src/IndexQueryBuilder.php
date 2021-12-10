@@ -24,7 +24,7 @@ final class IndexQueryBuilder
      * determine the next set of data to load.  Assumed to be an
      * exclusive value, as in, load data "after" this cursor.
      *
-     * @var string
+     * @var string|null
      */
     private ?string $cursor = null;
 
@@ -97,37 +97,37 @@ final class IndexQueryBuilder
 
     public function filterEq(string $field, $value): self
     {
-        $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::EQUAL_TO(), $value);
+        $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::EQUAL_TO, $value);
         return $this;
     }
 
     public function filterNe(string $field, $value): self
     {
-        $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::NOT_EQUAL_TO(), $value);
+        $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::NOT_EQUAL_TO, $value);
         return $this;
     }
 
     public function filterGt(string $field, $value): self
     {
-        $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::GREATER_THAN(), $value);
+        $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::GREATER_THAN, $value);
         return $this;
     }
 
     public function filterGte(string $field, $value): self
     {
-        $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::GREATER_THAN_OR_EQUAL_TO(), $value);
+        $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::GREATER_THAN_OR_EQUAL_TO, $value);
         return $this;
     }
 
     public function filterLt(string $field, $value): self
     {
-        $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::LESS_THAN(), $value);
+        $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::LESS_THAN, $value);
         return $this;
     }
 
     public function filterLte(string $field, $value): self
     {
-        $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::LESS_THAN_OR_EQUAL_TO(), $value);
+        $this->filters[] = new IndexQueryFilter($field, IndexQueryFilterOperator::LESS_THAN_OR_EQUAL_TO, $value);
         return $this;
     }
 

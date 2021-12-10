@@ -33,12 +33,7 @@ final class AggregateResolver
         self::$aggregates = array_merge(self::$aggregates, $aggregates);
     }
 
-    /**
-     * @param SchemaQName $qname
-     *
-     * @return Aggregate
-     */
-    public static function resolve(SchemaQName $qname): string
+    public static function resolve(SchemaQName $qname): Aggregate|string
     {
         $key = $qname->toString();
         if (isset(self::$aggregates[$key])) {

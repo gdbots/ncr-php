@@ -9,6 +9,6 @@ final class InvalidArgumentException extends \InvalidArgumentException implement
 {
     public function __construct(string $message = '', ?\Throwable $previous = null)
     {
-        parent::__construct($message, Code::INVALID_ARGUMENT, $previous);
+        parent::__construct($message, Code::INVALID_ARGUMENT->value, $previous);
     }
 }

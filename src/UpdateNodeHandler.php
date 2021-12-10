@@ -13,7 +13,7 @@ class UpdateNodeHandler implements CommandHandler
 {
     public static function handlesCuries(): array
     {
-        // deprecated mixins, will be removed in 3.x
+        // deprecated mixins, will be removed in 4.x.
         $curies = MessageResolver::findAllUsingMixin('gdbots:ncr:mixin:update-node:v1', false);
         $curies[] = 'gdbots:ncr:command:update-node';
         return $curies;

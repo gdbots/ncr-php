@@ -131,7 +131,7 @@ class IndexManager
                         $index->getName(),
                         $qname
                     ),
-                    Code::INTERNAL,
+                    Code::INTERNAL->value,
                     $e
                 );
             }
@@ -166,7 +166,7 @@ class IndexManager
                     $index->getName(),
                     $qname
                 ),
-                Code::INTERNAL,
+                Code::INTERNAL->value,
                 $e
             );
         }
@@ -241,9 +241,9 @@ class IndexManager
      * Filter the index name before it's returned to the consumer. Typically used to add
      * prefixes or suffixes for multi-tenant applications using the context.
      *
-     * @param string      $indexName The resolved index name, from converting qname to the config value.
-     * @param SchemaQName $qname     QName used to derive the unfiltered index name.
-     * @param array       $context   Data that helps the NCR decide where to read/write data from.
+     * @param string           $indexName The resolved index name, from converting qname to the config value.
+     * @param SchemaQName|null $qname     QName used to derive the unfiltered index name.
+     * @param array            $context   Data that helps the NCR decide where to read/write data from.
      *
      * @return string
      */

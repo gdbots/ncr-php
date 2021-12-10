@@ -35,7 +35,7 @@ class NcrRequestInterceptor implements EventSubscriber
      */
     protected array $cacheItems = [];
 
-    public static function getSubscribedEvents()
+    public static function getSubscribedEvents(): array
     {
         return [
             'gdbots:ncr:mixin:get-node-request.enrich'              => 'enrichGetNodeRequest',

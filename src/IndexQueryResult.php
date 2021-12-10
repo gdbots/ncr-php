@@ -15,9 +15,9 @@ final class IndexQueryResult implements \JsonSerializable, \IteratorAggregate, \
     private ?string $nextCursor;
 
     /**
-     * @param IndexQuery $query
-     * @param NodeRef[]  $nodeRefs
-     * @param string     $nextCursor
+     * @param IndexQuery  $query
+     * @param NodeRef[]   $nodeRefs
+     * @param string|null $nextCursor
      */
     public function __construct(IndexQuery $query, array $nodeRefs = [], ?string $nextCursor = null)
     {
@@ -55,17 +55,17 @@ final class IndexQueryResult implements \JsonSerializable, \IteratorAggregate, \
         ];
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         return $this->toArray();
     }
 
-    public function getIterator()
+    public function getIterator(): \Traversable
     {
         return new \ArrayIterator($this->nodeRefs);
     }
 
-    public function count()
+    public function count(): int
     {
         return count($this->nodeRefs);
     }

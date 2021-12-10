@@ -15,7 +15,7 @@ use Gdbots\Pbj\Message;
 class IndexQueryFilterProcessor
 {
     /**
-     * @param mixed              $items
+     * @param array              $items
      * @param IndexQueryFilter[] $filters
      *
      * @return array
@@ -41,16 +41,16 @@ class IndexQueryFilterProcessor
         });
     }
 
-    protected function extractValue($item, string $field)
+    protected function extractValue(mixed $item, string $field): mixed
     {
         if ($item instanceof Message && $item->has($field)) {
-            return $item->get($field);
+            return $item->fget($field);
         }
 
         return null;
     }
 
-    protected function valueMatchesFilter($value, IndexQueryFilter $filter): bool
+    protected function valueMatchesFilter(mixed $value, IndexQueryFilter $filter): bool
     {
         switch ($filter->getOperator()) {
             case IndexQueryFilterOperator::EQUAL_TO:

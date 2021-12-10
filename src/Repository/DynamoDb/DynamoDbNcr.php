@@ -95,13 +95,13 @@ final class DynamoDbNcr implements Ncr
                 if ('ResourceNotFoundException' === $errorName) {
                     return false;
                 } elseif ('ProvisionedThroughputExceededException' === $errorName) {
-                    $code = Code::RESOURCE_EXHAUSTED;
+                    $code = Code::RESOURCE_EXHAUSTED->value;
                 } else {
-                    $code = Code::UNAVAILABLE;
+                    $code = Code::UNAVAILABLE->value;
                 }
             } else {
                 $errorName = ClassUtil::getShortName($e);
-                $code = Code::INTERNAL;
+                $code = Code::INTERNAL->value;
             }
 
             throw new RepositoryOperationFailed(
@@ -136,13 +136,13 @@ final class DynamoDbNcr implements Ncr
                 if ('ResourceNotFoundException' === $errorName) {
                     throw NodeNotFound::forNodeRef($nodeRef, $e);
                 } elseif ('ProvisionedThroughputExceededException' === $errorName) {
-                    $code = Code::RESOURCE_EXHAUSTED;
+                    $code = Code::RESOURCE_EXHAUSTED->value;
                 } else {
-                    $code = Code::UNAVAILABLE;
+                    $code = Code::UNAVAILABLE->value;
                 }
             } else {
                 $errorName = ClassUtil::getShortName($e);
-                $code = Code::INTERNAL;
+                $code = Code::INTERNAL->value;
             }
 
             throw new RepositoryOperationFailed(
@@ -276,13 +276,13 @@ final class DynamoDbNcr implements Ncr
                         $e
                     );
                 } elseif ('ProvisionedThroughputExceededException' === $errorName) {
-                    $code = Code::RESOURCE_EXHAUSTED;
+                    $code = Code::RESOURCE_EXHAUSTED->value;
                 } else {
-                    $code = Code::UNAVAILABLE;
+                    $code = Code::UNAVAILABLE->value;
                 }
             } else {
                 $errorName = ClassUtil::getShortName($e);
-                $code = Code::INTERNAL;
+                $code = Code::INTERNAL->value;
             }
 
             throw new RepositoryOperationFailed(
@@ -315,13 +315,13 @@ final class DynamoDbNcr implements Ncr
                     // if it's already deleted, it's fine
                     return;
                 } elseif ('ProvisionedThroughputExceededException' === $errorName) {
-                    $code = Code::RESOURCE_EXHAUSTED;
+                    $code = Code::RESOURCE_EXHAUSTED->value;
                 } else {
-                    $code = Code::UNAVAILABLE;
+                    $code = Code::UNAVAILABLE->value;
                 }
             } else {
                 $errorName = ClassUtil::getShortName($e);
-                $code = Code::INTERNAL;
+                $code = Code::INTERNAL->value;
             }
 
             throw new RepositoryOperationFailed(
@@ -375,13 +375,13 @@ final class DynamoDbNcr implements Ncr
             if ($e instanceof AwsException) {
                 $errorName = $e->getAwsErrorCode() ?: ClassUtil::getShortName($e);
                 if ('ProvisionedThroughputExceededException' === $errorName) {
-                    $code = Code::RESOURCE_EXHAUSTED;
+                    $code = Code::RESOURCE_EXHAUSTED->value;
                 } else {
-                    $code = Code::UNAVAILABLE;
+                    $code = Code::UNAVAILABLE->value;
                 }
             } else {
                 $errorName = ClassUtil::getShortName($e);
-                $code = Code::INTERNAL;
+                $code = Code::INTERNAL->value;
             }
 
             throw new RepositoryOperationFailed(
@@ -598,9 +598,9 @@ final class DynamoDbNcr implements Ncr
 
             $errorName = $exception->getAwsErrorCode() ?: ClassUtil::getShortName($exception);
             if ('ProvisionedThroughputExceededException' === $errorName) {
-                $code = Code::RESOURCE_EXHAUSTED;
+                $code = Code::RESOURCE_EXHAUSTED->value;
             } else {
-                $code = Code::UNAVAILABLE;
+                $code = Code::UNAVAILABLE->value;
             }
 
             if ($skipErrors) {

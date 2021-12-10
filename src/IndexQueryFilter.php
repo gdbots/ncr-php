@@ -9,13 +9,13 @@ final class IndexQueryFilter implements \JsonSerializable
 {
     private string $field;
     private IndexQueryFilterOperator $operator;
-    private $value;
+    private mixed $value;
 
-    public function __construct(string $field, IndexQueryFilterOperator $operator, $value)
+    public function __construct(string $field, IndexQueryFilterOperator $operator, mixed $value)
     {
         $this->field = $field;
         $this->operator = $operator;
-        $this->value = $value;
+        $this->value = $value instanceof \BackedEnum ? $value->value : $value;
     }
 
     public function getField(): string
@@ -28,7 +28,7 @@ final class IndexQueryFilter implements \JsonSerializable
         return $this->operator;
     }
 
-    public function getValue()
+    public function getValue(): mixed
     {
         return $this->value;
     }
@@ -37,12 +37,12 @@ final class IndexQueryFilter implements \JsonSerializable
     {
         return [
             'field'    => $this->field,
-            'operator' => $this->operator->getValue(),
+            'operator' => $this->operator->value,
             'value'    => $this->value,
         ];
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         return $this->toArray();
     }

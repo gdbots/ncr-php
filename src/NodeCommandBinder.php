@@ -17,12 +17,12 @@ use Gdbots\Schemas\Pbjx\Enum\Code;
 
 class NodeCommandBinder implements EventSubscriber, PbjxBinder
 {
-    public static function getSubscribedEvents()
+    public static function getSubscribedEvents(): array
     {
         return [
             'gdbots:ncr:command:rename-node.bind' => 'bindRenameNode',
             'gdbots:ncr:command:update-node.bind' => 'bindUpdateNode',
-            // deprecated mixins, will be removed in 3.x
+            // deprecated mixins, will be removed in 4.x.
             'gdbots:ncr:mixin:rename-node.bind'   => 'bindRenameNode',
             'gdbots:ncr:mixin:update-node.bind'   => 'bindUpdateNode',
         ];
@@ -65,7 +65,7 @@ class NodeCommandBinder implements EventSubscriber, PbjxBinder
 
             $response = $pbjx->copyContext($command, $request)->request($request);
         } catch (RequestHandlingFailed $e) {
-            if (Code::NOT_FOUND === $e->getCode()) {
+            if (Code::NOT_FOUND->value === $e->getCode()) {
                 throw NodeNotFound::forNodeRef($nodeRef, $e);
             }
 

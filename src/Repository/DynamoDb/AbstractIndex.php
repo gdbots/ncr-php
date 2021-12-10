@@ -121,38 +121,23 @@ abstract class AbstractIndex implements GlobalSecondaryIndex
         return $params;
     }
 
-    private function marshalValue(string $attributeType, $value)
+    private function marshalValue(string $attributeType, mixed $value): bool|string
     {
-        switch ($attributeType) {
-            case 'BOOL':
-                return filter_var($value, FILTER_VALIDATE_BOOLEAN);
-
-            default:
-                return (string)$value;
-        }
+        return match ($attributeType) {
+            'BOOL' => filter_var($value, FILTER_VALIDATE_BOOLEAN),
+            default => (string)$value,
+        };
     }
 
     private function getDynamoDbOperator(IndexQueryFilterOperator $operator): string
     {
-        switch ($operator->getValue()) {
-            case IndexQueryFilterOperator::NOT_EQUAL_TO:
-                return '<>';
-
-            case IndexQueryFilterOperator::GREATER_THAN:
-                return '>';
-
-            case IndexQueryFilterOperator::GREATER_THAN_OR_EQUAL_TO:
-                return '>=';
-
-            case IndexQueryFilterOperator::LESS_THAN:
-                return '<';
-
-            case IndexQueryFilterOperator::LESS_THAN_OR_EQUAL_TO:
-                return '<=';
-
-            case IndexQueryFilterOperator::EQUAL_TO:
-            default:
-                return '=';
-        }
+        return match ($operator) {
+            IndexQueryFilterOperator::NOT_EQUAL_TO => '<>',
+            IndexQueryFilterOperator::GREATER_THAN => '>',
+            IndexQueryFilterOperator::GREATER_THAN_OR_EQUAL_TO => '>=',
+            IndexQueryFilterOperator::LESS_THAN => '<',
+            IndexQueryFilterOperator::LESS_THAN_OR_EQUAL_TO => '<=',
+            default => '=',
+        };
     }
 }

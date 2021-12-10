@@ -7,7 +7,7 @@ use Gdbots\Ncr\IndexQueryFilterProcessor as BaseIndexQueryFilterProcessor;
 
 final class IndexQueryFilterProcessor extends BaseIndexQueryFilterProcessor
 {
-    protected function extractValue($item, string $field)
+    protected function extractValue(mixed $item, string $field): mixed
     {
         if (!is_array($item) || !isset($item[$field])) {
             return null;

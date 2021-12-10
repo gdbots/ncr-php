@@ -12,7 +12,7 @@ final class NodeNotFound extends \RuntimeException implements GdbotsNcrException
 
     public function __construct(string $message = '', ?\Throwable $previous = null)
     {
-        parent::__construct($message, Code::NOT_FOUND, $previous);
+        parent::__construct($message, Code::NOT_FOUND->value, $previous);
     }
 
     public static function forNodeRef(NodeRef $nodeRef, ?\Throwable $previous = null): self

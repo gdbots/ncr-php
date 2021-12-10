@@ -9,6 +9,6 @@ final class NodeAlreadyExists extends \RuntimeException implements GdbotsNcrExce
 {
     public function __construct(string $message = 'Node already exists.')
     {
-        parent::__construct($message, Code::ALREADY_EXISTS);
+        parent::__construct($message, Code::ALREADY_EXISTS->value);
     }
 }

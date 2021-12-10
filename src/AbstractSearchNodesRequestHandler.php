@@ -31,7 +31,7 @@ abstract class AbstractSearchNodesRequestHandler implements RequestHandler
             true
         ));
 
-        $prohibited = BoolOperator::PROHIBITED();
+        $prohibited = BoolOperator::PROHIBITED;
 
         // if status is not specified in some way, default to not
         // showing any deleted nodes.
@@ -40,7 +40,7 @@ abstract class AbstractSearchNodesRequestHandler implements RequestHandler
             && !$request->isInSet('fields_used', 'status')
         ) {
             $parsedQuery->addNode(
-                new Field('status', new Word(NodeStatus::DELETED, $prohibited), $prohibited)
+                new Field('status', new Word(NodeStatus::DELETED->value, $prohibited), $prohibited)
             );
         }
 
