@@ -41,7 +41,7 @@ interface GlobalSecondaryIndex
      * Returns the AttributeName for the KeySchema KeyType "RANGE".
      * This is optional.
      *
-     * @return string
+     * @return string|null
      */
     public function getRangeKeyName(): ?string;
 

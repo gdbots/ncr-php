@@ -161,7 +161,7 @@ class NodeTable
      *
      * @param string $alias
      *
-     * @return GlobalSecondaryIndex
+     * @return GlobalSecondaryIndex|null
      */
     final public function getIndex(string $alias): ?GlobalSecondaryIndex
     {
