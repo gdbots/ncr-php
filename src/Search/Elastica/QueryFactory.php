@@ -16,6 +16,7 @@ use Gdbots\QueryParser\Node\Field;
 use Gdbots\QueryParser\Node\Numbr;
 use Gdbots\QueryParser\Node\Word;
 use Gdbots\QueryParser\ParsedQuery;
+use Gdbots\Schemas\Ncr\Enum\NodeStatus;
 
 class QueryFactory
 {
@@ -180,7 +181,7 @@ class QueryFactory
             return;
         }
 
-        $statuses = array_map('strval', $request->get('statuses'));
+        $statuses = array_map(fn(NodeStatus $s) => $s->value, $request->get('statuses'));
         $query->addFilter(new Query\Terms('status', $statuses));
     }
 }
