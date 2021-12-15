@@ -40,7 +40,10 @@ class QueryFactory
         }
 
         $query = Query::create($query);
-        $query->setTrackTotalHits($request->get('track_total_hits'));
+        if ($request->get('track_total_hits')) {
+            $query->setTrackTotalHits(true);
+        }
+
         return $query;
     }
 
