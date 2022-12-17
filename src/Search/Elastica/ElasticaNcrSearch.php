@@ -41,11 +41,11 @@ class ElasticaNcrSearch implements NcrSearch
     protected string $timeout;
 
     public function __construct(
-        ClientManager $clientManager,
-        EventDispatcher $dispatcher,
-        IndexManager $indexManager,
+        ClientManager    $clientManager,
+        EventDispatcher  $dispatcher,
+        IndexManager     $indexManager,
         ?LoggerInterface $logger = null,
-        ?string $timeout = null
+        ?string          $timeout = null
     ) {
         $this->clientManager = $clientManager;
         $this->dispatcher = $dispatcher;
@@ -218,14 +218,17 @@ TEXT;
     {
         $context = $this->enrichContext(__FUNCTION__, $context);
         $skipValidation = filter_var($context['skip_validation'] ?? true, FILTER_VALIDATE_BOOLEAN);
-        $search = new Search($this->getClientForRead($context));
+        $client = $this->getClientForRead($context);
+        $search = new Search($client);
 
         if (empty($qnames)) {
-            $search->addIndex($this->indexManager->getIndexPrefix($context) . '*');
+            $search->addIndex(new Index($client, $this->indexManager->getIndexPrefix($context) . '*'));
         } else {
-            $search->addIndices(array_unique(
+            $indices = array_unique(
                 array_map(fn(SchemaQName $qname) => $this->indexManager->getIndexName($qname, $context), $qnames)
-            ));
+            );
+
+            $search->addIndices(array_map(fn(string $index) => new Index($client, $index), $indices));
         }
 
         $page = $request->has('cursor') ? 1 : $request->get('page');

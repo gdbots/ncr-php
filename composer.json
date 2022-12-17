@@ -5,7 +5,7 @@
   "license": "Apache-2.0",
   "require": {
     "php": ">=8.1",
-    "gdbots/pbjx": "^4.0",
+    "gdbots/pbjx": "^4.1",
     "psr/cache": "^1|^2|^3",
     "psr/log": "^1|^2|^3"
   },
@@ -14,7 +14,7 @@
     "aws/aws-sdk-php": "^3.138",
     "gdbots/acme-schemas": "^3.0",
     "ruflin/elastica": "^7.1",
-    "symfony/cache": "^6.0"
+    "symfony/cache": "^6.2"
   },
   "autoload": {
     "psr-4": {

@@ -2,6 +2,11 @@
 This changelog references the relevant changes done in 3.x versions.
 
 
+## v3.1.0
+* Require symfony 6.2.x
+* Fix deprecation notice from elastica for addIndices.
+
+
 ## v3.0.2
 * Only apply track_total_hits if it's true in QueryFactory, otherwise total is always 0.
 
