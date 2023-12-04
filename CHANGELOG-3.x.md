@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 3.x versions.
 
 
+## v3.1.1
+* Update `DynamoDbNcr::doPipeNodes` to allow iteration key in piping nodes to be string or int.
+
+
 ## v3.1.0
 * Require symfony 6.2.x
 * Fix deprecation notice from elastica for addIndices.

@@ -537,7 +537,7 @@ final class DynamoDbNcr implements Ncr
             $pending[] = $this->client->getCommand('Scan', $params);
         }
 
-        $fulfilled = function (ResultInterface $result, string $iterKey) use (
+        $fulfilled = function (ResultInterface $result, int|string $iterKey) use (
             $qname, $queue, $tableName, $context, $params, &$pending, &$iter2seg
         ) {
             $segment = $iter2seg['prev'][$iterKey];
@@ -591,7 +591,7 @@ final class DynamoDbNcr implements Ncr
             }
         };
 
-        $rejected = function (AwsException $exception, string $iterKey, PromiseInterface $aggregatePromise) use (
+        $rejected = function (AwsException $exception, int|string $iterKey, PromiseInterface $aggregatePromise) use (
             $qname, $tableName, $context, $skipErrors, &$iter2seg
         ) {
             $segment = $iter2seg['prev'][$iterKey];
