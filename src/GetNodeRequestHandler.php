@@ -46,7 +46,12 @@ class GetNodeRequestHandler implements RequestHandler
 
                 $aggregate = AggregateResolver::resolve($nodeRef->getQName())::fromNodeRef($nodeRef, $pbjx);
                 $aggregate->sync($context);
-                return $response->set('node', $aggregate->getNode());
+                $node = $aggregate->getNode();
+                if (!$node->has('last_event_ref')) {
+                    // created from empty stream
+                    throw $nf;
+                }
+                return $response->set('node', $node);
             } catch (\Throwable $e) {
                 throw $e;
             }
