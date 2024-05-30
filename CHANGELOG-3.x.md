@@ -2,6 +2,10 @@
 This changelog references the relevant changes done in 3.x versions.
 
 
+## v3.1.2
+* In `GetNodeRequestHandler::handleRequest` do not treat aggregate-synced nodes with empty event streams as valid.
+
+
 ## v3.1.1
 * Update `DynamoDbNcr::doPipeNodes` to allow iteration key in piping nodes to be string or int.
 
